@@ -12,7 +12,7 @@ import {
   type RecurringTransaction,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { formatAmount, getScheduledDisplayName } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { useTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -47,6 +47,7 @@ export const ScheduledPickerSheet = forwardRef<
     const sheetStyles = useSheetStyles()
     const insets = useSafeAreaInsets()
     const tz = useTimezone()
+    const { t } = useI18n()
     const { activeSpaceId } = useSpace()
     const { data: settingsData } = useGetSettingsQuery(
       {},
@@ -76,7 +77,7 @@ export const ScheduledPickerSheet = forwardRef<
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             <BottomSheetHeader
-              title="Pending Scheduled Items"
+              title={t("finance.pickers.scheduled.defaultTitle")}
               onClose={handleClose}
             />
           }
@@ -90,7 +91,7 @@ export const ScheduledPickerSheet = forwardRef<
             ) : (
               <View style={sheetStyles.emptySheetBox}>
                 <Text style={sheetStyles.emptySheetText}>
-                  No pending scheduled items found.
+                  {t("finance.pickers.scheduled.noItemsFound")}
                 </Text>
               </View>
             )
@@ -121,13 +122,14 @@ export const ScheduledPickerSheet = forwardRef<
                     {displayName}
                   </Text>
                   <Text style={sheetStyles.accountItemSubtitle}>
-                    Due:{" "}
                     {st.dueDate
-                      ? tz.format(st.dueDate, {
-                          month: "short",
-                          day: "numeric",
+                      ? t("finance.pickers.scheduled.dueLabel", {
+                          date: tz.format(st.dueDate, {
+                            month: "short",
+                            day: "numeric",
+                          }),
                         })
-                      : "Pending"}
+                      : t("finance.pickers.scheduled.pending")}
                   </Text>
                 </View>
                 <Text style={sheetStyles.scheduledItemAmount}>

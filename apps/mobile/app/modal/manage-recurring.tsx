@@ -56,6 +56,8 @@ import {
   invalidateFinanceQueries,
   useCurrencyConversionPreview,
 } from "@saturn/hooks/finance"
+import { useI18n } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -83,6 +85,7 @@ export default function ManageRecurringModal() {
   const isEditMode = Boolean(editRecurringId)
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { t, locale } = useI18n()
   const { colors, getBudgetColors } = useTheme()
   const styles = useThemedStyles(createStyles)
 
@@ -279,8 +282,10 @@ export default function ManageRecurringModal() {
         })
         haptics.success()
         toast.show({
-          title: "Template Updated",
-          message: `"${values.name.trim()}" was updated.`,
+          title: t("finance.recurring.mobile.toastUpdatedTitle"),
+          message: t("finance.recurring.mobile.toastUpdatedDesc", {
+            name: values.name.trim(),
+          }),
           type: "success",
         })
       } else {
@@ -303,8 +308,10 @@ export default function ManageRecurringModal() {
         })
         haptics.success()
         toast.show({
-          title: "Template Created",
-          message: `"${values.name.trim()}" has been set up.`,
+          title: t("finance.recurring.mobile.toastCreatedTitle"),
+          message: t("finance.recurring.mobile.toastCreatedDesc", {
+            name: values.name.trim(),
+          }),
           type: "success",
         })
       }
@@ -314,8 +321,10 @@ export default function ManageRecurringModal() {
     } catch (err: any) {
       haptics.error()
       toast.show({
-        title: isEditMode ? "Update Failed" : "Create Failed",
-        message: err?.message || "Could not save recurring template.",
+        title: isEditMode
+          ? t("finance.recurring.sheet.updateFailed")
+          : t("finance.recurring.sheet.createFailed"),
+        message: err?.message || t("finance.recurring.mobile.toastSaveFailed"),
         type: "error",
       })
     }
@@ -327,12 +336,12 @@ export default function ManageRecurringModal() {
     haptics.warning()
 
     Alert.alert(
-      "Delete Recurring Template",
-      `Are you sure you want to delete "${recurringName}"? Future scheduled instances will no longer be generated.`,
+      t("finance.recurring.mobile.deleteTitle"),
+      t("finance.recurring.mobile.deleteDesc", { name: recurringName }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -345,8 +354,10 @@ export default function ManageRecurringModal() {
               })
               haptics.success()
               toast.show({
-                title: "Template Deleted",
-                message: `"${recurringName}" was deleted.`,
+                title: t("finance.recurring.delete.deletedTitle"),
+                message: t("finance.recurring.mobile.toastDeletedDesc", {
+                  name: recurringName,
+                }),
                 type: "info",
               })
               await invalidateFinanceQueries(queryClient)
@@ -354,8 +365,10 @@ export default function ManageRecurringModal() {
             } catch (err: any) {
               haptics.error()
               toast.show({
-                title: "Delete Failed",
-                message: err?.message || "Could not delete template.",
+                title: t("finance.recurring.mobile.toastDeleteFailed"),
+                message:
+                  err?.message ||
+                  t("finance.recurring.delete.failedDescription"),
                 type: "error",
               })
             }
@@ -377,13 +390,15 @@ export default function ManageRecurringModal() {
     <>
       <Stack.Screen
         options={{
-          headerTitle: isEditMode ? "Edit Recurring" : "New Recurring",
+          headerTitle: isEditMode
+            ? t("finance.recurring.mobile.headerTitleEdit")
+            : t("finance.recurring.mobile.newRecurring"),
           ...(Platform.OS === "ios"
             ? {
                 unstable_headerLeftItems: () => [
                   {
                     type: "button",
-                    label: "Close",
+                    label: t("common.close"),
                     icon: { type: "sfSymbol", name: "xmark" },
                     onPress: () => router.back(),
                   },
@@ -402,7 +417,7 @@ export default function ManageRecurringModal() {
                       }
                     : {
                         type: "button",
-                        label: "Save",
+                        label: t("common.save"),
                         variant: "done",
                         onPress: () => handleSubmit(onValid)(),
                       },
@@ -428,7 +443,9 @@ export default function ManageRecurringModal() {
                     {isSaving ? (
                       <ActivityIndicator size="small" color={colors.primary} />
                     ) : (
-                      <Text style={styles.headerSaveBtnText}>Save</Text>
+                      <Text style={styles.headerSaveBtnText}>
+                        {t("common.save")}
+                      </Text>
                     )}
                   </TouchableOpacity>
                 ),
@@ -470,7 +487,7 @@ export default function ManageRecurringModal() {
                   type === "EXPENSE" && styles.segmentTextActiveExpense,
                 ]}
               >
-                Expense / Bill
+                {t("finance.recurring.mobile.segExpense")}
               </Text>
             </TouchableOpacity>
 
@@ -495,21 +512,23 @@ export default function ManageRecurringModal() {
                   type === "INCOME" && styles.segmentTextActiveIncome,
                 ]}
               >
-                Income / Salary
+                {t("finance.recurring.mobile.segIncome")}
               </Text>
             </TouchableOpacity>
           </View>
 
           {/* Template Name */}
           <Card style={styles.fieldCard}>
-            <Text style={styles.fieldLabel}>TEMPLATE NAME *</Text>
+            <Text style={styles.fieldLabel}>
+              {t("finance.recurring.sheet.nameLabel").toUpperCase()} *
+            </Text>
             <TextInput
               control={control}
               name="name"
               placeholder={
                 type === "EXPENSE"
-                  ? "e.g., Netflix, Office Rent, Electricity"
-                  : "e.g., Monthly Salary, Client Retainer"
+                  ? t("finance.recurring.sheet.namePlaceholderExpense")
+                  : t("finance.recurring.sheet.namePlaceholderIncome")
               }
               style={styles.textInput}
             />
@@ -517,7 +536,10 @@ export default function ManageRecurringModal() {
 
           {/* Amount & Currency */}
           <Card style={styles.fieldCard}>
-            <Text style={styles.fieldLabel}>AMOUNT & CURRENCY *</Text>
+            <Text style={styles.fieldLabel}>
+              {t("finance.recurring.mobile.amountCurrencyLabel").toUpperCase()}{" "}
+              *
+            </Text>
             <View style={styles.amountRow}>
               <View style={styles.amountInputWrapper}>
                 <TextInput
@@ -545,7 +567,10 @@ export default function ManageRecurringModal() {
               <View style={styles.conversionBadge}>
                 <Sparkles size={13} color={colors.textSecondary} />
                 <Text style={styles.conversionText}>
-                  ≈ {conversionPreview.toFixed(2)} {baseCurrency} (Base)
+                  {t("finance.recurring.mobile.conversionBase", {
+                    amount: conversionPreview.toFixed(2),
+                    currency: baseCurrency,
+                  })}
                 </Text>
               </View>
             ) : null}
@@ -553,12 +578,19 @@ export default function ManageRecurringModal() {
 
           {/* Recurrence Interval */}
           <Card style={styles.fieldCard}>
-            <Text style={styles.fieldLabel}>FREQUENCY *</Text>
+            <Text style={styles.fieldLabel}>
+              {t("finance.recurring.mobile.frequencyLabel").toUpperCase()} *
+            </Text>
             <FormPillGroup
               control={control}
               name="interval"
               options={RECURRING_INTERVAL_OPTIONS.map((opt) => ({
-                label: opt.label,
+                label: getLocalizedEnumLabel(
+                  "finance",
+                  "interval",
+                  opt.value,
+                  locale
+                ),
                 value: opt.value as RecurringTransaction_Interval,
                 icon: <Clock size={14} color={colors.primary} />,
               }))}
@@ -567,12 +599,14 @@ export default function ManageRecurringModal() {
 
           {/* Next Due Date / Start Date */}
           <Card style={styles.fieldCard}>
-            <Text style={styles.fieldLabel}>NEXT DUE DATE *</Text>
+            <Text style={styles.fieldLabel}>
+              {t("finance.recurring.sheet.nextDueDateLabel").toUpperCase()} *
+            </Text>
             <FormDateRow
               control={control}
               name="nextDueDate"
-              label="Target execution schedule"
-              title="Select Due Date"
+              label={t("finance.recurring.mobile.dueDateRowLabel")}
+              title={t("finance.recurring.mobile.selectDueDate")}
               icon={<Calendar size={18} color={colors.primary} />}
               containerStyle={{ paddingHorizontal: 0, paddingVertical: 6 }}
             />
@@ -581,7 +615,12 @@ export default function ManageRecurringModal() {
           {/* Budget Category (Required if EXPENSE) */}
           {type === "EXPENSE" ? (
             <Card style={styles.fieldCard}>
-              <Text style={styles.fieldLabel}>BUDGET CATEGORY *</Text>
+              <Text style={styles.fieldLabel}>
+                {t(
+                  "finance.recurring.mobile.budgetCategoryLabel"
+                ).toUpperCase()}{" "}
+                *
+              </Text>
               <TouchableOpacity
                 style={styles.pickerSelectorRow}
                 onPress={() => {
@@ -623,10 +662,11 @@ export default function ManageRecurringModal() {
                         !selectedBudget && { color: colors.textMuted },
                       ]}
                     >
-                      {selectedBudget?.name || "Select Budget Category"}
+                      {selectedBudget?.name ||
+                        t("finance.recurring.mobile.selectBudgetCategory")}
                     </Text>
                     <Text style={styles.pickerHintText}>
-                      Tracks spending against allocation
+                      {t("finance.recurring.mobile.budgetTracksHint")}
                     </Text>
                   </View>
                 </View>
@@ -641,8 +681,10 @@ export default function ManageRecurringModal() {
           {/* Account Mapping (Optional) */}
           <Card style={styles.fieldCard}>
             <Text style={styles.fieldLabel}>
-              {type === "EXPENSE" ? "PAY FROM ACCOUNT" : "DEPOSIT TO ACCOUNT"}{" "}
-              (OPTIONAL)
+              {type === "EXPENSE"
+                ? t("finance.recurring.mobile.payFromAccount")
+                : t("finance.recurring.mobile.depositToAccount")}{" "}
+              {t("finance.recurring.mobile.optionalSuffix").toUpperCase()}
             </Text>
             <AccountCardSelect
               account={selectedAccount}
@@ -650,8 +692,8 @@ export default function ManageRecurringModal() {
                 Keyboard.dismiss()
                 accountSheetRef.current?.expand()
               }}
-              placeholder="None (Choose when confirming)"
-              subtitle="Default linked payment method"
+              placeholder={t("finance.recurring.mobile.accountNonePlaceholder")}
+              subtitle={t("finance.recurring.mobile.accountDefaultHint")}
             />
           </Card>
 
@@ -660,8 +702,8 @@ export default function ManageRecurringModal() {
             <FormSwitchRow
               control={control}
               name="isVariable"
-              label="Variable Amount"
-              subtitle="Amount fluctuates each billing cycle (e.g. utility bills)"
+              label={t("finance.recurring.mobile.variableAmount")}
+              subtitle={t("finance.recurring.mobile.variableFluctuatesHint")}
               containerStyle={{ paddingHorizontal: 0, paddingVertical: 4 }}
             />
 
@@ -669,9 +711,11 @@ export default function ManageRecurringModal() {
 
             <View style={styles.toggleRow}>
               <View style={styles.toggleInfo}>
-                <Text style={styles.toggleTitle}>Grace Period</Text>
+                <Text style={styles.toggleTitle}>
+                  {t("finance.recurring.mobile.gracePeriodTitle")}
+                </Text>
                 <Text style={styles.toggleDescription}>
-                  Days allowed past due date before marking overdue
+                  {t("finance.recurring.mobile.gracePeriodDesc")}
                 </Text>
               </View>
               <FormPillGroup
@@ -693,9 +737,11 @@ export default function ManageRecurringModal() {
             <Card style={styles.fieldCard}>
               <View style={styles.toggleRow}>
                 <View style={styles.toggleInfo}>
-                  <Text style={styles.toggleTitle}>Template Active</Text>
+                  <Text style={styles.toggleTitle}>
+                    {t("finance.recurring.mobile.templateActiveTitle")}
+                  </Text>
                   <Text style={styles.toggleDescription}>
-                    Paused templates do not generate new scheduled cycles
+                    {t("finance.recurring.mobile.templateActiveDesc")}
                   </Text>
                 </View>
                 <Switch
@@ -728,7 +774,7 @@ export default function ManageRecurringModal() {
                   <>
                     <Trash2 size={16} color={colors.destructive} />
                     <Text style={styles.deleteBtnText}>
-                      Delete Recurring Template
+                      {t("finance.recurring.mobile.deleteTitle")}
                     </Text>
                   </>
                 )}

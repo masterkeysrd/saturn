@@ -35,6 +35,7 @@ import {
   type CurrencyInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useSpace } from "@/lib/space-context"
+import { useI18n } from "@saturn/hooks"
 import {
   resolveTransactionFlowType,
   type TransactionFlowType,
@@ -55,6 +56,7 @@ export default function AddTransactionModal() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
   const { colors } = useTheme()
+  const { t } = useI18n()
   const styles = useThemedStyles(createStyles)
   const {
     id: editTransactionId,
@@ -166,7 +168,9 @@ export default function AddTransactionModal() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading transaction...</Text>
+        <Text style={styles.loadingText}>
+          {t("finance.transactions.create.mobile.loadingTransaction")}
+        </Text>
       </View>
     )
   }
@@ -178,15 +182,15 @@ export default function AddTransactionModal() {
           options={{
             title: isEditMode
               ? activeType === "INCOME"
-                ? "Edit Income"
-                : "Edit Expense"
-              : "New Transaction",
+                ? t("finance.transactions.create.mobile.editIncome")
+                : t("finance.transactions.create.mobile.editExpense")
+              : t("finance.transactions.create.mobile.newTransaction"),
             ...(Platform.OS === "ios"
               ? {
                   unstable_headerLeftItems: () => [
                     {
                       type: "button",
-                      label: "Close",
+                      label: t("common.close"),
                       icon: { type: "sfSymbol", name: "xmark" },
                       onPress: () => {
                         haptics.light()
@@ -207,7 +211,7 @@ export default function AddTransactionModal() {
                       }}
                       style={{ paddingHorizontal: 4, paddingVertical: 4 }}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      accessibilityLabel="Close"
+                      accessibilityLabel={t("common.close")}
                     >
                       <X size={20} color={colors.textMuted} />
                     </TouchableOpacity>
@@ -252,7 +256,7 @@ export default function AddTransactionModal() {
                       styles.typePillExpenseTextActive,
                   ]}
                 >
-                  Expense
+                  {t("finance.transactions.create.mobile.pillExpense")}
                 </Text>
               </TouchableOpacity>
 
@@ -280,7 +284,7 @@ export default function AddTransactionModal() {
                     activeType === "INCOME" && styles.typePillIncomeTextActive,
                   ]}
                 >
-                  Income
+                  {t("finance.transactions.create.mobile.pillIncome")}
                 </Text>
               </TouchableOpacity>
 
@@ -311,7 +315,7 @@ export default function AddTransactionModal() {
                       styles.typePillTransferTextActive,
                   ]}
                 >
-                  Transfer
+                  {t("finance.transactions.create.mobile.pillTransfer")}
                 </Text>
               </TouchableOpacity>
 
@@ -342,7 +346,7 @@ export default function AddTransactionModal() {
                       styles.typePillScheduledTextActive,
                   ]}
                 >
-                  Scheduled
+                  {t("finance.transactions.create.mobile.pillScheduled")}
                   {pendingScheduled.length > 0
                     ? ` (${pendingScheduled.length})`
                     : ""}
@@ -376,7 +380,7 @@ export default function AddTransactionModal() {
                       styles.typePillBorrowingTextActive,
                   ]}
                 >
-                  Loan
+                  {t("finance.transactions.create.mobile.pillLoan")}
                   {activeBorrowings.length > 0
                     ? ` (${activeBorrowings.length})`
                     : ""}

@@ -19,7 +19,7 @@ import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { RepaymentSchema, type RepaymentFormValues } from "@saturn/schemas"
 import { toCentsString, formatAmount, getCurrencySymbol } from "@saturn/core"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
 import {
   useLogBorrowingTransactionMutation,
   type Account,
@@ -64,6 +64,7 @@ export function BorrowingForm({
   onAccountChange,
 }: BorrowingFormProps) {
   const { colors } = useTheme()
+  const { t } = useI18n()
   const styles = useThemedStyles(createStyles)
   const formStyles = useFormStyles()
   const insets = useSafeAreaInsets()
@@ -144,7 +145,7 @@ export function BorrowingForm({
   const onSubmit = async (values: RepaymentFormValues) => {
     if (!selectedBorrowing?.id) {
       haptics.error()
-      setSubmissionError("Please select an active agreement.")
+      setSubmissionError(t("finance.borrowing.mobile.selectActiveAgreement"))
       return
     }
 
@@ -174,12 +175,15 @@ export function BorrowingForm({
         type: "success",
         title: isPayment
           ? isLent
-            ? "Payment Received Recorded"
-            : "Repayment Recorded"
+            ? t("finance.borrowing.mobile.toastPaymentReceived")
+            : t("finance.borrowing.mobile.toastRepayment")
           : isLent
-            ? "Additional Loan Recorded"
-            : "Drawdown Recorded",
-        message: `${currentSymbol}${amountDecimal} logged for ${selectedBorrowing.counterparty}`,
+            ? t("finance.borrowing.mobile.toastAdditionalLoan")
+            : t("finance.borrowing.mobile.toastDrawdown"),
+        message: t("finance.borrowing.mobile.toastLoggedDesc", {
+          amount: `${currentSymbol}${amountDecimal}`,
+          name: selectedBorrowing.counterparty,
+        }),
       })
 
       await invalidateFinanceQueries(queryClient)
@@ -189,7 +193,7 @@ export function BorrowingForm({
       const errMsg =
         err instanceof Error
           ? err.message
-          : "An unexpected error occurred while saving."
+          : t("finance.budgets.unexpectedError")
       setSubmissionError(errMsg)
     }
   }
@@ -197,7 +201,9 @@ export function BorrowingForm({
   const actionOptions = useMemo(
     () => [
       {
-        label: isLent ? "Receive Payment" : "Make Repayment",
+        label: isLent
+          ? t("finance.transactions.borrowing.repaymentReceive")
+          : t("finance.transactions.borrowing.repaymentMake"),
         value: "BORROWING_TRANSACTION_TYPE_PAYMENT",
         activeColor: colors.warning,
         activeBg: colors.warningSubtle,
@@ -205,7 +211,9 @@ export function BorrowingForm({
         activeTextColor: colors.warning,
       },
       {
-        label: isLent ? "Give Additional Loan" : "Take Additional Draw",
+        label: isLent
+          ? t("finance.transactions.borrowing.disbursementLend")
+          : t("finance.transactions.borrowing.disbursementDrawdown"),
         value: "BORROWING_TRANSACTION_TYPE_DISBURSEMENT",
         activeColor: colors.warning,
         activeBg: colors.warningSubtle,
@@ -213,7 +221,7 @@ export function BorrowingForm({
         activeTextColor: colors.warning,
       },
     ],
-    [isLent, colors.warning, colors.warningSubtle]
+    [isLent, colors.warning, colors.warningSubtle, t]
   )
 
   return (
@@ -242,12 +250,18 @@ export function BorrowingForm({
           </View>
           <View style={{ flex: 1 }}>
             <Text style={formStyles.specialSelectorLabel}>
-              Active Agreement
+              {t("finance.borrowing.mobile.activeAgreementLabel")}
             </Text>
             <Text style={formStyles.specialSelectorValue} numberOfLines={1}>
               {selectedBorrowing
-                ? `${selectedBorrowing.counterparty} • ${formatAmount(selectedBorrowing.remainingAmount, selectedBorrowing.currency)} remaining`
-                : "Select agreement..."}
+                ? t("finance.borrowing.mobile.selectorRemaining", {
+                    name: selectedBorrowing.counterparty,
+                    amount: formatAmount(
+                      selectedBorrowing.remainingAmount,
+                      selectedBorrowing.currency
+                    ),
+                  })
+                : t("finance.borrowing.mobile.selectAgreementPlaceholder")}
             </Text>
           </View>
           <ChevronRight size={16} color={colors.textMuted} />
@@ -269,6 +283,7 @@ export function BorrowingForm({
           currency={currentCurrency}
           currencySymbol={currentSymbol}
           currencyDisabled
+          label={t("finance.transactions.borrowing.amountLabel").toUpperCase()}
           accentColor={colors.warning}
           autoFocus
         />
@@ -277,15 +292,19 @@ export function BorrowingForm({
         {selectedBorrowing && (
           <View style={styles.agreementInfoCard}>
             <View style={styles.agreementInfoRow}>
-              <Text style={styles.agreementInfoLabel}>Direction:</Text>
+              <Text style={styles.agreementInfoLabel}>
+                {t("finance.borrowing.mobile.directionLabel")}
+              </Text>
               <Text style={styles.agreementInfoVal}>
                 {isLent
-                  ? "I lent money (Owed to me)"
-                  : "I borrowed money (I owe)"}
+                  ? t("finance.borrowing.mobile.borrowerInfoLent")
+                  : t("finance.borrowing.mobile.borrowerInfoBorrowed")}
               </Text>
             </View>
             <View style={styles.agreementInfoRow}>
-              <Text style={styles.agreementInfoLabel}>Remaining:</Text>
+              <Text style={styles.agreementInfoLabel}>
+                {t("finance.transactions.borrowing.remaining")}
+              </Text>
               <Text style={styles.agreementInfoVal}>
                 {formatAmount(
                   selectedBorrowing.remainingAmount,
@@ -300,7 +319,7 @@ export function BorrowingForm({
         <Card style={formStyles.formGroupCard}>
           {/* Field: Linked Payment Account */}
           <AccountRow
-            label="Linked Account"
+            label={t("finance.borrowing.mobile.linkedAccountLabel")}
             account={selectedAccount}
             error={errors.accountId?.message}
             onPress={() => {
@@ -314,7 +333,7 @@ export function BorrowingForm({
           <FormDateRow
             control={control}
             name="paymentDate"
-            label="Transaction Date"
+            label={t("finance.transactions.borrowing.transactionDate")}
           />
 
           {/* Field: Memo / Notes */}
@@ -322,9 +341,9 @@ export function BorrowingForm({
           <FormRowInput
             control={control}
             name="notes"
-            label="Notes"
+            label={t("finance.transactions.borrowing.notesLabel")}
             icon={<FileText size={16} color={colors.textMuted} />}
-            placeholder="e.g. Bank transfer ref, monthly check"
+            placeholder={t("finance.transactions.borrowing.notesPlaceholder")}
             returnKeyType="done"
           />
         </Card>
@@ -353,11 +372,19 @@ export function BorrowingForm({
         >
           {isPayment
             ? isLent
-              ? `Receive ${currentSymbol}${amountDecimal}`
-              : `Repay ${currentSymbol}${amountDecimal}`
+              ? t("finance.borrowing.mobile.submitReceive", {
+                  amount: `${currentSymbol}${amountDecimal}`,
+                })
+              : t("finance.borrowing.mobile.submitRepay", {
+                  amount: `${currentSymbol}${amountDecimal}`,
+                })
             : isLent
-              ? `Lend ${currentSymbol}${amountDecimal}`
-              : `Borrow ${currentSymbol}${amountDecimal}`}
+              ? t("finance.borrowing.mobile.submitLend", {
+                  amount: `${currentSymbol}${amountDecimal}`,
+                })
+              : t("finance.borrowing.mobile.submitBorrow", {
+                  amount: `${currentSymbol}${amountDecimal}`,
+                })}
         </Button>
       </View>
 

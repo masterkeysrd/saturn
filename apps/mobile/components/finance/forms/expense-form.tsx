@@ -42,7 +42,7 @@ import {
   CurrencyPickerSheet,
   AccountPickerSheet,
 } from "../sheets"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
 import { AccountRow } from "../account-select"
 import { HeroAmountInput } from "@/components/ui/amount-input"
 import {
@@ -84,6 +84,7 @@ export function ExpenseForm({
   const formStyles = useFormStyles()
   const insets = useSafeAreaInsets()
   const toast = useToast()
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const isEditMode = !!existingTx?.id
 
@@ -271,8 +272,16 @@ export function ExpenseForm({
 
       toast.show({
         type: "success",
-        title: isEditMode ? "Expense Updated" : "Expense Recorded",
-        message: `${currentSymbol}${amountDecimal} ${values.currency} under ${selectedBudget?.name || "Budget"}`,
+        title: isEditMode
+          ? t("finance.transactions.expenseForm.toastUpdatedTitle")
+          : t("finance.transactions.expenseForm.recordedTitle"),
+        message: t("finance.transactions.expenseForm.toastDesc", {
+          amount: `${currentSymbol}${amountDecimal}`,
+          currency: values.currency,
+          budget:
+            selectedBudget?.name ||
+            t("finance.transactions.expenseForm.budgetFallback"),
+        }),
       })
 
       await invalidateFinanceQueries(queryClient)
@@ -282,7 +291,7 @@ export function ExpenseForm({
       const errMsg =
         err instanceof Error
           ? err.message
-          : "An unexpected error occurred while saving."
+          : t("finance.budgets.unexpectedError")
       setSubmissionError(errMsg)
     }
   }
@@ -298,6 +307,9 @@ export function ExpenseForm({
         <HeroAmountInput
           control={control}
           name="amount"
+          label={t(
+            "finance.transactions.expenseForm.amountLabel"
+          ).toUpperCase()}
           currency={currentCurrency}
           currencySymbol={currentSymbol}
           onPressCurrency={() => {
@@ -320,7 +332,7 @@ export function ExpenseForm({
                 />
                 <View style={{ flex: 1 }}>
                   <Text style={formStyles.conversionAlertTitle}>
-                    Exchange Rate Required
+                    {t("finance.conversion.rateRequired")}
                   </Text>
                   <Text style={formStyles.conversionAlertText}>
                     {conversionPreview.error}
@@ -336,7 +348,7 @@ export function ExpenseForm({
                 />
                 <View style={{ flex: 1 }}>
                   <Text style={formStyles.conversionBoxLabel}>
-                    REPORTING CURRENCY CONVERSION
+                    {t("finance.conversion.reportingLabel").toUpperCase()}
                   </Text>
                   <Text style={formStyles.conversionBoxAmount}>
                     ≈{" "}
@@ -347,9 +359,11 @@ export function ExpenseForm({
                     {conversionPreview.currency}
                   </Text>
                   <Text style={formStyles.conversionBoxRate}>
-                    Exchange rate: 1 {currentCurrency} ={" "}
-                    {conversionPreview.rate.toFixed(4)}{" "}
-                    {conversionPreview.currency}
+                    {t("finance.conversion.exchangeRateLine", {
+                      from: currentCurrency,
+                      rate: conversionPreview.rate.toFixed(4),
+                      to: conversionPreview.currency,
+                    })}
                   </Text>
                 </View>
               </View>
@@ -370,7 +384,9 @@ export function ExpenseForm({
           >
             <View style={formStyles.formRowLabelGroup}>
               <Tag size={16} color={colors.textMuted} />
-              <Text style={formStyles.formRowLabel}>Budget</Text>
+              <Text style={formStyles.formRowLabel}>
+                {t("finance.transactions.expenseForm.budgetLabel")}
+              </Text>
             </View>
             <View style={formStyles.formRowValueGroup}>
               {selectedBudget ? (
@@ -420,7 +436,9 @@ export function ExpenseForm({
                   )}
                 </View>
               ) : (
-                <Text style={formStyles.placeholderText}>Select a budget</Text>
+                <Text style={formStyles.placeholderText}>
+                  {t("finance.transactions.expenseForm.budgetPlaceholder")}
+                </Text>
               )}
               <ChevronRight size={14} color={colors.textMuted} />
             </View>
@@ -451,7 +469,7 @@ export function ExpenseForm({
           {/* Field: Account */}
           <View style={formStyles.rowDivider} />
           <AccountRow
-            label="Account"
+            label={t("finance.transactions.expenseForm.accountRowLabel")}
             account={selectedAccount}
             error={errors.accountId?.message}
             onPress={() => {
@@ -465,15 +483,28 @@ export function ExpenseForm({
           <FormRowInput
             control={control}
             name="description"
-            label="Description"
+            label={t("finance.transactions.expenseForm.descriptionLabel")}
             icon={<FileText size={16} color={colors.textMuted} />}
-            placeholder="e.g. Amazon Web Services, Restaurant Dinner"
+            placeholder={t(
+              "finance.transactions.expenseForm.descriptionPlaceholder"
+            )}
             returnKeyType="done"
           />
 
           {/* Field: Date Section */}
           <View style={formStyles.rowDivider} />
-          <FormEffectiveDateSection control={control} />
+          <FormEffectiveDateSection
+            control={control}
+            dateLabel={t(
+              "finance.transactions.expenseForm.transactionDateLabel"
+            )}
+            effectiveDateLabel={t(
+              "finance.transactions.expenseForm.effectiveDateLabel"
+            )}
+            switchLabel={t(
+              "finance.transactions.expenseForm.customEffectiveCheckbox"
+            )}
+          />
         </Card>
 
         {/* Error Box */}
@@ -499,8 +530,12 @@ export function ExpenseForm({
           onPress={handleSubmit(onSubmit)}
         >
           {isEditMode
-            ? `Update Expense • ${currentSymbol}${amountDecimal}`
-            : `Record Expense • ${currentSymbol}${amountDecimal}`}
+            ? t("finance.transactions.expenseForm.submitUpdateShort", {
+                amount: `${currentSymbol}${amountDecimal}`,
+              })
+            : t("finance.transactions.expenseForm.submitRecord", {
+                amount: `${currentSymbol}${amountDecimal}`,
+              })}
         </Button>
       </View>
 

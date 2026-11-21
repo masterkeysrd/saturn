@@ -37,7 +37,7 @@ import {
   getTimezoneParts,
   formatDateWithTimezone,
 } from "@saturn/core"
-import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
+import { invalidateFinanceQueries, useTimezone, useI18n } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -97,6 +97,7 @@ export default function BorrowingScreen() {
   const toast = useToast()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { colors, resolvedMode } = useTheme()
   const styles = useThemedStyles(createStyles)
   const [refreshing, setRefreshing] = useState(false)
@@ -212,12 +213,14 @@ export default function BorrowingScreen() {
   const handleDeleteBorrowing = (b: Borrowing) => {
     haptics.warning()
     Alert.alert(
-      "Delete Debt Agreement",
-      `Are you sure you want to delete this record with "${b.counterparty}"? All logged transactions and repayments will be deleted.`,
+      t("finance.borrowing.delete.title"),
+      t("finance.borrowing.delete.description", {
+        name: b.counterparty || "",
+      }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -227,16 +230,20 @@ export default function BorrowingScreen() {
               })
               haptics.success()
               toast.show({
-                title: "Agreement Deleted",
-                message: `Record with ${b.counterparty} was removed.`,
+                title: t("finance.borrowing.delete.deletedTitle"),
+                message: t("finance.borrowing.delete.deletedDescription", {
+                  name: b.counterparty || "",
+                }),
                 type: "info",
               })
               await invalidateFinanceQueries(queryClient)
             } catch (err: any) {
               haptics.error()
               toast.show({
-                title: "Delete Failed",
-                message: err?.message || "Could not delete record.",
+                title: t("finance.borrowing.delete.failedTitle"),
+                message:
+                  err?.message ||
+                  t("finance.borrowing.delete.failedDescription"),
                 type: "error",
               })
             }
@@ -250,13 +257,13 @@ export default function BorrowingScreen() {
     <View style={styles.safeArea}>
       <Stack.Screen
         options={{
-          headerTitle: "Debts & Loans",
+          headerTitle: t("finance.borrowing.mobile.headerTitle"),
           ...(Platform.OS === "ios"
             ? {
                 unstable_headerRightItems: () => [
                   {
                     type: "button",
-                    label: "New Agreement",
+                    label: t("finance.borrowing.mobile.newAgreement"),
                     icon: { type: "sfSymbol", name: "plus" },
                     tintColor: colors.primary,
                     onPress: () => {
@@ -310,14 +317,16 @@ export default function BorrowingScreen() {
                 <TrendingUp size={16} color={colors.success} />
               </View>
               <Text style={styles.summaryLabel} numberOfLines={1}>
-                Owed to Me
+                {t("finance.borrowing.mobile.owedToMe")}
               </Text>
             </View>
             <MonoAmount size="md" color={colors.success} numberOfLines={1}>
               {formatAmount(totalLentCents, baseCurrency)}
             </MonoAmount>
             <Text style={styles.summarySubtext}>
-              {tabCounts.lent} active lend(s)
+              {t("finance.borrowing.mobile.activeLends", {
+                count: tabCounts.lent,
+              })}
             </Text>
           </Card>
 
@@ -333,14 +342,16 @@ export default function BorrowingScreen() {
                 <TrendingDown size={16} color={colors.warning} />
               </View>
               <Text style={styles.summaryLabel} numberOfLines={1}>
-                I Owe
+                {t("finance.borrowing.mobile.iOwe")}
               </Text>
             </View>
             <MonoAmount size="md" color={colors.warning} numberOfLines={1}>
               {formatAmount(totalBorrowedCents, baseCurrency)}
             </MonoAmount>
             <Text style={styles.summarySubtext}>
-              {tabCounts.borrowed} active loan(s)
+              {t("finance.borrowing.mobile.activeLoans", {
+                count: tabCounts.borrowed,
+              })}
             </Text>
           </Card>
         </View>
@@ -357,11 +368,13 @@ export default function BorrowingScreen() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.netCardLabel}>NET POSITION</Text>
+              <Text style={styles.netCardLabel}>
+                {t("finance.borrowing.mobile.netPosition").toUpperCase()}
+              </Text>
               <Text style={styles.netCardSublabel}>
                 {netPositionCents >= 0
-                  ? "Net Creditor • You are owed more than you owe"
-                  : "Net Debtor • You owe more than you are owed"}
+                  ? t("finance.borrowing.mobile.netCreditor")
+                  : t("finance.borrowing.mobile.netDebtor")}
               </Text>
             </View>
             <MonoAmount
@@ -400,7 +413,9 @@ export default function BorrowingScreen() {
                   activeTab === "ALL" && styles.filterTabTextActive,
                 ]}
               >
-                All ({tabCounts.all})
+                {t("finance.borrowing.mobile.tabAll", {
+                  count: tabCounts.all,
+                })}
               </Text>
             </TouchableOpacity>
 
@@ -421,7 +436,9 @@ export default function BorrowingScreen() {
                   activeTab === "LENT" && styles.filterTabTextActive,
                 ]}
               >
-                Owed to Me ({tabCounts.lent})
+                {t("finance.borrowing.mobile.tabOwedToMe", {
+                  count: tabCounts.lent,
+                })}
               </Text>
             </TouchableOpacity>
 
@@ -442,7 +459,9 @@ export default function BorrowingScreen() {
                   activeTab === "BORROWED" && styles.filterTabTextActive,
                 ]}
               >
-                I Owe ({tabCounts.borrowed})
+                {t("finance.borrowing.mobile.tabIOwe", {
+                  count: tabCounts.borrowed,
+                })}
               </Text>
             </TouchableOpacity>
 
@@ -463,7 +482,9 @@ export default function BorrowingScreen() {
                   activeTab === "SETTLED" && styles.filterTabTextActive,
                 ]}
               >
-                Settled ({tabCounts.settled})
+                {t("finance.borrowing.mobile.tabSettled", {
+                  count: tabCounts.settled,
+                })}
               </Text>
             </TouchableOpacity>
           </ScrollView>
@@ -481,20 +502,22 @@ export default function BorrowingScreen() {
             icon={<HandCoins size={32} color={colors.textMuted} />}
             title={
               activeTab === "SETTLED"
-                ? "No settled debts"
+                ? t("finance.borrowing.mobile.emptySettledTitle")
                 : activeTab === "LENT"
-                  ? "No money lent"
+                  ? t("finance.borrowing.mobile.emptyLentTitle")
                   : activeTab === "BORROWED"
-                    ? "No money borrowed"
-                    : "No debts or loans"
+                    ? t("finance.borrowing.mobile.emptyBorrowedTitle")
+                    : t("finance.borrowing.mobile.emptyAllTitle")
             }
             description={
               activeTab === "ALL"
-                ? "Track informal lends and borrows with friends, family, and contacts."
-                : "No records found matching this filter."
+                ? t("finance.borrowing.mobile.emptyAllDesc")
+                : t("finance.borrowing.mobile.emptyFilterDesc")
             }
             actionLabel={
-              activeTab === "ALL" ? "Record Debt or Loan" : undefined
+              activeTab === "ALL"
+                ? t("finance.borrowing.recordBorrowing")
+                : undefined
             }
             onAction={
               activeTab === "ALL"
@@ -567,11 +590,16 @@ export default function BorrowingScreen() {
                             style={styles.counterpartyText}
                             numberOfLines={1}
                           >
-                            {b.counterparty || "Unknown"}
+                            {b.counterparty ||
+                              t("finance.borrowing.mobile.unknownCounterparty")}
                           </Text>
                           <Badge
                             size="sm"
-                            label={isLent ? "Owed to you" : "You owe"}
+                            label={
+                              isLent
+                                ? t("finance.borrowing.mobile.badgeOwedToYou")
+                                : t("finance.borrowing.mobile.badgeYouOwe")
+                            }
                             bg={
                               isPaid
                                 ? colors.surfaceElevated
@@ -608,7 +636,10 @@ export default function BorrowingScreen() {
 
                     {/* 3-dots native popup menu */}
                     <ActionMenu
-                      title={b.counterparty || "Agreement"}
+                      title={
+                        b.counterparty ||
+                        t("finance.borrowing.mobile.agreementFallback")
+                      }
                       colorScheme={resolvedMode}
                       style={styles.menuTriggerWrapper}
                       onPressAction={({ nativeEvent }) => {
@@ -644,7 +675,7 @@ export default function BorrowingScreen() {
                       actions={[
                         {
                           id: "details",
-                          title: "View Details",
+                          title: t("finance.borrowing.mobile.menuViewDetails"),
                           image: detailsIcon,
                         },
                         ...(!isPaid
@@ -652,25 +683,31 @@ export default function BorrowingScreen() {
                               {
                                 id: "pay",
                                 title: isLent
-                                  ? "Record Payment Received"
-                                  : "Log Repayment",
+                                  ? t(
+                                      "finance.borrowing.mobile.menuRecordPaymentReceived"
+                                    )
+                                  : t(
+                                      "finance.borrowing.mobile.menuLogRepayment"
+                                    ),
                                 image: paymentIcon,
                               },
                             ]
                           : []),
                         {
                           id: "adjust",
-                          title: "Adjust Balance",
+                          title: t("finance.borrowing.adjustBalance"),
                           image: adjustIcon,
                         },
                         {
                           id: "edit",
-                          title: "Edit Agreement",
+                          title: t("finance.borrowing.editAgreement"),
                           image: editIcon,
                         },
                         {
                           id: "delete",
-                          title: "Delete Agreement",
+                          title: t(
+                            "finance.borrowing.mobile.menuDeleteAgreement"
+                          ),
                           image: deleteIcon,
                           attributes: { destructive: true },
                         },
@@ -694,7 +731,13 @@ export default function BorrowingScreen() {
                   >
                     <View>
                       <Text style={styles.financialStatLabel}>
-                        {isPaid ? "FINAL SETTLED" : "REMAINING BALANCE"}
+                        {isPaid
+                          ? t(
+                              "finance.borrowing.mobile.finalSettled"
+                            ).toUpperCase()
+                          : t(
+                              "finance.borrowing.remainingBalance"
+                            ).toUpperCase()}
                       </Text>
                       <MonoAmount
                         size="lg"
@@ -711,7 +754,9 @@ export default function BorrowingScreen() {
                     </View>
 
                     <View style={styles.financialRightCol}>
-                      <Text style={styles.financialStatLabel}>PRINCIPAL</Text>
+                      <Text style={styles.financialStatLabel}>
+                        {t("finance.borrowing.mobile.principal").toUpperCase()}
+                      </Text>
                       <MonoAmount size="sm" color={colors.textMuted}>
                         {formatAmount(total, curr)}
                       </MonoAmount>
@@ -731,11 +776,15 @@ export default function BorrowingScreen() {
                     <View style={styles.progressHeaderRow}>
                       <Text style={styles.progressLabel}>
                         {isPaid
-                          ? "100% Repaid • Agreement Settled"
-                          : `Payoff Progress • ${percentage.toFixed(0)}%`}
+                          ? t("finance.borrowing.mobile.repaidSettled")
+                          : t("finance.borrowing.mobile.payoffProgress", {
+                              pct: percentage.toFixed(0),
+                            })}
                       </Text>
                       <Text style={styles.progressAmounts}>
-                        {formatAmount(paidAmount, curr)} paid
+                        {t("finance.borrowing.mobile.paidAmount", {
+                          amount: formatAmount(paidAmount, curr),
+                        })}
                       </Text>
                     </View>
                     <View style={styles.progressBarTrack}>
@@ -788,19 +837,29 @@ export default function BorrowingScreen() {
                             ]}
                           >
                             {isPaid
-                              ? `Due ${formatDate(b.dueAt, tz.timezone)}`
+                              ? t("finance.borrowing.mobile.dueOn", {
+                                  date: formatDate(b.dueAt, tz.timezone),
+                                })
                               : isOverdue
-                                ? `Overdue by ${Math.abs(daysDiff!)}d (${formatDate(b.dueAt, tz.timezone)})`
+                                ? t("finance.borrowing.mobile.overdueBy", {
+                                    days: Math.abs(daysDiff!),
+                                    date: formatDate(b.dueAt, tz.timezone),
+                                  })
                                 : isDueToday
-                                  ? "Due Today"
-                                  : `Due in ${daysDiff}d (${formatDate(b.dueAt, tz.timezone)})`}
+                                  ? t("finance.borrowing.mobile.dueToday")
+                                  : t("finance.borrowing.mobile.dueIn", {
+                                      days: daysDiff ?? 0,
+                                      date: formatDate(b.dueAt, tz.timezone),
+                                    })}
                           </Text>
                         </View>
                       ) : (
                         <View style={styles.dueDateWrap}>
                           <Calendar size={13} color={colors.textMuted} />
                           <Text style={styles.footerDateText}>
-                            Started {formatDate(b.establishedAt, tz.timezone)}
+                            {t("finance.borrowing.mobile.startedOn", {
+                              date: formatDate(b.establishedAt, tz.timezone),
+                            })}
                           </Text>
                         </View>
                       )}
@@ -823,7 +882,9 @@ export default function BorrowingScreen() {
                         activeOpacity={0.7}
                       >
                         <Text style={styles.quickPayBtnText}>
-                          {isLent ? "Receive" : "Repay"}
+                          {isLent
+                            ? t("finance.borrowing.mobile.quickReceive")
+                            : t("finance.borrowing.mobile.quickRepay")}
                         </Text>
                       </TouchableOpacity>
                     )}

@@ -3,6 +3,8 @@ import { StyleSheet, View, Text, TouchableOpacity, Image } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import { Landmark, CreditCard, Coins, Wallet } from "lucide-react-native"
 import { formatAmount, getInstitutionLogoUrl } from "@saturn/core"
+import { useI18n } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import type {
   Account,
   Account_InstitutionInfo,
@@ -99,6 +101,7 @@ export function CardAccountItem({
   onPress,
 }: CardAccountItemProps) {
   const styles = useThemedStyles(createStyles)
+  const { t, locale } = useI18n()
   const [logoError, setLogoError] = useState(false)
   const cardTheme = getCardTheme(acc.color)
   const isCredit = acc.type === "CREDIT_CARD"
@@ -194,14 +197,21 @@ export function CardAccountItem({
               {inst?.name || acc.name}
             </Text>
             <Text style={styles.accountTypeLabel}>
-              {acc.type.replace(/_/g, " ")}
+              {getLocalizedEnumLabel(
+                "finance",
+                "accountType",
+                acc.type,
+                locale
+              )}
             </Text>
           </View>
         </View>
 
         {acc.isDefault ? (
           <View style={styles.defaultBadge}>
-            <Text style={styles.defaultBadgeText}>DEFAULT</Text>
+            <Text style={styles.defaultBadgeText}>
+              {t("finance.accounts.card.defaultBadge")}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -216,7 +226,9 @@ export function CardAccountItem({
         {/* Upper Row: Account Name & Balance Display */}
         <View style={styles.footerRow}>
           <View style={styles.footerLeft}>
-            <Text style={styles.footerSubText}>NAME</Text>
+            <Text style={styles.footerSubText}>
+              {t("finance.accounts.card.nameLabel")}
+            </Text>
             <Text style={styles.holderName} numberOfLines={1}>
               {acc.name}
             </Text>
@@ -226,9 +238,9 @@ export function CardAccountItem({
             <Text style={[styles.footerSubText, { textAlign: "right" }]}>
               {isCredit
                 ? rawBal > 0
-                  ? "BALANCE OWED"
-                  : "CURRENT CREDIT"
-                : "BALANCE"}
+                  ? t("finance.accounts.card.balanceOwed")
+                  : t("finance.accounts.card.currentCredit")
+                : t("finance.accounts.card.balance")}
             </Text>
             <View style={styles.balanceRow}>
               <MonoAmount
@@ -270,13 +282,13 @@ export function CardAccountItem({
             {/* Subtext Row: Available & Limit */}
             <View style={styles.limitLabelsRow}>
               <Text style={styles.limitSubLabel}>
-                Available:{" "}
+                {t("finance.accounts.card.available")}{" "}
                 <Text style={styles.limitValueBold}>
                   {formatAmount(availableCents, acc.currency)}
                 </Text>
               </Text>
               <Text style={styles.limitSubLabel}>
-                Limit:{" "}
+                {t("finance.accounts.card.limit")}{" "}
                 <Text style={styles.limitValueBold}>
                   {formatAmount(limit, acc.currency)}
                 </Text>

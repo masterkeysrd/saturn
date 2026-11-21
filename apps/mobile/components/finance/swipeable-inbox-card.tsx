@@ -36,7 +36,7 @@ import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import {
   canQuickApproveInboxItem,
-  getInboxDocTypeLabel,
+  getInboxDocTypeLabelKey,
   resolveInboxTransactionType,
 } from "@/lib/inbox-triage"
 import { Badge } from "@/components/ui/badge"
@@ -158,7 +158,7 @@ export function SwipeableInboxCard({
   const txnType = resolveInboxTransactionType(item)
   const readyForQuickApprove = canQuickApproveInboxItem(item)
   const hasDuplicate = Boolean(item.metadata?.potential_duplicate_id)
-  const docTypeLabel = getInboxDocTypeLabel(item.docType)
+  const docTypeLabel = t(getInboxDocTypeLabelKey(item.docType))
   const currency = item.currency || baseCurrency || "USD"
 
   const dateLabel = item.transactionDate
@@ -167,7 +167,7 @@ export function SwipeableInboxCard({
         day: "numeric",
         year: "numeric",
       })
-    : "No date"
+    : t("finance.inbox.card.noDate")
 
   const budgetColors = budget
     ? getBudgetColors(budget.color || "indigo")
@@ -233,7 +233,7 @@ export function SwipeableInboxCard({
           <View style={styles.topRow}>
             <View style={styles.vendorCol}>
               <Text style={styles.vendorName} numberOfLines={1}>
-                {item.vendorName || "Unknown Vendor"}
+                {item.vendorName || t("finance.inbox.unknownVendor")}
               </Text>
               <Text style={styles.dateText}>{dateLabel}</Text>
             </View>
@@ -266,10 +266,10 @@ export function SwipeableInboxCard({
               }
               label={
                 txnType === "INCOME"
-                  ? "Income"
+                  ? t("finance.inbox.sheet.flowIncome")
                   : txnType === "TRANSFER"
-                    ? "Transfer"
-                    : "Expense"
+                    ? t("finance.inbox.sheet.flowTransfer")
+                    : t("finance.inbox.sheet.flowExpense")
               }
             />
             {hasDuplicate && (
@@ -277,7 +277,7 @@ export function SwipeableInboxCard({
                 size="sm"
                 variant="warning"
                 icon={<AlertTriangle size={11} color={colors.warning} />}
-                label="Duplicate?"
+                label={t("finance.inbox.card.badgeDuplicate")}
               />
             )}
           </View>
@@ -317,7 +317,7 @@ export function SwipeableInboxCard({
                   ]}
                   numberOfLines={1}
                 >
-                  {budget ? budget.name : "Assign Budget"}
+                  {budget ? budget.name : t("finance.inbox.card.assignBudget")}
                 </Text>
                 <ChevronDown
                   size={12}
@@ -344,7 +344,7 @@ export function SwipeableInboxCard({
                 color={account ? colors.primary : colors.textMuted}
               />
               <Text style={styles.assignChipText} numberOfLines={1}>
-                {account ? account.name : "Assign Account"}
+                {account ? account.name : t("finance.inbox.card.assignAccount")}
               </Text>
               <ChevronDown size={12} color={colors.textMuted} />
             </TouchableOpacity>
@@ -363,7 +363,10 @@ export function SwipeableInboxCard({
                 style={styles.discardBtn}
                 testID={`inbox-discard-btn-${item.id}`}
                 accessibilityRole="button"
-                accessibilityLabel={`Discard ${item.vendorName || "item"}`}
+                accessibilityLabel={t("finance.inbox.aria.discardItem", {
+                  name:
+                    item.vendorName || t("finance.inbox.toast.itemFallback"),
+                })}
               >
                 <Trash2 size={14} color={colors.destructive} />
                 <Text style={styles.discardBtnText}>{t("common.discard")}</Text>
@@ -381,8 +384,16 @@ export function SwipeableInboxCard({
                 accessibilityRole="button"
                 accessibilityLabel={
                   readyForQuickApprove
-                    ? `Approve ${item.vendorName || "item"}`
-                    : `Review and approve ${item.vendorName || "item"}`
+                    ? t("finance.inbox.aria.approveItem", {
+                        name:
+                          item.vendorName ||
+                          t("finance.inbox.toast.itemFallback"),
+                      })
+                    : t("finance.inbox.aria.reviewApproveItem", {
+                        name:
+                          item.vendorName ||
+                          t("finance.inbox.toast.itemFallback"),
+                      })
                 }
               >
                 <Check
@@ -401,7 +412,7 @@ export function SwipeableInboxCard({
                 >
                   {readyForQuickApprove
                     ? t("common.approve")
-                    : "Review & Approve"}
+                    : t("finance.inbox.card.reviewAndApprove")}
                 </Text>
               </TouchableOpacity>
             </View>

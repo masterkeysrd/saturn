@@ -26,8 +26,8 @@ import {
   type Budget,
   type Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { formatAmount, groupTransactionsByDate } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { formatAmount } from "@saturn/core"
+import { useDateSections, useI18n } from "@saturn/hooks"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
@@ -43,7 +43,7 @@ export default function AccountDetailScreen() {
   const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
   const { activeSpaceId } = useSpace()
-  const tz = useTimezone()
+  const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
   const [refreshing, setRefreshing] = useState(false)
@@ -123,10 +123,7 @@ export default function AccountDetailScreen() {
     [txnsData?.transactions]
   )
 
-  const sections = useMemo(
-    () => groupTransactionsByDate(transactions, tz.timezone),
-    [transactions, tz.timezone]
-  )
+  const sections = useDateSections(transactions)
 
   const handleRefresh = async () => {
     haptics.light()
@@ -150,16 +147,20 @@ export default function AccountDetailScreen() {
     return (
       <View style={styles.errorContainer}>
         <AlertCircle size={36} color={colors.destructive} />
-        <Text style={styles.errorTitle}>Account Not Found</Text>
+        <Text style={styles.errorTitle}>
+          {t("finance.accounts.mobile.notFoundTitle")}
+        </Text>
         <Text style={styles.errorSubtitle}>
-          The requested financial account could not be loaded.
+          {t("finance.accounts.mobile.notFoundSubtitle")}
         </Text>
         <TouchableOpacity
           style={styles.backToAccountsBtn}
           onPress={() => router.replace("/(app)/finance/accounts")}
           activeOpacity={0.7}
         >
-          <Text style={styles.backToAccountsText}>Back to Accounts</Text>
+          <Text style={styles.backToAccountsText}>
+            {t("finance.accounts.mobile.backToAccounts")}
+          </Text>
         </TouchableOpacity>
       </View>
     )
@@ -215,7 +216,9 @@ export default function AccountDetailScreen() {
           <View style={[styles.actionIconWrap, styles.iconTransfer]}>
             <ArrowRightLeft size={18} color={colors.primary} />
           </View>
-          <Text style={styles.actionBtnText}>Transfer</Text>
+          <Text style={styles.actionBtnText}>
+            {t("finance.reconcile.row.transfer")}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -231,7 +234,9 @@ export default function AccountDetailScreen() {
           <View style={[styles.actionIconWrap, styles.iconAdjust]}>
             <Scale size={18} color={colors.success} />
           </View>
-          <Text style={styles.actionBtnText}>Adjust Balance</Text>
+          <Text style={styles.actionBtnText}>
+            {t("finance.accounts.card.adjust")}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -250,7 +255,9 @@ export default function AccountDetailScreen() {
           <View style={[styles.actionIconWrap, styles.iconExpense]}>
             <Plus size={18} color={colors.destructive} />
           </View>
-          <Text style={styles.actionBtnText}>Add Tx</Text>
+          <Text style={styles.actionBtnText}>
+            {t("finance.accounts.mobile.addTx")}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -266,12 +273,14 @@ export default function AccountDetailScreen() {
           <View style={[styles.actionIconWrap, styles.iconEdit]}>
             <Edit3 size={18} color={colors.textPrimary} />
           </View>
-          <Text style={styles.actionBtnText}>Edit</Text>
+          <Text style={styles.actionBtnText}>{t("common.edit")}</Text>
         </TouchableOpacity>
       </View>
 
       <Caption style={styles.ledgerHeader}>
-        ACCOUNT LEDGER ({transactions.length})
+        {t("finance.accounts.mobile.accountLedger", {
+          count: transactions.length,
+        })}
       </Caption>
     </View>
   )
@@ -286,7 +295,7 @@ export default function AccountDetailScreen() {
                 unstable_headerRightItems: () => [
                   {
                     type: "button",
-                    label: "Edit",
+                    label: t("common.edit"),
                     onPress: () => {
                       haptics.light()
                       router.push({
@@ -310,7 +319,9 @@ export default function AccountDetailScreen() {
                     style={styles.headerEditBtn}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <Text style={styles.headerEditBtnText}>Edit</Text>
+                    <Text style={styles.headerEditBtnText}>
+                      {t("common.edit")}
+                    </Text>
                   </TouchableOpacity>
                 ),
               }),
@@ -363,8 +374,8 @@ export default function AccountDetailScreen() {
               <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
                 <EmptyState
                   icon={<ReceiptText size={28} color={colors.textMuted} />}
-                  title="No transactions found"
-                  description="Transactions booked under this account will appear here."
+                  title={t("finance.transactions.list.emptyTitle")}
+                  description={t("finance.accounts.mobile.ledgerEmptyDesc")}
                 />
               </View>
             )
@@ -483,5 +494,6 @@ const createStyles = (t: SaturnMobileTheme) => ({
     marginTop: 20,
     marginBottom: 8,
     letterSpacing: 0.6,
+    textTransform: "uppercase" as const,
   },
 })

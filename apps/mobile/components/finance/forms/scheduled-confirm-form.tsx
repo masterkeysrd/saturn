@@ -28,7 +28,7 @@ import {
   getCurrencySymbol,
   getScheduledDisplayName,
 } from "@saturn/core"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
 import {
   useConfirmScheduledTransactionMutation,
   type Budget,
@@ -81,6 +81,7 @@ export function ScheduledConfirmForm({
   onAccountChange,
 }: ScheduledConfirmFormProps) {
   const { colors, getBudgetColors } = useTheme()
+  const { t } = useI18n()
   const formStyles = useFormStyles()
   const insets = useSafeAreaInsets()
   const toast = useToast()
@@ -216,7 +217,7 @@ export function ScheduledConfirmForm({
   const onSubmit = async (values: ConfirmTransactionFormValues) => {
     if (!currentScheduled?.id) {
       haptics.error()
-      setSubmissionError("Please select a pending scheduled item to confirm.")
+      setSubmissionError(t("finance.recurring.confirm.selectScheduledRequired"))
       return
     }
 
@@ -245,8 +246,10 @@ export function ScheduledConfirmForm({
 
       toast.show({
         type: "success",
-        title: "Scheduled Bill Confirmed",
-        message: `Cleared scheduled item for ${currentSymbol}${amountDecimal}`,
+        title: t("finance.recurring.confirm.toastConfirmedTitle"),
+        message: t("finance.recurring.confirm.toastConfirmedDesc", {
+          amount: `${currentSymbol}${amountDecimal}`,
+        }),
       })
 
       await invalidateFinanceQueries(queryClient)
@@ -256,7 +259,7 @@ export function ScheduledConfirmForm({
       const errMsg =
         err instanceof Error
           ? err.message
-          : "An unexpected error occurred while saving."
+          : t("finance.budgets.unexpectedError")
       setSubmissionError(errMsg)
     }
   }
@@ -286,11 +289,13 @@ export function ScheduledConfirmForm({
             <CalendarClock size={20} color={colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={formStyles.specialSelectorLabel}>Scheduled Item</Text>
+            <Text style={formStyles.specialSelectorLabel}>
+              {t("finance.recurring.confirm.scheduledItemLabel")}
+            </Text>
             <Text style={formStyles.specialSelectorValue} numberOfLines={1}>
               {currentScheduled
-                ? `${getScheduledDisplayName(currentScheduled, recurringTemplates)} • Due ${formatAmount(currentScheduled.amount, currentCurrency)}`
-                : "Select scheduled item..."}
+                ? `${getScheduledDisplayName(currentScheduled, recurringTemplates)} • ${t("finance.transactions.scheduled.dueOn", { date: formatAmount(currentScheduled.amount, currentCurrency) })}`
+                : t("finance.recurring.confirm.selectScheduledItem")}
             </Text>
           </View>
           <ChevronRight size={16} color={colors.textMuted} />
@@ -303,6 +308,7 @@ export function ScheduledConfirmForm({
           currency={currentCurrency}
           currencySymbol={currentSymbol}
           currencyDisabled
+          label={t("finance.transactions.scheduled.actualAmount").toUpperCase()}
           accentColor={colors.accent}
           autoFocus
         />
@@ -322,7 +328,9 @@ export function ScheduledConfirmForm({
               >
                 <View style={formStyles.formRowLabelGroup}>
                   <Tag size={16} color={colors.textMuted} />
-                  <Text style={formStyles.formRowLabel}>Budget</Text>
+                  <Text style={formStyles.formRowLabel}>
+                    {t("finance.recurring.confirm.budgetCategory")}
+                  </Text>
                 </View>
                 <View style={formStyles.formRowValueGroup}>
                   {selectedBudget ? (
@@ -353,7 +361,7 @@ export function ScheduledConfirmForm({
                     </View>
                   ) : (
                     <Text style={formStyles.placeholderText}>
-                      Select a budget
+                      {t("finance.recurring.sheet.budgetPlaceholder")}
                     </Text>
                   )}
                   <ChevronRight size={14} color={colors.textMuted} />
@@ -387,7 +395,7 @@ export function ScheduledConfirmForm({
 
           {/* Field: Account */}
           <AccountRow
-            label="Paid via Account"
+            label={t("finance.recurring.confirm.paidViaAccount")}
             account={selectedAccount}
             error={errors.accountId?.message}
             onPress={() => {
@@ -401,9 +409,9 @@ export function ScheduledConfirmForm({
           <FormRowInput
             control={control}
             name="description"
-            label="Description"
+            label={t("finance.recurring.confirm.descriptionNotes")}
             icon={<FileText size={16} color={colors.textMuted} />}
-            placeholder="e.g. Netflix Monthly, Internet Bill"
+            placeholder={t("finance.recurring.confirm.descriptionPlaceholder")}
             returnKeyType="done"
           />
 
@@ -412,7 +420,7 @@ export function ScheduledConfirmForm({
           <FormDateRow
             control={control}
             name="transactionDate"
-            label="Cleared Date"
+            label={t("finance.recurring.confirm.dateCleared")}
           />
         </Card>
 
@@ -438,7 +446,7 @@ export function ScheduledConfirmForm({
           loading={isSubmitting}
           onPress={handleSubmit(onSubmit)}
         >
-          {`Confirm Payment • ${currentSymbol}${amountDecimal}`}
+          {`${t("finance.recurring.confirm.confirmPayment")} • ${currentSymbol}${amountDecimal}`}
         </Button>
       </View>
 

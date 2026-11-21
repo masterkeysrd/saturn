@@ -167,15 +167,24 @@ export function UpcomingBillsWidget() {
                     {getScheduledDisplayName(item, recurringTemplates)}
                   </Text>
                   {isOverdue ? (
-                    <Badge variant="destructive" size="sm" label="Overdue" />
+                    <Badge
+                      variant="destructive"
+                      size="sm"
+                      label={t("dashboard.widget.upcoming_bills.overdue")}
+                    />
                   ) : isDueToday ? (
-                    <Badge variant="warning" size="sm" label="Due today" />
+                    <Badge
+                      variant="warning"
+                      size="sm"
+                      label={t("finance.tab.dueToday")}
+                    />
                   ) : (
                     <Text style={styles.dueText}>
-                      Due{" "}
-                      {tz.formatDate(item.dueDate, {
-                        month: "short",
-                        day: "numeric",
+                      {t("dashboard.widget.upcoming_bills.dueLabel", {
+                        date: tz.formatDate(item.dueDate, {
+                          month: "short",
+                          day: "numeric",
+                        }),
                       })}
                     </Text>
                   )}

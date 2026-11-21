@@ -375,20 +375,23 @@ export default function FinanceHubScreen() {
     if (diffDays < 0) {
       const absDays = Math.abs(diffDays)
       return {
-        label: absDays === 1 ? "Overdue · 1d" : `Overdue · ${absDays}d`,
+        label: t("finance.tab.overdueBadge", { days: absDays }),
         isOverdue: true,
         isToday: false,
       }
     }
     if (diffDays === 0) {
       return {
-        label: "Due today",
+        label: t("finance.tab.dueToday"),
         isOverdue: false,
         isToday: true,
       }
     }
     return {
-      label: diffDays === 1 ? "Due tomorrow" : `In ${diffDays}d`,
+      label:
+        diffDays === 1
+          ? t("finance.tab.dueTomorrow")
+          : t("finance.tab.dueBadge", { days: diffDays }),
       isOverdue: false,
       isToday: false,
     }
@@ -397,12 +400,12 @@ export default function FinanceHubScreen() {
   const promptSkipScheduled = (st: ScheduledTransaction) => {
     const title = getScheduledDisplayName(st, recurringTemplates)
     Alert.alert(
-      "Skip Scheduled Cycle?",
-      `Are you sure you want to skip this cycle for "${title}"?`,
+      t("finance.tab.skipCycleConfirmTitle"),
+      t("finance.tab.skipCycleConfirmDesc", { name: title }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Skip",
+          text: t("finance.inbox.actions.skip"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -412,16 +415,17 @@ export default function FinanceHubScreen() {
               })
               haptics.success()
               toast.show({
-                title: "Cycle Skipped",
-                message: "The scheduled cycle was skipped.",
+                title: t("finance.tab.cycleSkipped"),
+                message: t("finance.tab.cycleSkippedDesc"),
                 type: "info",
               })
               await handleRefresh()
             } catch (err: any) {
               haptics.error()
               toast.show({
-                title: "Failed to Skip",
-                message: err?.message || "Could not skip cycle.",
+                title: t("finance.tab.cycleSkipFailed"),
+                message:
+                  err?.message || t("finance.tab.cycleSkipFailedDefault"),
                 type: "error",
               })
             }
@@ -474,7 +478,7 @@ export default function FinanceHubScreen() {
             onPress={() => navigateTo("/(app)/finance/transactions")}
           >
             <ReceiptText size={15} color={colors.primary} />
-            <Text style={styles.navPillText}>Transactions</Text>
+            <Text style={styles.navPillText}>{t("nav.transactions")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -483,7 +487,7 @@ export default function FinanceHubScreen() {
             onPress={() => navigateTo("/(app)/finance/budgets")}
           >
             <PiggyBank size={15} color={colors.accent} />
-            <Text style={styles.navPillText}>Budgets</Text>
+            <Text style={styles.navPillText}>{t("nav.budgets")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -492,7 +496,7 @@ export default function FinanceHubScreen() {
             onPress={() => navigateTo("/(app)/finance/accounts")}
           >
             <Landmark size={15} color={colors.success} />
-            <Text style={styles.navPillText}>Accounts</Text>
+            <Text style={styles.navPillText}>{t("nav.accounts")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -501,7 +505,9 @@ export default function FinanceHubScreen() {
             onPress={() => navigateTo("/(app)/finance/recurring")}
           >
             <CalendarClock size={15} color={colors.warning} />
-            <Text style={styles.navPillText}>Recurring</Text>
+            <Text style={styles.navPillText}>
+              {t("finance.tab.recurringPill")}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -510,7 +516,9 @@ export default function FinanceHubScreen() {
             onPress={() => navigateTo("/(app)/finance/borrowing")}
           >
             <HandCoins size={15} color={colors.primary} />
-            <Text style={styles.navPillText}>Borrowing</Text>
+            <Text style={styles.navPillText}>
+              {t("finance.tab.borrowingPill")}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -520,7 +528,9 @@ export default function FinanceHubScreen() {
             testID="finance-pill-review"
           >
             <Inbox size={15} color={colors.brandSecondary} />
-            <Text style={styles.navPillText}>Review</Text>
+            <Text style={styles.navPillText}>
+              {t("finance.tab.reviewPill")}
+            </Text>
             {pendingInboxCount > 0 && (
               <Badge
                 variant="primary"
@@ -545,11 +555,13 @@ export default function FinanceHubScreen() {
             <View style={styles.inboxBannerTextContainer}>
               <Text style={styles.inboxBannerTitle}>
                 {pendingInboxCount === 1
-                  ? "1 Pending Inbox Item"
-                  : `${pendingInboxCount} Pending Inbox Items`}
+                  ? t("finance.tab.pendingInboxOne")
+                  : t("finance.tab.pendingInboxMany", {
+                      count: pendingInboxCount,
+                    })}
               </Text>
               <Text style={styles.inboxBannerSubtitle}>
-                Tap to review and approve into your ledger
+                {t("finance.tab.pendingInboxSubtitle")}
               </Text>
             </View>
             <ChevronRight size={16} color={colors.textMuted} />
@@ -561,14 +573,18 @@ export default function FinanceHubScreen() {
           <View style={styles.netWorthHeader}>
             <View style={styles.netWorthHeaderLeft}>
               <Wallet size={15} color={colors.primary} />
-              <Caption style={styles.netWorthTitle}>NET LIQUIDITY</Caption>
+              <Caption style={styles.netWorthTitle}>
+                {t("finance.tab.netLiquidity")}
+              </Caption>
             </View>
             <TouchableOpacity
               style={styles.seeAllBtn}
               activeOpacity={0.7}
               onPress={() => navigateTo("/(app)/finance/accounts")}
             >
-              <Text style={styles.seeAllText}>Accounts</Text>
+              <Text style={styles.seeAllText}>
+                {t("finance.tab.accountsSection")}
+              </Text>
               <ChevronRight size={13} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
@@ -579,7 +595,7 @@ export default function FinanceHubScreen() {
 
           <View style={styles.assetsLiabilitiesRow}>
             <View style={styles.assetItem}>
-              <Caption>Total Assets</Caption>
+              <Caption>{t("finance.tab.totalAssets")}</Caption>
               <MonoAmount size="sm" color={colors.success}>
                 +{formatAmount(String(metrics.totalAssetsCents), baseCurrency)}
               </MonoAmount>
@@ -591,7 +607,7 @@ export default function FinanceHubScreen() {
               onPress={() => navigateTo("/(app)/finance/borrowing")}
             >
               <View style={styles.assetItemHeader}>
-                <Caption>Total Debt</Caption>
+                <Caption>{t("finance.accounts.totalDebt")}</Caption>
                 <ChevronRight size={11} color={colors.textMuted} />
               </View>
               <MonoAmount size="sm" color={colors.destructive}>
@@ -608,7 +624,9 @@ export default function FinanceHubScreen() {
         {/* Section 1: Recent Transactions Preview */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Caption style={styles.sectionHeader}>RECENT TRANSACTIONS</Caption>
+            <Caption style={styles.sectionHeader}>
+              {t("finance.tab.recentTransactions")}
+            </Caption>
             <TouchableOpacity
               style={styles.seeAllBtn}
               activeOpacity={0.7}
@@ -623,7 +641,9 @@ export default function FinanceHubScreen() {
             <SkeletonCard />
           ) : transactions.length === 0 ? (
             <Card style={styles.emptyCard}>
-              <Text style={styles.emptyText}>No recent transactions</Text>
+              <Text style={styles.emptyText}>
+                {t("finance.tab.emptyRecentTx")}
+              </Text>
               <TouchableOpacity
                 style={styles.emptyActionBtn}
                 activeOpacity={0.7}
@@ -633,7 +653,9 @@ export default function FinanceHubScreen() {
                 }}
               >
                 <Plus size={14} color={colors.primary} />
-                <Text style={styles.emptyActionText}>Add Transaction</Text>
+                <Text style={styles.emptyActionText}>
+                  {t("finance.tab.addTransaction")}
+                </Text>
               </TouchableOpacity>
             </Card>
           ) : (
@@ -664,7 +686,9 @@ export default function FinanceHubScreen() {
                 }}
               >
                 <Plus size={14} color={colors.primary} />
-                <Text style={styles.cardFooterActionText}>Add Transaction</Text>
+                <Text style={styles.cardFooterActionText}>
+                  {t("finance.tab.addTransaction")}
+                </Text>
               </TouchableOpacity>
             </Card>
           )}
@@ -673,7 +697,9 @@ export default function FinanceHubScreen() {
         {/* Section 2: Accounts Summary Preview */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Caption style={styles.sectionHeader}>ACCOUNTS SUMMARY</Caption>
+            <Caption style={styles.sectionHeader}>
+              {t("finance.tab.accountsSummary")}
+            </Caption>
             <TouchableOpacity
               style={styles.seeAllBtn}
               activeOpacity={0.7}
@@ -688,7 +714,9 @@ export default function FinanceHubScreen() {
             <SkeletonCard height={190} />
           ) : accounts.length === 0 ? (
             <Card style={styles.emptyCard}>
-              <Text style={styles.emptyText}>No accounts connected</Text>
+              <Text style={styles.emptyText}>
+                {t("finance.tab.emptyAccounts")}
+              </Text>
             </Card>
           ) : (
             <ScrollView
@@ -744,7 +772,9 @@ export default function FinanceHubScreen() {
         {/* Section 3: Budget Health Overview */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Caption style={styles.sectionHeader}>BUDGET HEALTH</Caption>
+            <Caption style={styles.sectionHeader}>
+              {t("finance.tab.budgetHealth")}
+            </Caption>
             <TouchableOpacity
               style={styles.seeAllBtn}
               activeOpacity={0.7}
@@ -759,7 +789,9 @@ export default function FinanceHubScreen() {
             <SkeletonCard height={140} />
           ) : !budgetStats.hasBudgets ? (
             <Card style={styles.emptyCard}>
-              <Text style={styles.emptyText}>No active budgets configured</Text>
+              <Text style={styles.emptyText}>
+                {t("finance.tab.emptyBudgets")}
+              </Text>
             </Card>
           ) : (
             <Card
@@ -772,7 +804,7 @@ export default function FinanceHubScreen() {
                   <View style={styles.budgetStatsLabelRow}>
                     <PiggyBank size={15} color={colors.accent} />
                     <Caption style={styles.budgetStatsCaption}>
-                      TOTAL SPENT THIS MONTH
+                      {t("finance.tab.totalSpentThisMonth").toUpperCase()}
                     </Caption>
                   </View>
                   <View style={styles.budgetStatsAmountRow}>
@@ -784,11 +816,12 @@ export default function FinanceHubScreen() {
                     </MonoAmount>
                     <Text style={styles.budgetStatsLimitText}>
                       {" "}
-                      of{" "}
-                      {formatAmount(
-                        String(budgetStats.totalLimitCents),
-                        baseCurrency
-                      )}
+                      {t("finance.tab.ofLimit", {
+                        amount: formatAmount(
+                          String(budgetStats.totalLimitCents),
+                          baseCurrency
+                        ),
+                      })}
                     </Text>
                   </View>
                 </View>
@@ -842,8 +875,8 @@ export default function FinanceHubScreen() {
                 <View style={styles.budgetStatsRemaining}>
                   <Caption>
                     {budgetStats.isOver
-                      ? "Over budget by"
-                      : "Remaining allowance"}
+                      ? t("finance.tab.overBudgetBy")
+                      : t("finance.tab.remainingAllowance")}
                   </Caption>
                   <MonoAmount
                     size="sm"
@@ -875,7 +908,9 @@ export default function FinanceHubScreen() {
                         ]}
                       />
                       <Text style={styles.healthPillText}>
-                        {budgetStats.onTrackCount} on track
+                        {t("finance.tab.onTrackLabel", {
+                          count: budgetStats.onTrackCount,
+                        })}
                       </Text>
                     </View>
                   )}
@@ -888,7 +923,9 @@ export default function FinanceHubScreen() {
                         ]}
                       />
                       <Text style={styles.healthPillText}>
-                        {budgetStats.warningCount} warning
+                        {t("finance.tab.warningLabel", {
+                          count: budgetStats.warningCount,
+                        })}
                       </Text>
                     </View>
                   )}
@@ -901,7 +938,9 @@ export default function FinanceHubScreen() {
                         ]}
                       />
                       <Text style={styles.healthPillText}>
-                        {budgetStats.overCount} over
+                        {t("finance.tab.overLabel", {
+                          count: budgetStats.overCount,
+                        })}
                       </Text>
                     </View>
                   )}
@@ -934,20 +973,21 @@ export default function FinanceHubScreen() {
                       ]}
                       numberOfLines={1}
                     >
-                      {budgetStats.topCritical.budgetName} is at{" "}
-                      {Math.round(budgetStats.topCritical.usagePercentage || 0)}
-                      % (
-                      {formatAmount(
-                        budgetStats.topCritical.spentInBase ||
-                          budgetStats.topCritical.spent,
-                        baseCurrency
-                      )}{" "}
-                      of{" "}
-                      {formatAmount(
-                        budgetStats.topCritical.limit,
-                        baseCurrency
-                      )}
-                      )
+                      {t("finance.tab.criticalCallout", {
+                        name: budgetStats.topCritical.budgetName,
+                        pct: Math.round(
+                          budgetStats.topCritical.usagePercentage || 0
+                        ),
+                        spent: formatAmount(
+                          budgetStats.topCritical.spentInBase ||
+                            budgetStats.topCritical.spent,
+                          baseCurrency
+                        ),
+                        limit: formatAmount(
+                          budgetStats.topCritical.limit,
+                          baseCurrency
+                        ),
+                      })}
                     </Text>
                   </View>
                   <ChevronRight size={13} color={colors.textMuted} />
@@ -961,7 +1001,7 @@ export default function FinanceHubScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Caption style={styles.sectionHeader}>
-              PENDING SCHEDULED ({scheduledList.length})
+              {t("finance.tab.pendingScheduled")} ({scheduledList.length})
             </Caption>
             <TouchableOpacity
               style={styles.seeAllBtn}
@@ -978,7 +1018,7 @@ export default function FinanceHubScreen() {
           ) : scheduledList.length === 0 ? (
             <Card style={styles.emptyCard}>
               <Text style={styles.emptyText}>
-                No pending scheduled transactions
+                {t("finance.tab.emptyScheduled")}
               </Text>
             </Card>
           ) : (
@@ -1054,14 +1094,16 @@ export default function FinanceHubScreen() {
                             <View style={styles.badgeRow}>
                               {st.dueDate ? (
                                 <Text style={styles.txMeta} numberOfLines={1}>
-                                  Due {formatDate(st.dueDate)}
+                                  {t("finance.transactions.scheduled.dueOn", {
+                                    date: formatDate(st.dueDate),
+                                  })}
                                 </Text>
                               ) : null}
                               {isIncome ? (
                                 <Badge
                                   size="sm"
                                   variant="success"
-                                  label="Deposit due"
+                                  label={t("finance.tab.depositDue")}
                                 />
                               ) : dueBadge ? (
                                 <Badge
@@ -1103,13 +1145,15 @@ export default function FinanceHubScreen() {
                           {
                             id: "confirm",
                             title: isIncome
-                              ? "Confirm Deposit"
-                              : "Confirm / Pay",
+                              ? t(
+                                  "finance.transactions.scheduled.confirmDeposit"
+                                )
+                              : t("finance.tab.confirmPay"),
                             image: isIncome ? depositIcon : confirmIcon,
                           },
                           {
                             id: "skip",
-                            title: "Skip Cycle",
+                            title: t("finance.recurring.skipCycle"),
                             attributes: {
                               destructive: true,
                             },
@@ -1132,7 +1176,7 @@ export default function FinanceHubScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Caption style={styles.sectionHeader}>
-              DEBTS & LOANS ({borrowingsList.length})
+              {t("finance.tab.debtsAndLoans")} ({borrowingsList.length})
             </Caption>
             <TouchableOpacity
               style={styles.seeAllBtn}
@@ -1148,7 +1192,9 @@ export default function FinanceHubScreen() {
             <SkeletonCard />
           ) : borrowingsList.length === 0 ? (
             <Card style={styles.emptyCard}>
-              <Text style={styles.emptyText}>No active debts or loans</Text>
+              <Text style={styles.emptyText}>
+                {t("finance.tab.emptyDebts")}
+              </Text>
             </Card>
           ) : (
             <Card style={styles.listCard}>
@@ -1195,7 +1241,8 @@ export default function FinanceHubScreen() {
                         <View style={styles.itemInfo}>
                           <View style={styles.itemTopRow}>
                             <Text style={styles.txName} numberOfLines={1}>
-                              {b.counterparty || "Borrowing"}
+                              {b.counterparty ||
+                                t("finance.tab.borrowingFallback")}
                             </Text>
                             <MonoAmount
                               size="sm"
@@ -1214,11 +1261,17 @@ export default function FinanceHubScreen() {
                             <Badge
                               size="sm"
                               variant={isLent ? "success" : "destructive"}
-                              label={isLent ? "Owed to you" : "You owe"}
+                              label={
+                                isLent
+                                  ? t("finance.tab.owedToYou")
+                                  : t("finance.tab.youOwe")
+                              }
                             />
                             {b.dueAt ? (
                               <Text style={styles.txMeta} numberOfLines={1}>
-                                Due {formatDate(b.dueAt)}
+                                {t("finance.transactions.scheduled.dueOn", {
+                                  date: formatDate(b.dueAt),
+                                })}
                               </Text>
                             ) : null}
                           </View>
@@ -1227,7 +1280,9 @@ export default function FinanceHubScreen() {
                     </TouchableOpacity>
 
                     <ActionMenu
-                      title={b.counterparty || "Borrowing"}
+                      title={
+                        b.counterparty || t("finance.tab.borrowingFallback")
+                      }
                       colorScheme={resolvedMode}
                       style={styles.menuTriggerWrapper}
                       onPressAction={({ nativeEvent }) => {
@@ -1252,13 +1307,13 @@ export default function FinanceHubScreen() {
                         {
                           id: "pay",
                           title: isLent
-                            ? "Record Payment Received"
-                            : "Log Repayment",
+                            ? t("finance.tab.recordPaymentReceived")
+                            : t("finance.tab.logRepayment"),
                           image: paymentIcon,
                         },
                         {
                           id: "details",
-                          title: "View Details",
+                          title: t("finance.borrowing.viewDetails"),
                           image: detailsIcon,
                         },
                       ]}
@@ -1279,14 +1334,14 @@ export default function FinanceHubScreen() {
         <>
           <QuickCaptureFab
             testID="finance-fab-add"
-            accessibilityLabel="Add transaction"
-            accessibilityHint="Tap to record an expense, or long press for more finance actions"
+            accessibilityLabel={t("finance.tab.addTransactionAria")}
+            accessibilityHint={t("finance.tab.addTransactionHint")}
             onPress={() => router.push("/modal/add-transaction?type=EXPENSE")}
             onLongPress={() => quickActionsRef.current?.expand()}
           />
           <QuickCaptureSheet
             ref={quickActionsRef}
-            title="Finance Quick Actions"
+            title={t("finance.tab.financeQuickActions")}
             actions={financeQuickActions}
             onClose={() => quickActionsRef.current?.close()}
           />
@@ -1378,6 +1433,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
   netWorthTitle: {
     letterSpacing: 0.8,
     fontWeight: "600" as const,
+    textTransform: "uppercase" as const,
   },
   netWorthAmount: {
     marginTop: 2,
@@ -1415,6 +1471,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   sectionHeader: {
     letterSpacing: 0.8,
+    textTransform: "uppercase" as const,
   },
   seeAllBtn: {
     flexDirection: "row" as const,

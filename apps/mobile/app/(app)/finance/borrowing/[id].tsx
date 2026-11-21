@@ -43,13 +43,17 @@ import {
 } from "@saturn/api/saturn/finance/v1/finance"
 import {
   formatAmount,
-  groupTransactionsByDate,
   parseDate,
   getStartOfDay,
   getTimezoneParts,
   formatDateWithTimezone,
 } from "@saturn/core"
-import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
+import {
+  invalidateFinanceQueries,
+  useDateSections,
+  useTimezone,
+  useI18n,
+} from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -97,7 +101,11 @@ function getDaysDiff(
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 }
 
-function formatDate(dateStr?: string, timezone: string = "UTC"): string {
+function formatDate(
+  dateStr?: string,
+  timezone: string = "UTC",
+  locale?: string
+): string {
   if (!dateStr) return ""
   const d = parseDate(dateStr)
   if (!d) return ""
@@ -105,11 +113,16 @@ function formatDate(dateStr?: string, timezone: string = "UTC"): string {
   const dParts = getTimezoneParts(d, timezone)
   const nowParts = getTimezoneParts(now, timezone)
   const showYear = dParts && nowParts ? dParts.year !== nowParts.year : false
-  return formatDateWithTimezone(d, timezone, {
-    month: "short",
-    day: "numeric",
-    year: showYear ? "numeric" : undefined,
-  })
+  return formatDateWithTimezone(
+    d,
+    timezone,
+    {
+      month: "short",
+      day: "numeric",
+      year: showYear ? "numeric" : undefined,
+    },
+    locale
+  )
 }
 
 export default function BorrowingDetailScreen() {
@@ -117,6 +130,7 @@ export default function BorrowingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { t, locale } = useI18n()
   const queryClient = useQueryClient()
   const toast = useToast()
   const { colors, resolvedMode } = useTheme()
@@ -195,10 +209,7 @@ export default function BorrowingDetailScreen() {
     [txnsData?.transactions]
   )
 
-  const sections = useMemo(
-    () => groupTransactionsByDate(transactions, tz.timezone),
-    [transactions, tz.timezone]
-  )
+  const sections = useDateSections(transactions)
 
   const deleteBorrowingMutation = useDeleteBorrowingMutation()
   const deleteTxMutation = useDeleteBorrowingTransactionMutation()
@@ -222,12 +233,14 @@ export default function BorrowingDetailScreen() {
     if (!borrowing?.id) return
     haptics.warning()
     Alert.alert(
-      "Delete Debt Agreement",
-      `Are you sure you want to delete this record with "${borrowing.counterparty}"? All logged transactions and repayments will be deleted.`,
+      t("finance.borrowing.delete.title"),
+      t("finance.borrowing.delete.description", {
+        name: borrowing.counterparty || "",
+      }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -237,8 +250,10 @@ export default function BorrowingDetailScreen() {
               })
               haptics.success()
               toast.show({
-                title: "Agreement Deleted",
-                message: `Record with ${borrowing.counterparty} was removed.`,
+                title: t("finance.borrowing.delete.deletedTitle"),
+                message: t("finance.borrowing.delete.deletedDescription", {
+                  name: borrowing.counterparty || "",
+                }),
                 type: "info",
               })
               await invalidateFinanceQueries(queryClient)
@@ -246,8 +261,10 @@ export default function BorrowingDetailScreen() {
             } catch (err: any) {
               haptics.error()
               toast.show({
-                title: "Delete Failed",
-                message: err?.message || "Could not delete record.",
+                title: t("finance.borrowing.delete.failedTitle"),
+                message:
+                  err?.message ||
+                  t("finance.borrowing.delete.failedDescription"),
                 type: "error",
               })
             }
@@ -261,12 +278,12 @@ export default function BorrowingDetailScreen() {
     if (!borrowing?.id || !transactionId) return
     haptics.warning()
     Alert.alert(
-      "Delete Repayment",
-      "Are you sure you want to delete this borrowing transaction? The remaining balance will be updated.",
+      t("finance.borrowing.mobile.deleteTxTitle"),
+      t("finance.borrowing.mobile.deleteTxDesc"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -280,8 +297,8 @@ export default function BorrowingDetailScreen() {
               })
               haptics.success()
               toast.show({
-                title: "Transaction Deleted",
-                message: "The repayment transaction was deleted.",
+                title: t("finance.transactions.deletedSuccessTitle"),
+                message: t("finance.borrowing.mobile.toastTxDeletedDesc"),
                 type: "info",
               })
               await invalidateFinanceQueries(queryClient)
@@ -291,8 +308,10 @@ export default function BorrowingDetailScreen() {
             } catch (err: any) {
               haptics.error()
               toast.show({
-                title: "Delete Failed",
-                message: err?.message || "Could not delete transaction.",
+                title: t("finance.borrowing.delete.failedTitle"),
+                message:
+                  err?.message ||
+                  t("finance.borrowing.mobile.toastTxDeleteFailed"),
                 type: "error",
               })
             }
@@ -314,16 +333,20 @@ export default function BorrowingDetailScreen() {
     return (
       <View style={styles.errorContainer}>
         <AlertCircle size={36} color={colors.destructive} />
-        <Text style={styles.errorTitle}>Debt Agreement Not Found</Text>
+        <Text style={styles.errorTitle}>
+          {t("finance.borrowing.mobile.notFoundTitle")}
+        </Text>
         <Text style={styles.errorSubtitle}>
-          The requested debt or loan agreement could not be loaded.
+          {t("finance.borrowing.mobile.notFoundSubtitle")}
         </Text>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => router.replace("/(app)/finance/borrowing")}
           activeOpacity={0.7}
         >
-          <Text style={styles.backBtnText}>Back to Debts & Loans</Text>
+          <Text style={styles.backBtnText}>
+            {t("finance.borrowing.mobile.backToDebts")}
+          </Text>
         </TouchableOpacity>
       </View>
     )
@@ -381,7 +404,8 @@ export default function BorrowingDetailScreen() {
             </View>
             <View style={styles.heroTitleCol}>
               <Text style={styles.counterpartyText} numberOfLines={1}>
-                {borrowing.counterparty || "Unknown"}
+                {borrowing.counterparty ||
+                  t("finance.borrowing.mobile.unknownCounterparty")}
               </Text>
               {borrowing.contactInfo ? (
                 <View style={styles.contactRow}>
@@ -397,7 +421,13 @@ export default function BorrowingDetailScreen() {
           <View style={styles.badgesCol}>
             <Badge
               size="sm"
-              label={isPaid ? "Settled" : isLent ? "Lent to" : "Borrowed from"}
+              label={
+                isPaid
+                  ? t("finance.borrowing.mobile.badgeSettled")
+                  : isLent
+                    ? t("finance.borrowing.mobile.badgeLentTo")
+                    : t("finance.borrowing.mobile.badgeBorrowedFrom")
+              }
               bg={
                 isPaid
                   ? colors.surfaceElevated
@@ -423,14 +453,14 @@ export default function BorrowingDetailScreen() {
             {isPaid ? (
               <Badge
                 size="sm"
-                label="Paid Off"
+                label={t("finance.borrowing.mobile.badgePaidOff")}
                 bg={colors.successSubtle}
                 color={colors.success}
               />
             ) : (
               <Badge
                 size="sm"
-                label="Active"
+                label={t("finance.borrowing.mobile.badgeActive")}
                 bg={colors.primarySubtle}
                 color={colors.primary}
               />
@@ -442,7 +472,9 @@ export default function BorrowingDetailScreen() {
         <View style={styles.financialRow}>
           <View>
             <Text style={styles.financialStatLabel}>
-              {isPaid ? "FINAL SETTLED" : "REMAINING BALANCE"}
+              {isPaid
+                ? t("finance.borrowing.mobile.finalSettled").toUpperCase()
+                : t("finance.borrowing.remainingBalance").toUpperCase()}
             </Text>
             <MonoAmount
               size="xl"
@@ -460,13 +492,17 @@ export default function BorrowingDetailScreen() {
 
           <View style={styles.financialRightCol}>
             <View style={{ alignItems: "flex-end" }}>
-              <Text style={styles.financialStatLabel}>PRINCIPAL</Text>
+              <Text style={styles.financialStatLabel}>
+                {t("finance.borrowing.mobile.principal").toUpperCase()}
+              </Text>
               <MonoAmount size="sm" color={colors.textMuted}>
                 {formatAmount(total, curr)}
               </MonoAmount>
             </View>
             <View style={{ alignItems: "flex-end", marginTop: 4 }}>
-              <Text style={styles.financialStatLabel}>REPAID</Text>
+              <Text style={styles.financialStatLabel}>
+                {t("finance.borrowing.mobile.repaid").toUpperCase()}
+              </Text>
               <MonoAmount size="sm" color={colors.textSecondary}>
                 {formatAmount(paidAmount, curr)}
               </MonoAmount>
@@ -479,11 +515,16 @@ export default function BorrowingDetailScreen() {
           <View style={styles.progressHeaderRow}>
             <Text style={styles.progressLabel}>
               {isPaid
-                ? "100% Repaid • Agreement Settled"
-                : `Payoff Progress • ${percentage.toFixed(0)}%`}
+                ? t("finance.borrowing.mobile.repaidSettled")
+                : t("finance.borrowing.mobile.payoffProgress", {
+                    pct: percentage.toFixed(0),
+                  })}
             </Text>
             <Text style={styles.progressAmounts}>
-              {formatAmount(paidAmount, curr)} of {formatAmount(total, curr)}
+              {t("finance.borrowing.mobile.progressOf", {
+                paid: formatAmount(paidAmount, curr),
+                total: formatAmount(total, curr),
+              })}
             </Text>
           </View>
           <View style={styles.progressBarTrack}>
@@ -508,7 +549,9 @@ export default function BorrowingDetailScreen() {
           <View style={styles.metaRow}>
             <Calendar size={14} color={colors.textMuted} />
             <Text style={styles.metaText}>
-              Started {formatDate(borrowing.establishedAt, tz.timezone)}
+              {t("finance.borrowing.mobile.startedOn", {
+                date: formatDate(borrowing.establishedAt, tz.timezone, locale),
+              })}
             </Text>
           </View>
 
@@ -534,12 +577,24 @@ export default function BorrowingDetailScreen() {
                 ]}
               >
                 {isPaid
-                  ? `Due ${formatDate(borrowing.dueAt, tz.timezone)}`
+                  ? t("finance.borrowing.mobile.dueOn", {
+                      date: formatDate(borrowing.dueAt, tz.timezone, locale),
+                    })
                   : isOverdue
-                    ? `Overdue by ${Math.abs(daysDiff!)}d (${formatDate(borrowing.dueAt, tz.timezone)})`
+                    ? t("finance.borrowing.mobile.overdueBy", {
+                        days: Math.abs(daysDiff!),
+                        date: formatDate(borrowing.dueAt, tz.timezone, locale),
+                      })
                     : isDueToday
-                      ? "Due Today"
-                      : `Due in ${daysDiff}d (${formatDate(borrowing.dueAt, tz.timezone)})`}
+                      ? t("finance.borrowing.mobile.dueToday")
+                      : t("finance.borrowing.mobile.dueIn", {
+                          days: daysDiff ?? 0,
+                          date: formatDate(
+                            borrowing.dueAt,
+                            tz.timezone,
+                            locale
+                          ),
+                        })}
               </Text>
             </View>
           ) : null}
@@ -548,7 +603,10 @@ export default function BorrowingDetailScreen() {
             <View style={styles.metaRow}>
               <Landmark size={14} color={colors.textMuted} />
               <Text style={styles.metaText}>
-                Account: {linkedAccount.name} ({linkedAccount.currency})
+                {t("finance.borrowing.mobile.accountMeta", {
+                  name: linkedAccount.name,
+                  currency: linkedAccount.currency,
+                })}
               </Text>
             </View>
           ) : null}
@@ -585,7 +643,9 @@ export default function BorrowingDetailScreen() {
           >
             <Plus size={16} color={colors.primaryForeground} />
             <Text style={styles.actionBtnPrimaryText} numberOfLines={1}>
-              {isLent ? "Receive Payment" : "Repay Debt"}
+              {isLent
+                ? t("finance.borrowing.mobile.receivePayment")
+                : t("finance.borrowing.mobile.repayDebt")}
             </Text>
           </TouchableOpacity>
         ) : null}
@@ -603,7 +663,7 @@ export default function BorrowingDetailScreen() {
         >
           <Scale size={16} color={colors.textPrimary} />
           <Text style={styles.actionBtnSecondaryText} numberOfLines={1}>
-            Adjust Balance
+            {t("finance.borrowing.adjustBalance")}
           </Text>
         </TouchableOpacity>
 
@@ -623,13 +683,15 @@ export default function BorrowingDetailScreen() {
         >
           <Edit3 size={16} color={colors.textPrimary} />
           <Text style={styles.actionBtnSecondaryText} numberOfLines={1}>
-            Edit
+            {t("common.edit")}
           </Text>
         </TouchableOpacity>
       </View>
 
       <Caption style={styles.ledgerHeader}>
-        REPAYMENTS & TRANSACTIONS ({transactions.length})
+        {t("finance.borrowing.mobile.repaymentsN", {
+          count: transactions.length,
+        }).toUpperCase()}
       </Caption>
     </View>
   )
@@ -638,24 +700,32 @@ export default function BorrowingDetailScreen() {
     <>
       <Stack.Screen
         options={{
-          headerTitle: borrowing.counterparty || "Agreement Details",
+          headerTitle:
+            borrowing.counterparty ||
+            t("finance.borrowing.mobile.headerFallback"),
           ...(Platform.OS === "ios"
             ? {
                 unstable_headerRightItems: () => [
                   {
                     type: "menu",
-                    label: "Actions",
+                    label: t("finance.budgets.mobile.menuActions"),
                     icon: { type: "sfSymbol", name: "ellipsis" },
                     menu: {
-                      title: borrowing.counterparty || "Agreement",
+                      title:
+                        borrowing.counterparty ||
+                        t("finance.borrowing.mobile.agreementFallback"),
                       items: [
                         ...(!isPaid
                           ? [
                               {
                                 type: "action" as const,
                                 label: isLent
-                                  ? "Record Payment Received"
-                                  : "Log Repayment",
+                                  ? t(
+                                      "finance.borrowing.mobile.menuRecordPaymentReceived"
+                                    )
+                                  : t(
+                                      "finance.borrowing.mobile.menuLogRepayment"
+                                    ),
                                 icon: {
                                   type: "sfSymbol" as const,
                                   name: "dollarsign.circle" as const,
@@ -675,7 +745,7 @@ export default function BorrowingDetailScreen() {
                           : []),
                         {
                           type: "action",
-                          label: "Adjust Balance",
+                          label: t("finance.borrowing.adjustBalance"),
                           icon: {
                             type: "sfSymbol",
                             name: "scalemass",
@@ -690,7 +760,7 @@ export default function BorrowingDetailScreen() {
                         },
                         {
                           type: "action",
-                          label: "Edit Agreement",
+                          label: t("finance.borrowing.editAgreement"),
                           icon: { type: "sfSymbol", name: "pencil" } as const,
                           onPress: () => {
                             haptics.light()
@@ -702,7 +772,9 @@ export default function BorrowingDetailScreen() {
                         },
                         {
                           type: "action",
-                          label: "Delete Agreement",
+                          label: t(
+                            "finance.borrowing.mobile.menuDeleteAgreement"
+                          ),
                           icon: { type: "sfSymbol", name: "trash" } as const,
                           destructive: true,
                           onPress: handleDeleteBorrowing,
@@ -715,7 +787,10 @@ export default function BorrowingDetailScreen() {
             : {
                 headerRight: () => (
                   <ActionMenu
-                    title={borrowing.counterparty || "Agreement"}
+                    title={
+                      borrowing.counterparty ||
+                      t("finance.borrowing.mobile.agreementFallback")
+                    }
                     colorScheme={resolvedMode}
                     onPressAction={({ nativeEvent }) => {
                       if (nativeEvent.event === "pay") {
@@ -749,25 +824,31 @@ export default function BorrowingDetailScreen() {
                             {
                               id: "pay",
                               title: isLent
-                                ? "Record Payment Received"
-                                : "Log Repayment",
+                                ? t(
+                                    "finance.borrowing.mobile.menuRecordPaymentReceived"
+                                  )
+                                : t(
+                                    "finance.borrowing.mobile.menuLogRepayment"
+                                  ),
                               image: paymentIcon,
                             },
                           ]
                         : []),
                       {
                         id: "adjust",
-                        title: "Adjust Balance",
+                        title: t("finance.borrowing.adjustBalance"),
                         image: adjustIcon,
                       },
                       {
                         id: "edit",
-                        title: "Edit Agreement",
+                        title: t("finance.borrowing.editAgreement"),
                         image: editIcon,
                       },
                       {
                         id: "delete",
-                        title: "Delete Agreement",
+                        title: t(
+                          "finance.borrowing.mobile.menuDeleteAgreement"
+                        ),
                         image: deleteIcon,
                         attributes: { destructive: true },
                       },
@@ -811,11 +892,12 @@ export default function BorrowingDetailScreen() {
               onPress={() => {
                 haptics.light()
                 Alert.alert(
-                  item.description || "Borrowing Transaction",
+                  item.description ||
+                    t("finance.borrowing.mobile.borrowingTransaction"),
                   `${formatAmount(item.amount, item.currency || baseCurrency)} • ${tz.format(item.transactionDate)}`,
                   [
                     {
-                      text: "View Transaction Details",
+                      text: t("finance.borrowing.mobile.viewTxDetails"),
                       onPress: () => {
                         if (item.id) {
                           router.push(`/(app)/finance/transactions/${item.id}`)
@@ -823,11 +905,11 @@ export default function BorrowingDetailScreen() {
                       },
                     },
                     {
-                      text: "Delete Record",
+                      text: t("finance.borrowing.deleteRecord"),
                       style: "destructive",
                       onPress: () => handleDeleteTransaction(item.id),
                     },
-                    { text: "Cancel", style: "cancel" },
+                    { text: t("common.cancel"), style: "cancel" },
                   ]
                 )
               }}
@@ -843,13 +925,15 @@ export default function BorrowingDetailScreen() {
               <View style={styles.emptyWrap}>
                 <EmptyState
                   icon={<ReceiptText size={32} color={colors.textMuted} />}
-                  title="No Repayments Yet"
-                  description="No repayments or balance adjustments have been recorded for this agreement."
+                  title={t("finance.borrowing.mobile.emptyRepaymentsTitle")}
+                  description={t(
+                    "finance.borrowing.mobile.emptyRepaymentsDesc"
+                  )}
                   actionLabel={
                     !isPaid
                       ? isLent
-                        ? "Receive Payment"
-                        : "Log Repayment"
+                        ? t("finance.borrowing.mobile.receivePayment")
+                        : t("finance.borrowing.mobile.menuLogRepayment")
                       : undefined
                   }
                   onAction={

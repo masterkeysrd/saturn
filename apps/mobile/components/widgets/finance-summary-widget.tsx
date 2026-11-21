@@ -165,8 +165,9 @@ export function FinanceSummaryWidget() {
           <View style={styles.headerRight}>
             {accounts.length > 0 ? (
               <Text style={styles.headerSubtitle}>
-                {accounts.length}{" "}
-                {accounts.length === 1 ? "account" : "accounts"}
+                {t("dashboard.widget.net_worth.accountsCount", {
+                  count: accounts.length,
+                })}
               </Text>
             ) : null}
             <ChevronRight size={16} color={colors.textMuted} />
@@ -175,7 +176,9 @@ export function FinanceSummaryWidget() {
 
         {/* Real Net Worth Figure */}
         <View style={styles.balanceSection}>
-          <Caption style={styles.balanceLabel}>TOTAL NET WORTH</Caption>
+          <Caption style={styles.balanceLabel}>
+            {t("dashboard.widget.net_worth.totalNetWorth").toUpperCase()}
+          </Caption>
           <MonoAmount size="xl" style={styles.balanceAmount}>
             {formatAmount(netWorthCents, baseCurrency)}
           </MonoAmount>
@@ -194,7 +197,9 @@ export function FinanceSummaryWidget() {
             </View>
             <View>
               <Caption style={styles.statLabel}>
-                Income ({currentMonthLabel})
+                {t("dashboard.widget.net_worth.incomeStat", {
+                  month: currentMonthLabel,
+                })}
               </Caption>
               <MonoAmount
                 size="sm"
@@ -217,7 +222,9 @@ export function FinanceSummaryWidget() {
             </View>
             <View>
               <Caption style={styles.statLabel}>
-                Expenses ({currentMonthLabel})
+                {t("dashboard.widget.net_worth.expensesStat", {
+                  month: currentMonthLabel,
+                })}
               </Caption>
               <MonoAmount
                 size="sm"
@@ -263,7 +270,9 @@ export function FinanceSummaryWidget() {
         }}
       >
         <Plus size={15} color={colors.primary} />
-        <Text style={styles.cardFooterText}>Add Transaction</Text>
+        <Text style={styles.cardFooterText}>
+          {t("dashboard.widget.net_worth.addTransaction")}
+        </Text>
       </TouchableOpacity>
     </Card>
   )

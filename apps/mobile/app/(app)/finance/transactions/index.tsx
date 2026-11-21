@@ -34,13 +34,17 @@ import {
 import {
   formatShortMonth,
   formatYm,
-  groupTransactionsByDate,
   parseYm,
   resolveFinancePeriodBounds,
   shiftYearMonth,
   type FinancePeriodPreset,
 } from "@saturn/core"
-import { useDebounce, useTimezone } from "@saturn/hooks"
+import {
+  useDateSections,
+  useDebounce,
+  useI18n,
+  useTimezone,
+} from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -57,6 +61,7 @@ export default function TransactionsScreen() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
 
@@ -203,10 +208,7 @@ export default function TransactionsScreen() {
   }, [data])
 
   // Grouped into Sections by Date
-  const sections = useMemo(
-    () => groupTransactionsByDate(allTransactions, tz.timezone),
-    [allTransactions, tz.timezone]
-  )
+  const sections = useDateSections(allTransactions)
 
   const activeFilterCount =
     (selectedType ? 1 : 0) +
@@ -284,7 +286,7 @@ export default function TransactionsScreen() {
         <View style={styles.searchBarRow}>
           <View style={styles.searchWrapper}>
             <BaseTextInput
-              placeholder="Search by merchant or description..."
+              placeholder={t("finance.transactions.list.searchPlaceholder")}
               value={search}
               onChangeText={setSearch}
               leftIcon={<Search size={18} color={colors.textMuted} />}
@@ -321,7 +323,7 @@ export default function TransactionsScreen() {
         <View style={styles.periodAndChipsRow}>
           <View style={styles.monthStepper}>
             <TouchableOpacity
-              accessibilityLabel="Previous month"
+              accessibilityLabel={t("calendar.prevMonth")}
               style={styles.monthStepBtn}
               onPress={() => handleStepMonth(-1)}
               activeOpacity={0.7}
@@ -330,7 +332,9 @@ export default function TransactionsScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              accessibilityLabel="Select period"
+              accessibilityLabel={t(
+                "finance.transactions.list.selectPeriodAria"
+              )}
               style={styles.monthCenterBtn}
               onPress={() => {
                 haptics.light()
@@ -346,7 +350,7 @@ export default function TransactionsScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              accessibilityLabel="Next month"
+              accessibilityLabel={t("calendar.nextMonth")}
               style={styles.monthStepBtn}
               onPress={() => handleStepMonth(1)}
               activeOpacity={0.7}
@@ -362,7 +366,9 @@ export default function TransactionsScreen() {
               activeOpacity={0.7}
             >
               <Text style={styles.quickChipTextActive}>
-                {selectedType === "EXPENSE" ? "Expenses" : "Income"}
+                {selectedType === "EXPENSE"
+                  ? t("finance.transactions.list.expenses")
+                  : t("finance.inbox.sheet.flowIncome")}
               </Text>
               <X size={12} color={colors.primary} />
             </TouchableOpacity>
@@ -375,7 +381,8 @@ export default function TransactionsScreen() {
               activeOpacity={0.7}
             >
               <Text style={styles.quickChipTextActive}>
-                {accountsMap.get(selectedAccountId)?.name || "Account"}
+                {accountsMap.get(selectedAccountId)?.name ||
+                  t("finance.transactions.facetAccount")}
               </Text>
               <X size={12} color={colors.primary} />
             </TouchableOpacity>
@@ -388,7 +395,8 @@ export default function TransactionsScreen() {
               activeOpacity={0.7}
             >
               <Text style={styles.quickChipTextActive}>
-                {budgetsMap.get(selectedBudgetId)?.name || "Budget"}
+                {budgetsMap.get(selectedBudgetId)?.name ||
+                  t("finance.transactions.facetBudget")}
               </Text>
               <X size={12} color={colors.primary} />
             </TouchableOpacity>
@@ -431,7 +439,7 @@ export default function TransactionsScreen() {
               <View style={styles.footerLoader}>
                 <ActivityIndicator size="small" color={colors.primary} />
                 <Text style={styles.footerLoaderText}>
-                  Loading more transactions...
+                  {t("finance.transactions.list.loadingMore")}
                 </Text>
               </View>
             ) : undefined
@@ -439,14 +447,16 @@ export default function TransactionsScreen() {
           ListEmptyComponent={
             <EmptyState
               icon={<ReceiptText size={32} color={colors.textMuted} />}
-              title="No transactions found"
+              title={t("finance.transactions.list.emptyTitle")}
               description={
                 search || activeFilterCount > 0
-                  ? "Try adjusting your search query or filters to find what you're looking for."
-                  : "Start logging your income and expenses to view your live financial feed."
+                  ? t("finance.transactions.list.emptyFiltered")
+                  : t("finance.transactions.list.emptyInitial")
               }
               actionLabel={
-                activeFilterCount > 0 ? "Reset Filters" : "Add Transaction"
+                activeFilterCount > 0
+                  ? t("finance.transactions.list.resetFiltersCta")
+                  : t("finance.tab.addTransaction")
               }
               onAction={
                 activeFilterCount > 0
@@ -462,6 +472,8 @@ export default function TransactionsScreen() {
       <TouchableOpacity
         style={styles.fab}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={t("finance.tab.addTransaction")}
         onPress={() => {
           haptics.medium()
           router.push("/modal/add-transaction")
@@ -474,7 +486,7 @@ export default function TransactionsScreen() {
       <AppBottomSheet
         ref={filterSheetRef}
         snapPoints={["78%"]}
-        title="Filter Transactions"
+        title={t("finance.transactions.list.filterSheetTitle")}
       >
         <BottomSheetScrollView
           contentContainerStyle={styles.filterSheetContent}
@@ -482,15 +494,32 @@ export default function TransactionsScreen() {
         >
           {/* Period & Quick Month Grid */}
           <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Period</Text>
+            <Text style={styles.filterSectionTitle}>
+              {t("finance.transactions.list.periodSection")}
+            </Text>
             <View style={styles.filterPillsContainer}>
               {(
                 [
-                  { label: "This Month", value: "this_month" },
-                  { label: "Last Month", value: "last_month" },
-                  { label: "Last 3M", value: "3m" },
-                  { label: "YTD", value: "ytd" },
-                  { label: "All Time", value: "all" },
+                  {
+                    labelKey: "finance.transactions.list.presetThisMonth",
+                    value: "this_month",
+                  },
+                  {
+                    labelKey: "finance.transactions.list.presetLastMonth",
+                    value: "last_month",
+                  },
+                  {
+                    labelKey: "finance.transactions.list.presetLast3M",
+                    value: "3m",
+                  },
+                  {
+                    labelKey: "finance.transactions.list.presetYtd",
+                    value: "ytd",
+                  },
+                  {
+                    labelKey: "finance.transactions.list.presetAllTime",
+                    value: "all",
+                  },
                 ] as const
               ).map((preset) => {
                 const isActive = periodBounds.period === preset.value
@@ -514,7 +543,7 @@ export default function TransactionsScreen() {
                         isActive && styles.filterPillTextActive,
                       ]}
                     >
-                      {preset.label}
+                      {t(preset.labelKey)}
                     </Text>
                   </TouchableOpacity>
                 )
@@ -524,7 +553,9 @@ export default function TransactionsScreen() {
             <View style={styles.monthGridCard}>
               <View style={styles.yearHeaderRow}>
                 <TouchableOpacity
-                  accessibilityLabel="Previous year"
+                  accessibilityLabel={t(
+                    "finance.transactions.list.prevYearAria"
+                  )}
                   style={styles.yearNavBtn}
                   onPress={() => {
                     haptics.selection()
@@ -535,7 +566,9 @@ export default function TransactionsScreen() {
                 </TouchableOpacity>
                 <Text style={styles.yearHeaderText}>{pickerYear}</Text>
                 <TouchableOpacity
-                  accessibilityLabel="Next year"
+                  accessibilityLabel={t(
+                    "finance.transactions.list.nextYearAria"
+                  )}
                   style={styles.yearNavBtn}
                   onPress={() => {
                     haptics.selection()
@@ -583,12 +616,20 @@ export default function TransactionsScreen() {
 
           {/* Flow Type Filter */}
           <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Flow Type</Text>
+            <Text style={styles.filterSectionTitle}>
+              {t("finance.transactions.list.flowType")}
+            </Text>
             <View style={styles.filterOptionsRow}>
               {[
-                { label: "All Types", value: "" },
-                { label: "Expenses", value: "EXPENSE" },
-                { label: "Income", value: "INCOME" },
+                { label: t("finance.transactions.type.allTypes"), value: "" },
+                {
+                  label: t("finance.transactions.list.expenses"),
+                  value: "EXPENSE",
+                },
+                {
+                  label: t("finance.inbox.sheet.flowIncome"),
+                  value: "INCOME",
+                },
               ].map((opt) => (
                 <TouchableOpacity
                   key={opt.value}
@@ -618,7 +659,9 @@ export default function TransactionsScreen() {
 
           {/* Account Filter */}
           <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Account</Text>
+            <Text style={styles.filterSectionTitle}>
+              {t("finance.transactions.facetAccount")}
+            </Text>
             <View style={styles.filterPillsContainer}>
               <TouchableOpacity
                 style={[
@@ -637,7 +680,7 @@ export default function TransactionsScreen() {
                     !selectedAccountId && styles.filterPillTextActive,
                   ]}
                 >
-                  All Accounts
+                  {t("finance.transactions.list.allAccounts")}
                 </Text>
               </TouchableOpacity>
 
@@ -672,7 +715,9 @@ export default function TransactionsScreen() {
 
           {/* Budget Filter */}
           <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Budget Category</Text>
+            <Text style={styles.filterSectionTitle}>
+              {t("finance.inbox.sheet.budgetCategory")}
+            </Text>
             <View style={styles.filterPillsContainer}>
               <TouchableOpacity
                 style={[
@@ -691,7 +736,7 @@ export default function TransactionsScreen() {
                     !selectedBudgetId && styles.filterPillTextActive,
                   ]}
                 >
-                  All Budgets
+                  {t("finance.budgets.allBudgets")}
                 </Text>
               </TouchableOpacity>
 
@@ -731,7 +776,7 @@ export default function TransactionsScreen() {
               style={{ flex: 1 }}
               onPress={clearAllFilters}
             >
-              Reset All
+              {t("finance.transactions.list.resetAll")}
             </Button>
             <Button
               variant="primary"
@@ -742,7 +787,7 @@ export default function TransactionsScreen() {
                 filterSheetRef.current?.close()
               }}
             >
-              Apply Filters
+              {t("finance.transactions.list.applyFilters")}
             </Button>
           </View>
         </BottomSheetScrollView>

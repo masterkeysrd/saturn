@@ -10,6 +10,7 @@ import { Check, Landmark, Search } from "lucide-react-native"
 import type { Account_InstitutionInfo } from "@saturn/api/saturn/finance/v1/finance"
 import { getInstitutionLogoUrl } from "@saturn/core"
 import { useTheme } from "@/lib/theme"
+import { useI18n } from "@saturn/hooks"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet, BottomSheetHeader } from "@/components/ui/bottom-sheet"
 import { useSheetStyles } from "./sheet-styles"
@@ -30,7 +31,7 @@ export const InstitutionPickerSheet = forwardRef<
 >(
   (
     {
-      title = "Select Financial Institution",
+      title,
       institutions,
       selectedInstitutionId = "",
       onSelect,
@@ -43,6 +44,7 @@ export const InstitutionPickerSheet = forwardRef<
     const { colors, isDark } = useTheme()
     const sheetStyles = useSheetStyles()
     const insets = useSafeAreaInsets()
+    const { t } = useI18n()
     const [search, setSearch] = useState("")
 
     const filteredInstitutions = useMemo(() => {
@@ -92,7 +94,10 @@ export const InstitutionPickerSheet = forwardRef<
           ]}
           ListHeaderComponent={
             <View>
-              <BottomSheetHeader title={title} onClose={handleClose} />
+              <BottomSheetHeader
+                title={title ?? t("finance.pickers.institution.defaultTitle")}
+                onClose={handleClose}
+              />
 
               {/* Search Bar */}
               <View style={sheetStyles.accountSearchContainer}>
@@ -100,7 +105,9 @@ export const InstitutionPickerSheet = forwardRef<
                 <BottomSheetTextInput
                   value={search}
                   onChangeText={setSearch}
-                  placeholder="Search institutions..."
+                  placeholder={t(
+                    "finance.pickers.institution.searchPlaceholder"
+                  )}
                   placeholderTextColor={colors.textMuted}
                   keyboardAppearance={isDark ? "dark" : "light"}
                   style={sheetStyles.accountSearchInput}
@@ -123,10 +130,10 @@ export const InstitutionPickerSheet = forwardRef<
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={sheetStyles.accountItemTitle}>
-                      No Institution / Custom
+                      {t("finance.pickers.institution.noInstitution")}
                     </Text>
                     <Text style={sheetStyles.accountItemSubtitle}>
-                      Standalone card or cash wallet
+                      {t("finance.pickers.institution.noInstitutionDesc")}
                     </Text>
                   </View>
 
@@ -145,7 +152,7 @@ export const InstitutionPickerSheet = forwardRef<
             ) : (
               <View style={sheetStyles.emptySheetBox}>
                 <Text style={sheetStyles.emptySheetText}>
-                  No institutions found
+                  {t("finance.pickers.institution.noInstitutionsFound")}
                 </Text>
               </View>
             )

@@ -17,6 +17,8 @@ import {
   type Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
+import { useI18n } from "@saturn/hooks"
+import type { TranslationKey } from "@saturn/i18n"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Caption } from "@/components/ui/typography"
@@ -28,6 +30,7 @@ import { haptics } from "@/lib/haptics"
 export default function AccountsScreen() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
+  const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
   const [refreshing, setRefreshing] = useState(false)
@@ -87,17 +90,40 @@ export default function AccountsScreen() {
     )
 
     const groups: { title: string; data: Account[] }[] = []
+    const groupTitle = (key: TranslationKey, count: number) =>
+      t(key, { count }).toUpperCase()
     if (bank.length > 0)
-      groups.push({ title: `DEPOSITORY & BANK (${bank.length})`, data: bank })
+      groups.push({
+        title: groupTitle(
+          "finance.accounts.mobile.groupDepository",
+          bank.length
+        ),
+        data: bank,
+      })
     if (credit.length > 0)
-      groups.push({ title: `CREDIT CARDS (${credit.length})`, data: credit })
+      groups.push({
+        title: groupTitle(
+          "finance.accounts.mobile.groupCreditCards",
+          credit.length
+        ),
+        data: credit,
+      })
     if (cash.length > 0)
-      groups.push({ title: `CASH & WALLETS (${cash.length})`, data: cash })
+      groups.push({
+        title: groupTitle(
+          "finance.accounts.mobile.groupCashWallets",
+          cash.length
+        ),
+        data: cash,
+      })
     if (other.length > 0)
-      groups.push({ title: `OTHER ACCOUNTS (${other.length})`, data: other })
+      groups.push({
+        title: groupTitle("finance.accounts.mobile.groupOther", other.length),
+        data: other,
+      })
 
     return groups
-  }, [accounts])
+  }, [accounts, t])
 
   const handleRefresh = async () => {
     haptics.light()
@@ -152,13 +178,13 @@ export default function AccountsScreen() {
     <View style={styles.safeArea}>
       <Stack.Screen
         options={{
-          headerTitle: "Accounts",
+          headerTitle: t("nav.accounts"),
           ...(Platform.OS === "ios"
             ? {
                 unstable_headerRightItems: () => [
                   {
                     type: "button",
-                    label: "Transfer",
+                    label: t("finance.reconcile.row.transfer"),
                     icon: { type: "sfSymbol", name: "arrow.left.arrow.right" },
                     tintColor: colors.primary,
                     onPress: () => {
@@ -171,7 +197,7 @@ export default function AccountsScreen() {
                   },
                   {
                     type: "button",
-                    label: "New Account",
+                    label: t("dashboard.quickAction.newAccount"),
                     icon: { type: "sfSymbol", name: "plus" },
                     tintColor: colors.primary,
                     onPress: () => {
@@ -234,8 +260,8 @@ export default function AccountsScreen() {
         ) : accounts.length === 0 ? (
           <EmptyState
             icon={<Landmark size={28} color={colors.textMuted} />}
-            title="No accounts registered"
-            description="Active accounts in this workspace will appear here."
+            title={t("finance.accounts.mobile.emptyTitle")}
+            description={t("finance.accounts.mobile.emptyDesc")}
           />
         ) : groupedAccounts.length > 0 ? (
           groupedAccounts.map((grp) => (

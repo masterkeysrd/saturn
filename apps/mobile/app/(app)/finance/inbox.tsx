@@ -33,6 +33,7 @@ import {
   useI18n,
   useTimezone,
 } from "@saturn/hooks"
+import type { TranslationKey } from "@saturn/i18n"
 import { canWriteWorkspace } from "@/lib/quick-capture"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
@@ -63,11 +64,17 @@ import {
 
 type DocTypeFilter = "" | "RECEIPT" | "INVOICE" | "BANK_NOTIFICATION"
 
-const DOC_TYPE_FILTERS: readonly { value: DocTypeFilter; label: string }[] = [
-  { value: "", label: "All" },
-  { value: "RECEIPT", label: "Receipts" },
-  { value: "INVOICE", label: "Invoices" },
-  { value: "BANK_NOTIFICATION", label: "Bank Alerts" },
+const DOC_TYPE_FILTERS: readonly {
+  value: DocTypeFilter
+  labelKey: TranslationKey
+}[] = [
+  { value: "", labelKey: "common.all" },
+  { value: "RECEIPT", labelKey: "finance.inbox.filters.receipts" },
+  { value: "INVOICE", labelKey: "finance.inbox.filters.invoices" },
+  {
+    value: "BANK_NOTIFICATION",
+    labelKey: "finance.inbox.filters.bankAlerts",
+  },
 ]
 
 export default function FinanceInboxScreen() {
@@ -258,15 +265,19 @@ export default function FinanceInboxScreen() {
       await refetchInbox()
       haptics.success()
       toast.show({
-        title: "Budget assigned",
-        message: `${item.vendorName || "Item"} linked to ${budget.name}.`,
+        title: t("finance.inbox.toast.budgetAssigned"),
+        message: t("finance.inbox.toast.budgetAssignedDesc", {
+          item: item.vendorName || t("finance.inbox.toast.itemFallback"),
+          budget: budget.name,
+        }),
         type: "success",
       })
     } catch (err) {
       haptics.error()
       toast.show({
-        title: "Could not assign budget",
-        message: err instanceof Error ? err.message : "Please try again.",
+        title: t("finance.inbox.toast.budgetAssignFailed"),
+        message:
+          err instanceof Error ? err.message : t("common.pleaseTryAgain"),
         type: "error",
       })
     } finally {
@@ -290,18 +301,23 @@ export default function FinanceInboxScreen() {
       await refetchInbox()
       haptics.success()
       const accName = accountId
-        ? accountsMap.get(accountId)?.name || "Account"
-        : "Cash / Off-ledger"
+        ? accountsMap.get(accountId)?.name ||
+          t("finance.inbox.toast.accountFallback")
+        : t("finance.inbox.toast.cashOffLedger")
       toast.show({
-        title: "Account updated",
-        message: `${item.vendorName || "Item"} set to ${accName}.`,
+        title: t("finance.inbox.toast.accountUpdated"),
+        message: t("finance.inbox.toast.accountUpdatedDesc", {
+          item: item.vendorName || t("finance.inbox.toast.itemFallback"),
+          account: accName,
+        }),
         type: "success",
       })
     } catch (err) {
       haptics.error()
       toast.show({
-        title: "Could not assign account",
-        message: err instanceof Error ? err.message : "Please try again.",
+        title: t("finance.inbox.toast.accountAssignFailed"),
+        message:
+          err instanceof Error ? err.message : t("common.pleaseTryAgain"),
         type: "error",
       })
     } finally {
@@ -315,10 +331,7 @@ export default function FinanceInboxScreen() {
 
     if (!canQuickApproveInboxItem(item)) {
       haptics.selection()
-      openReviewSheet(
-        item,
-        "Assign a budget category (or link a bill) and confirm details to approve."
-      )
+      openReviewSheet(item, t("finance.inbox.hint.assignBudgetToApprove"))
       return
     }
 
@@ -332,14 +345,16 @@ export default function FinanceInboxScreen() {
       await refetchInbox()
       haptics.success()
       toast.show({
-        title: "Approved into ledger",
+        title: t("finance.inbox.toast.approvedIntoLedger"),
         message: item.vendorName || undefined,
         type: "success",
       })
     } catch (err) {
       haptics.selection()
       const msg =
-        err instanceof Error ? err.message : "Review details before approving."
+        err instanceof Error
+          ? err.message
+          : t("finance.inbox.error.reviewBeforeApproving")
       openReviewSheet(item, null)
       setReviewError(msg)
     } finally {
@@ -366,7 +381,7 @@ export default function FinanceInboxScreen() {
       haptics.success()
       closeReviewSheet()
       toast.show({
-        title: "Approved into ledger",
+        title: t("finance.inbox.toast.approvedIntoLedger"),
         message: patch.vendorName || item.vendorName || undefined,
         type: "success",
       })
@@ -375,7 +390,7 @@ export default function FinanceInboxScreen() {
       setReviewError(
         err instanceof Error
           ? err.message
-          : "Failed to approve item into the ledger."
+          : t("finance.inbox.error.approveFailed")
       )
     } finally {
       setBusyItemId(null)
@@ -399,15 +414,16 @@ export default function FinanceInboxScreen() {
       setDiscardTarget(null)
       haptics.success()
       toast.show({
-        title: "Item discarded",
+        title: t("finance.inbox.discardedToastTitle"),
         message: target.vendorName || undefined,
         type: "info",
       })
     } catch (err) {
       haptics.error()
       toast.show({
-        title: "Failed to discard",
-        message: err instanceof Error ? err.message : "Please try again.",
+        title: t("finance.inbox.discardFailedTitle"),
+        message:
+          err instanceof Error ? err.message : t("common.pleaseTryAgain"),
         type: "error",
       })
     } finally {
@@ -425,7 +441,7 @@ export default function FinanceInboxScreen() {
         <BaseTextInput
           value={search}
           onChangeText={setSearch}
-          placeholder="Search vendor or item..."
+          placeholder={t("finance.inbox.searchVendorPlaceholder")}
           autoCorrect={false}
           leftIcon={<Search size={16} color={colors.textMuted} />}
           rightIcon={
@@ -436,7 +452,7 @@ export default function FinanceInboxScreen() {
                   haptics.light()
                   setSearch("")
                 }}
-                accessibilityLabel="Clear search"
+                accessibilityLabel={t("finance.transactions.clearSearchAria")}
               >
                 <X size={16} color={colors.textMuted} />
               </TouchableOpacity>
@@ -470,7 +486,7 @@ export default function FinanceInboxScreen() {
                     active && styles.filterPillTextActive,
                   ]}
                 >
-                  {opt.value === "" ? t("common.all") : opt.label}
+                  {t(opt.labelKey)}
                 </Text>
               </TouchableOpacity>
             )
@@ -506,9 +522,16 @@ export default function FinanceInboxScreen() {
             inboxItems.length > 0 ? (
               <View style={styles.queueSummaryRow}>
                 <Text style={styles.queueSummaryText}>
-                  {inboxItems.length}{" "}
-                  {inboxItems.length === 1 ? "item" : "items"} awaiting review
-                  {isWritable ? " · Swipe right to approve" : ""}
+                  {inboxItems.length === 1
+                    ? t("finance.inbox.awaitingReviewOne", {
+                        count: inboxItems.length,
+                      })
+                    : t("finance.inbox.awaitingReviewMany", {
+                        count: inboxItems.length,
+                      })}
+                  {isWritable
+                    ? ` · ${t("finance.inbox.swipeRightToApprove")}`
+                    : ""}
                 </Text>
                 <Text style={styles.queueTimezoneText}>{tz.timezone}</Text>
               </View>
@@ -518,9 +541,9 @@ export default function FinanceInboxScreen() {
             hasActiveFilter ? (
               <EmptyState
                 icon={<Search size={28} color={colors.textMuted} />}
-                title="No matching items"
-                description="No pending inbox items match your current search or document filter."
-                actionLabel="Clear Filters"
+                title={t("finance.inbox.noMatchingTitle")}
+                description={t("finance.inbox.noMatchingDescription")}
+                actionLabel={t("common.clearFilters")}
                 onAction={() => {
                   haptics.light()
                   setSearch("")
@@ -627,8 +650,8 @@ export default function FinanceInboxScreen() {
         ref={accountSheetRef}
         title={
           accountPickerMode === "review-dest"
-            ? "Select Destination Account"
-            : "Select Account"
+            ? t("finance.inbox.selectDestinationAccountSheet")
+            : t("finance.inbox.selectAccountSheet")
         }
         accounts={accounts}
         selectedAccountId={
@@ -699,10 +722,12 @@ export default function FinanceInboxScreen() {
       {/* Discard Confirmation Dialog */}
       <ConfirmDialog
         visible={Boolean(discardTarget)}
-        title="Discard Inbox Item?"
-        message={`Remove "${discardTarget?.vendorName || "this item"}" from your review queue without recording it to your ledger?`}
-        confirmText="Discard"
-        cancelText="Keep"
+        title={t("finance.inbox.discardTitle")}
+        message={t("finance.inbox.discardWithName", {
+          name: discardTarget?.vendorName || t("finance.inbox.thisItem"),
+        })}
+        confirmText={t("common.discard")}
+        cancelText={t("common.keep")}
         isDestructive
         loading={discardInboxMutation.isPending}
         onConfirm={handleConfirmDiscard}

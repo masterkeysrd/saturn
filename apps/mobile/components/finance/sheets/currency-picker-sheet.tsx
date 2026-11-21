@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Check, Search } from "lucide-react-native"
 import { type CurrencyInfo } from "@saturn/api/saturn/finance/v1/finance"
 import { getCurrencySymbol } from "@saturn/core"
+import { useI18n } from "@saturn/hooks"
 import { useTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet, BottomSheetHeader } from "@/components/ui/bottom-sheet"
@@ -39,6 +40,7 @@ export const CurrencyPickerSheet = forwardRef<
     const { colors, isDark } = useTheme()
     const sheetStyles = useSheetStyles()
     const insets = useSafeAreaInsets()
+    const { t } = useI18n()
     const [search, setSearch] = useState("")
 
     const handleClose = () => {
@@ -89,14 +91,14 @@ export const CurrencyPickerSheet = forwardRef<
           ListHeaderComponent={
             <View>
               <BottomSheetHeader
-                title="Select Currency"
+                title={t("finance.pickers.currency.defaultTitle")}
                 onClose={handleClose}
               />
               <View style={sheetStyles.currencySearchContainer}>
                 <Search size={16} color={colors.textMuted} />
                 <BottomSheetTextInput
                   style={sheetStyles.currencySearchInput}
-                  placeholder="Search currency code or name..."
+                  placeholder={t("finance.pickers.currency.searchPlaceholder")}
                   placeholderTextColor={colors.textMuted}
                   keyboardAppearance={isDark ? "dark" : "light"}
                   value={search}
@@ -117,7 +119,7 @@ export const CurrencyPickerSheet = forwardRef<
             ) : (
               <View style={sheetStyles.emptySheetBox}>
                 <Text style={sheetStyles.emptySheetText}>
-                  No currencies found.
+                  {t("finance.pickers.currency.noCurrenciesFound")}
                 </Text>
               </View>
             )

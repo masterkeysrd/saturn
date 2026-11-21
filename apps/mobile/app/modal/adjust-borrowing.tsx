@@ -36,7 +36,7 @@ import {
   type Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { formatAmount, formatCents, toCentsString } from "@saturn/core"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -55,6 +55,7 @@ export default function AdjustBorrowingModal() {
   const { borrowingId } = useLocalSearchParams<{ borrowingId: string }>()
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { t } = useI18n()
   const accountSheetRef = useRef<BottomSheet>(null)
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
@@ -88,9 +89,9 @@ export default function AdjustBorrowingModal() {
           : "",
       adjustmentDate: new Date(),
       accountId: "",
-      notes: "Manual balance adjustment",
+      notes: t("finance.accounts.mobile.defaultNote"),
     }),
-    [currentBalance]
+    [currentBalance, t]
   )
 
   const {
@@ -141,9 +142,8 @@ export default function AdjustBorrowingModal() {
     const diffCents = targetCents - currentBalanceCents
     if (diffCents === 0) {
       toast.show({
-        title: "No Adjustment Needed",
-        message:
-          "Current remaining balance already matches your entered amount.",
+        title: t("finance.accounts.mobile.toastNoAdjustTitle"),
+        message: t("finance.borrowing.mobile.toastNoAdjustDesc"),
         type: "info",
       })
       router.back()
@@ -164,8 +164,10 @@ export default function AdjustBorrowingModal() {
 
       haptics.success()
       toast.show({
-        title: "Balance Adjusted",
-        message: `Remaining balance adjusted to ${formatAmount(String(targetCents), currency)}.`,
+        title: t("finance.accounts.mobile.toastAdjustedTitle"),
+        message: t("finance.accounts.mobile.toastAdjustedDesc", {
+          amount: formatAmount(String(targetCents), currency),
+        }),
         type: "success",
       })
 
@@ -174,8 +176,9 @@ export default function AdjustBorrowingModal() {
     } catch (err: any) {
       haptics.error()
       toast.show({
-        title: "Adjustment Failed",
-        message: err?.message || "Could not adjust debt balance.",
+        title: t("finance.borrowing.adjust.failed"),
+        message:
+          err?.message || t("finance.borrowing.mobile.toastAdjustFailed"),
         type: "error",
       })
     }
@@ -193,7 +196,9 @@ export default function AdjustBorrowingModal() {
     return (
       <View style={styles.errorContainer}>
         <AlertCircle size={32} color={colors.destructive} />
-        <Text style={styles.errorTitle}>Debt Agreement Not Found</Text>
+        <Text style={styles.errorTitle}>
+          {t("finance.borrowing.mobile.notFoundTitle")}
+        </Text>
       </View>
     )
   }
@@ -202,13 +207,13 @@ export default function AdjustBorrowingModal() {
     <>
       <Stack.Screen
         options={{
-          headerTitle: "Adjust Debt Balance",
+          headerTitle: t("finance.borrowing.adjust.title"),
           ...(Platform.OS === "ios"
             ? {
                 unstable_headerLeftItems: () => [
                   {
                     type: "button",
-                    label: "Close",
+                    label: t("common.close"),
                     icon: { type: "sfSymbol", name: "xmark" },
                     onPress: () => router.back(),
                   },
@@ -258,17 +263,22 @@ export default function AdjustBorrowingModal() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.counterpartyText} numberOfLines={1}>
-                  {borrowing.counterparty || "Agreement"}
+                  {borrowing.counterparty ||
+                    t("finance.borrowing.mobile.agreementFallback")}
                 </Text>
                 <Text style={styles.directionText}>
-                  {isLent ? "Owed to you (Lent)" : "You owe (Borrowed)"} •{" "}
-                  {currency}
+                  {isLent
+                    ? t("finance.borrowing.mobile.owedToYouLent")
+                    : t("finance.borrowing.mobile.youOweBorrowed")}{" "}
+                  • {currency}
                 </Text>
               </View>
             </View>
 
             <View style={styles.currentBalWrap}>
-              <Text style={styles.currentBalLabel}>Remaining</Text>
+              <Text style={styles.currentBalLabel}>
+                {t("finance.borrowing.adjust.currentRemaining")}
+              </Text>
               <Text
                 style={[
                   styles.currentBalValue,
@@ -284,10 +294,11 @@ export default function AdjustBorrowingModal() {
 
           {/* Actual Target Balance Input Card */}
           <Card style={styles.sectionCard}>
-            <Text style={styles.sectionHeaderLabel}>TARGET BALANCE</Text>
+            <Text style={styles.sectionHeaderLabel}>
+              {t("finance.borrowing.adjust.targetBalance").toUpperCase()}
+            </Text>
             <Text style={styles.fieldDesc}>
-              Enter the new remaining balance of this agreement to record a
-              balance adjustment:
+              {t("finance.borrowing.mobile.targetBalanceDesc")}
             </Text>
 
             <TextInput
@@ -321,14 +332,14 @@ export default function AdjustBorrowingModal() {
               )}
               <Text style={styles.summaryTitle}>
                 {differenceCents === 0
-                  ? "Balances Match"
+                  ? t("finance.accounts.mobile.summaryMatch")
                   : differenceCents > 0
                     ? isLent
-                      ? "Balance Increase (Owed More)"
-                      : "Debt Increase (You Owe More)"
+                      ? t("finance.borrowing.mobile.summaryLentIncrease")
+                      : t("finance.borrowing.mobile.summaryDebtIncrease")
                     : isLent
-                      ? "Balance Reduction (Owed Less)"
-                      : "Debt Reduction (You Owe Less)"}
+                      ? t("finance.borrowing.mobile.summaryLentDecrease")
+                      : t("finance.borrowing.mobile.summaryDebtDecrease")}
               </Text>
             </View>
 
@@ -342,26 +353,32 @@ export default function AdjustBorrowingModal() {
 
             <Text style={styles.summaryDesc}>
               {differenceCents === 0
-                ? "The remaining balance matches your entered amount. No adjustments are necessary."
-                : `A balancing entry will automatically update the agreement remaining balance to ${formatAmount(String(targetBalanceCents), currency)}.`}
+                ? t("finance.borrowing.mobile.summaryMatchDesc")
+                : t("finance.borrowing.mobile.summaryAdjustDesc", {
+                    amount: formatAmount(String(targetBalanceCents), currency),
+                  })}
             </Text>
           </Card>
 
           {/* Adjustment Date & Bank Account Option */}
           <Card style={styles.sectionCard}>
-            <Text style={styles.sectionHeaderLabel}>ADJUSTMENT DETAILS</Text>
+            <Text style={styles.sectionHeaderLabel}>
+              {t(
+                "finance.borrowing.mobile.adjustmentDetailsSection"
+              ).toUpperCase()}
+            </Text>
             <FormDateRow
               control={control}
               name="adjustmentDate"
-              label="Adjustment Date"
+              label={t("finance.borrowing.adjust.adjustmentDate")}
               icon={<Calendar size={16} color={colors.textMuted} />}
-              title="Select Adjustment Date"
+              title={t("finance.borrowing.mobile.selectAdjustmentDate")}
             />
             <View style={styles.rowDivider} />
             <AccountRow
-              label="Bank Account"
+              label={t("finance.borrowing.mobile.bankAccountLabel")}
               account={selectedAccount}
-              placeholder="None (Do not post to bank)"
+              placeholder={t("finance.borrowing.mobile.noBankPost")}
               onPress={() => {
                 Keyboard.dismiss()
                 accountSheetRef.current?.expand()
@@ -371,11 +388,13 @@ export default function AdjustBorrowingModal() {
 
           {/* Note / Memo */}
           <Card style={styles.sectionCard}>
-            <Text style={styles.sectionHeaderLabel}>ADJUSTMENT MEMO</Text>
+            <Text style={styles.sectionHeaderLabel}>
+              {t("finance.accounts.mobile.memoSection").toUpperCase()}
+            </Text>
             <TextInput
               control={control}
               name="notes"
-              placeholder="Reason for balance adjustment..."
+              placeholder={t("finance.accounts.mobile.memoPlaceholder")}
               placeholderTextColor={colors.textMuted}
             />
           </Card>
@@ -389,8 +408,8 @@ export default function AdjustBorrowingModal() {
               size="lg"
             >
               {differenceCents === 0
-                ? "Close (No Changes)"
-                : "Confirm & Adjust Balance"}
+                ? t("finance.accounts.mobile.closeNoChanges")
+                : t("finance.accounts.adjust.submit")}
             </Button>
           </View>
         </ScrollView>

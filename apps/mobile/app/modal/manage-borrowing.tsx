@@ -45,7 +45,7 @@ import {
   type CurrencyInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { formatCents, getCurrencySymbol, toCentsString } from "@saturn/core"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -71,6 +71,7 @@ export default function ManageBorrowingModal() {
   const isEditMode = Boolean(editBorrowingId)
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
 
@@ -236,8 +237,10 @@ export default function ManageBorrowingModal() {
         })
         haptics.success()
         toast.show({
-          title: "Agreement Updated",
-          message: `Debt record with ${values.counterparty.trim()} was updated.`,
+          title: t("finance.borrowing.mobile.toastUpdatedTitle"),
+          message: t("finance.borrowing.mobile.toastUpdatedDesc", {
+            name: values.counterparty.trim(),
+          }),
           type: "success",
         })
       } else {
@@ -246,8 +249,10 @@ export default function ManageBorrowingModal() {
         })
         haptics.success()
         toast.show({
-          title: "Agreement Recorded",
-          message: `Debt record with ${values.counterparty.trim()} has been saved.`,
+          title: t("finance.borrowing.mobile.toastRecordedTitle"),
+          message: t("finance.borrowing.mobile.toastRecordedDesc", {
+            name: values.counterparty.trim(),
+          }),
           type: "success",
         })
       }
@@ -257,8 +262,10 @@ export default function ManageBorrowingModal() {
     } catch (err: any) {
       haptics.error()
       toast.show({
-        title: isEditMode ? "Update Failed" : "Create Failed",
-        message: err?.message || "Could not save borrowing agreement.",
+        title: isEditMode
+          ? t("finance.borrowing.mobile.toastUpdateFailed")
+          : t("finance.borrowing.mobile.toastCreateFailed"),
+        message: err?.message || t("finance.borrowing.mobile.toastSaveFailed"),
         type: "error",
       })
     }
@@ -270,12 +277,12 @@ export default function ManageBorrowingModal() {
     haptics.warning()
 
     Alert.alert(
-      "Delete Debt Agreement",
-      `Are you sure you want to delete this agreement with ${counterparty}? This will delete all logged repayments and associated ledger entries.`,
+      t("finance.borrowing.delete.title"),
+      t("finance.borrowing.delete.description", { name: counterparty }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -287,8 +294,10 @@ export default function ManageBorrowingModal() {
               })
               haptics.success()
               toast.show({
-                title: "Agreement Deleted",
-                message: `Debt record with ${counterparty} was deleted.`,
+                title: t("finance.borrowing.delete.deletedTitle"),
+                message: t("finance.borrowing.delete.deletedDescription", {
+                  name: counterparty,
+                }),
                 type: "info",
               })
               await invalidateFinanceQueries(queryClient)
@@ -296,8 +305,10 @@ export default function ManageBorrowingModal() {
             } catch (err: any) {
               haptics.error()
               toast.show({
-                title: "Delete Failed",
-                message: err?.message || "Could not delete agreement.",
+                title: t("finance.borrowing.delete.failedTitle"),
+                message:
+                  err?.message ||
+                  t("finance.borrowing.delete.failedDescription"),
                 type: "error",
               })
             }
@@ -321,13 +332,15 @@ export default function ManageBorrowingModal() {
     <>
       <Stack.Screen
         options={{
-          headerTitle: isEditMode ? "Edit Debt / Loan" : "Record Debt / Loan",
+          headerTitle: isEditMode
+            ? t("finance.borrowing.mobile.headerTitleEdit")
+            : t("finance.borrowing.mobile.headerTitleCreate"),
           ...(Platform.OS === "ios"
             ? {
                 unstable_headerLeftItems: () => [
                   {
                     type: "button",
-                    label: "Close",
+                    label: t("common.close"),
                     icon: { type: "sfSymbol", name: "xmark" },
                     onPress: () => router.back(),
                   },
@@ -384,7 +397,7 @@ export default function ManageBorrowingModal() {
                   isLent && styles.directionToggleTextLentActive,
                 ]}
               >
-                Lent (Owed to Me)
+                {t("finance.borrowing.sheet.directionLent")}
               </Text>
             </TouchableOpacity>
 
@@ -409,7 +422,7 @@ export default function ManageBorrowingModal() {
                   !isLent && styles.directionToggleTextBorrowedActive,
                 ]}
               >
-                Borrowed (I Owe)
+                {t("finance.borrowing.sheet.directionBorrowed")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -420,6 +433,7 @@ export default function ManageBorrowingModal() {
             name="amount"
             currency={currency}
             currencySymbol={currentSymbol}
+            label={t("finance.borrowing.sheet.amountLabel").toUpperCase()}
             onPressCurrency={() => {
               Keyboard.dismiss()
               currencySheetRef.current?.expand()
@@ -434,9 +448,13 @@ export default function ManageBorrowingModal() {
             <FormRowInput
               control={control}
               name="counterparty"
-              label={isLent ? "Borrower" : "Lender"}
+              label={
+                isLent
+                  ? t("finance.borrowing.mobile.borrowerLabel")
+                  : t("finance.borrowing.mobile.lenderLabel")
+              }
               icon={<User size={16} color={colors.textMuted} />}
-              placeholder="Name of contact / institution"
+              placeholder={t("finance.borrowing.sheet.namePlaceholder")}
               returnKeyType="next"
             />
 
@@ -445,9 +463,9 @@ export default function ManageBorrowingModal() {
             <FormRowInput
               control={control}
               name="contactInfo"
-              label="Contact"
+              label={t("finance.borrowing.mobile.contactShort")}
               icon={<Phone size={16} color={colors.textMuted} />}
-              placeholder="Email, phone or handle (optional)"
+              placeholder={t("finance.borrowing.sheet.contactPlaceholder")}
               returnKeyType="next"
             />
 
@@ -456,9 +474,9 @@ export default function ManageBorrowingModal() {
             <FormDateRow
               control={control}
               name="establishedAt"
-              label="Established Date"
+              label={t("finance.borrowing.sheet.establishedLabel")}
               icon={<Calendar size={16} color={colors.textMuted} />}
-              title="Select Established Date"
+              title={t("finance.borrowing.mobile.selectEstablishedDate")}
             />
 
             {/* Has Due Date Toggle */}
@@ -466,7 +484,7 @@ export default function ManageBorrowingModal() {
             <FormSwitchRow
               control={control}
               name="hasDueDate"
-              label="Set Due Date"
+              label={t("finance.borrowing.mobile.setDueDateToggle")}
               icon={<CalendarClock size={16} color={colors.textMuted} />}
             />
 
@@ -477,14 +495,14 @@ export default function ManageBorrowingModal() {
                 <FormDateRow
                   control={control}
                   name="dueAt"
-                  label="Target Due Date"
+                  label={t("finance.borrowing.mobile.targetDueDate")}
                   icon={
                     <CalendarClock
                       size={16}
                       color={isLent ? colors.success : colors.destructive}
                     />
                   }
-                  title="Select Target Due Date"
+                  title={t("finance.borrowing.mobile.selectTargetDueDate")}
                 />
               </>
             )}
@@ -496,11 +514,11 @@ export default function ManageBorrowingModal() {
               <FormSwitchRow
                 control={control}
                 name="createAsTransaction"
-                label="Post to Account"
+                label={t("finance.borrowing.mobile.postToAccount")}
                 subtitle={
                   isLent
-                    ? "Record disbursement from bank balance"
-                    : "Record loan receipt to bank balance"
+                    ? t("finance.borrowing.mobile.postToAccountLent")
+                    : t("finance.borrowing.mobile.postToAccountBorrowed")
                 }
                 icon={<Landmark size={16} color={colors.textMuted} />}
                 onValueChange={(val) => {
@@ -516,9 +534,11 @@ export default function ManageBorrowingModal() {
                 <>
                   <View style={styles.rowDivider} />
                   <AccountRow
-                    label="Account"
+                    label={t("finance.borrowing.mobile.accountShort")}
                     account={selectedAccount}
-                    placeholder="Select payment account"
+                    placeholder={t(
+                      "finance.borrowing.mobile.selectPaymentAccount"
+                    )}
                     onPress={() => {
                       Keyboard.dismiss()
                       accountSheetRef.current?.expand()
@@ -534,9 +554,9 @@ export default function ManageBorrowingModal() {
             <FormRowInput
               control={control}
               name="notes"
-              label="Notes"
+              label={t("finance.borrowing.sheet.notesLabel")}
               icon={<FileText size={16} color={colors.textMuted} />}
-              placeholder="Collateral, payment schedule, terms..."
+              placeholder={t("finance.borrowing.mobile.notesTermsPlaceholder")}
               multiline
               numberOfLines={3}
               style={styles.notesInput}
@@ -557,7 +577,7 @@ export default function ManageBorrowingModal() {
                 <>
                   <Trash2 size={16} color={colors.destructive} />
                   <Text style={styles.deleteBtnText}>
-                    Delete Debt Agreement
+                    {t("finance.borrowing.delete.title")}
                   </Text>
                 </>
               )}
@@ -578,10 +598,14 @@ export default function ManageBorrowingModal() {
             ]}
           >
             {isEditMode
-              ? "Save Changes"
+              ? t("finance.borrowing.sheet.saveSubmit")
               : isLent
-                ? `Record Loan • ${currentSymbol}${amount || "0.00"}`
-                : `Record Borrowing • ${currentSymbol}${amount || "0.00"}`}
+                ? t("finance.borrowing.mobile.recordLoanWith", {
+                    amount: `${currentSymbol}${amount || "0.00"}`,
+                  })
+                : t("finance.borrowing.mobile.recordBorrowingWith", {
+                    amount: `${currentSymbol}${amount || "0.00"}`,
+                  })}
           </Button>
         </View>
       </KeyboardAvoidingView>

@@ -28,7 +28,7 @@ import { Card } from "@/components/ui/card"
 import { useToast } from "@/components/ui/toast"
 import { toLocalISODate } from "@/components/ui/date-picker-sheet"
 import { AccountPickerSheet, CurrencyPickerSheet } from "../sheets"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
 import { AccountRow } from "../account-select"
 import { HeroAmountInput } from "@/components/ui/amount-input"
 import {
@@ -64,6 +64,7 @@ export function IncomeForm({
   const formStyles = useFormStyles()
   const insets = useSafeAreaInsets()
   const toast = useToast()
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const isEditMode = !!existingTx?.id
 
@@ -211,8 +212,16 @@ export function IncomeForm({
 
       toast.show({
         type: "success",
-        title: isEditMode ? "Income Updated" : "Income Recorded",
-        message: `+${currentSymbol}${amountDecimal} ${values.currency} credited to ${selectedAccount?.name || "Account"}`,
+        title: isEditMode
+          ? t("finance.transactions.incomeForm.toastUpdatedTitle")
+          : t("finance.transactions.incomeForm.recordedTitle"),
+        message: t("finance.transactions.incomeForm.toastDesc", {
+          amount: `${currentSymbol}${amountDecimal}`,
+          currency: values.currency,
+          account:
+            selectedAccount?.name ||
+            t("finance.transactions.incomeForm.accountFallback"),
+        }),
       })
 
       await invalidateFinanceQueries(queryClient)
@@ -222,7 +231,7 @@ export function IncomeForm({
       const errMsg =
         err instanceof Error
           ? err.message
-          : "An unexpected error occurred while saving."
+          : t("finance.budgets.unexpectedError")
       setSubmissionError(errMsg)
     }
   }
@@ -238,6 +247,7 @@ export function IncomeForm({
         <HeroAmountInput
           control={control}
           name="amount"
+          label={t("finance.transactions.incomeForm.amountLabel").toUpperCase()}
           currency={currentCurrency}
           currencySymbol={currentSymbol}
           onPressCurrency={() => {
@@ -260,7 +270,7 @@ export function IncomeForm({
                 />
                 <View style={{ flex: 1 }}>
                   <Text style={formStyles.conversionAlertTitle}>
-                    Exchange Rate Required
+                    {t("finance.conversion.rateRequired")}
                   </Text>
                   <Text style={formStyles.conversionAlertText}>
                     {conversionPreview.error}
@@ -276,7 +286,7 @@ export function IncomeForm({
                 />
                 <View style={{ flex: 1 }}>
                   <Text style={formStyles.conversionBoxLabel}>
-                    REPORTING CURRENCY CONVERSION
+                    {t("finance.conversion.reportingLabel").toUpperCase()}
                   </Text>
                   <Text style={formStyles.conversionBoxAmount}>
                     ≈{" "}
@@ -287,9 +297,11 @@ export function IncomeForm({
                     {conversionPreview.currency}
                   </Text>
                   <Text style={formStyles.conversionBoxRate}>
-                    Exchange rate: 1 {currentCurrency} ={" "}
-                    {conversionPreview.rate.toFixed(4)}{" "}
-                    {conversionPreview.currency}
+                    {t("finance.conversion.exchangeRateLine", {
+                      from: currentCurrency,
+                      rate: conversionPreview.rate.toFixed(4),
+                      to: conversionPreview.currency,
+                    })}
                   </Text>
                 </View>
               </View>
@@ -301,7 +313,7 @@ export function IncomeForm({
         <Card style={formStyles.formGroupCard}>
           {/* Field: Account */}
           <AccountRow
-            label="Account"
+            label={t("finance.transactions.incomeForm.accountRowLabel")}
             account={selectedAccount}
             error={errors.accountId?.message}
             onPress={() => {
@@ -315,15 +327,28 @@ export function IncomeForm({
           <FormRowInput
             control={control}
             name="description"
-            label="Description"
+            label={t("finance.transactions.incomeForm.descriptionLabel")}
             icon={<FileText size={16} color={colors.textMuted} />}
-            placeholder="e.g. Monthly Salary, Freelance Payment"
+            placeholder={t(
+              "finance.transactions.incomeForm.descriptionPlaceholder"
+            )}
             returnKeyType="done"
           />
 
           {/* Field: Date Section */}
           <View style={formStyles.rowDivider} />
-          <FormEffectiveDateSection control={control} />
+          <FormEffectiveDateSection
+            control={control}
+            dateLabel={t(
+              "finance.transactions.incomeForm.transactionDateLabel"
+            )}
+            effectiveDateLabel={t(
+              "finance.transactions.incomeForm.effectiveDateLabel"
+            )}
+            switchLabel={t(
+              "finance.transactions.incomeForm.customEffectiveCheckbox"
+            )}
+          />
         </Card>
 
         {/* Error Box */}
@@ -349,8 +374,12 @@ export function IncomeForm({
           onPress={handleSubmit(onSubmit)}
         >
           {isEditMode
-            ? `Update Income • ${currentSymbol}${amountDecimal}`
-            : `Record Income • ${currentSymbol}${amountDecimal}`}
+            ? t("finance.transactions.incomeForm.submitUpdateShort", {
+                amount: `${currentSymbol}${amountDecimal}`,
+              })
+            : t("finance.transactions.incomeForm.submitRecord", {
+                amount: `${currentSymbol}${amountDecimal}`,
+              })}
         </Button>
       </View>
 

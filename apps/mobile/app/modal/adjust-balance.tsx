@@ -29,7 +29,8 @@ import {
   useAdjustAccountBalanceMutation,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { formatAmount, formatCents, toCentsString } from "@saturn/core"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -44,6 +45,7 @@ export default function AdjustBalanceModal() {
   const { accountId } = useLocalSearchParams<{ accountId: string }>()
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { t, locale } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
 
@@ -59,9 +61,9 @@ export default function AdjustBalanceModal() {
         currentBalance !== undefined
           ? formatCents(currentBalance).toString()
           : "",
-      notes: "Manual balance adjustment",
+      notes: t("finance.accounts.mobile.defaultNote"),
     }),
-    [currentBalance]
+    [currentBalance, t]
   )
 
   const {
@@ -101,8 +103,8 @@ export default function AdjustBalanceModal() {
     const diffCents = targetCents - currentBalanceCents
     if (diffCents === 0) {
       toast.show({
-        title: "No Adjustment Needed",
-        message: "Current balance already matches your entered amount.",
+        title: t("finance.accounts.mobile.toastNoAdjustTitle"),
+        message: t("finance.accounts.mobile.toastNoAdjustDesc"),
         type: "info",
       })
       router.back()
@@ -122,8 +124,10 @@ export default function AdjustBalanceModal() {
 
       haptics.success()
       toast.show({
-        title: "Balance Adjusted",
-        message: `Balance adjusted to ${formatAmount(String(targetCents), account?.currency)}.`,
+        title: t("finance.accounts.mobile.toastAdjustedTitle"),
+        message: t("finance.accounts.mobile.toastAdjustedDesc", {
+          amount: formatAmount(String(targetCents), account?.currency),
+        }),
         type: "success",
       })
 
@@ -132,8 +136,8 @@ export default function AdjustBalanceModal() {
     } catch (err: any) {
       haptics.error()
       toast.show({
-        title: "Adjustment Failed",
-        message: err?.message || "Could not adjust account balance.",
+        title: t("finance.accounts.adjust.failed"),
+        message: err?.message || t("finance.accounts.mobile.toastAdjustFailed"),
         type: "error",
       })
     }
@@ -151,7 +155,9 @@ export default function AdjustBalanceModal() {
     return (
       <View style={styles.errorContainer}>
         <AlertCircle size={32} color={colors.destructive} />
-        <Text style={styles.errorTitle}>Account Not Found</Text>
+        <Text style={styles.errorTitle}>
+          {t("finance.accounts.mobile.notFoundTitle")}
+        </Text>
       </View>
     )
   }
@@ -160,13 +166,13 @@ export default function AdjustBalanceModal() {
     <>
       <Stack.Screen
         options={{
-          headerTitle: "Adjust Balance",
+          headerTitle: t("finance.accounts.card.adjust"),
           ...(Platform.OS === "ios"
             ? {
                 unstable_headerLeftItems: () => [
                   {
                     type: "button",
-                    label: "Close",
+                    label: t("common.close"),
                     icon: { type: "sfSymbol", name: "xmark" },
                     onPress: () => router.back(),
                   },
@@ -204,13 +210,21 @@ export default function AdjustBalanceModal() {
               <View>
                 <Text style={styles.accountName}>{account.name}</Text>
                 <Text style={styles.accountType}>
-                  {account.currency} • {account.type.replace("_", " ")}
+                  {account.currency} •{" "}
+                  {getLocalizedEnumLabel(
+                    "finance",
+                    "accountType",
+                    account.type,
+                    locale
+                  )}
                 </Text>
               </View>
             </View>
 
             <View style={styles.currentBalWrap}>
-              <Text style={styles.currentBalLabel}>Current Balance</Text>
+              <Text style={styles.currentBalLabel}>
+                {t("finance.accounts.mobile.currentBalanceLabel")}
+              </Text>
               <Text style={styles.currentBalValue}>
                 {formatAmount(account.currentBalance, account.currency)}
               </Text>
@@ -219,10 +233,11 @@ export default function AdjustBalanceModal() {
 
           {/* Actual Target Balance Input Card */}
           <Card style={styles.sectionCard}>
-            <Text style={styles.sectionHeaderLabel}>TARGET BALANCE</Text>
+            <Text style={styles.sectionHeaderLabel}>
+              {t("finance.accounts.mobile.targetBalanceSection").toUpperCase()}
+            </Text>
             <Text style={styles.fieldDesc}>
-              Enter the new actual balance of your account to record a balance
-              adjustment:
+              {t("finance.accounts.mobile.targetBalanceDesc")}
             </Text>
 
             <TextInput
@@ -256,10 +271,10 @@ export default function AdjustBalanceModal() {
               )}
               <Text style={styles.summaryTitle}>
                 {differenceCents === 0
-                  ? "Balances Match"
+                  ? t("finance.accounts.mobile.summaryMatch")
                   : differenceCents > 0
-                    ? "Positive Adjustment"
-                    : "Negative Adjustment"}
+                    ? t("finance.accounts.mobile.summaryPositive")
+                    : t("finance.accounts.mobile.summaryNegative")}
               </Text>
             </View>
 
@@ -273,18 +288,25 @@ export default function AdjustBalanceModal() {
 
             <Text style={styles.summaryDesc}>
               {differenceCents === 0
-                ? "Your app ledger exactly matches your real statement. No adjustments are necessary."
-                : `A balancing entry will automatically be logged to align your account balance to ${formatAmount(String(targetBalanceCents), account.currency)}.`}
+                ? t("finance.accounts.mobile.summaryMatchDesc")
+                : t("finance.accounts.mobile.summaryAdjustDesc", {
+                    amount: formatAmount(
+                      String(targetBalanceCents),
+                      account.currency
+                    ),
+                  })}
             </Text>
           </Card>
 
           {/* Note / Memo */}
           <Card style={styles.sectionCard}>
-            <Text style={styles.sectionHeaderLabel}>ADJUSTMENT MEMO</Text>
+            <Text style={styles.sectionHeaderLabel}>
+              {t("finance.accounts.mobile.memoSection").toUpperCase()}
+            </Text>
             <TextInput
               control={control}
               name="notes"
-              placeholder="Reason for balance adjustment..."
+              placeholder={t("finance.accounts.mobile.memoPlaceholder")}
               placeholderTextColor={colors.textMuted}
             />
           </Card>
@@ -298,8 +320,8 @@ export default function AdjustBalanceModal() {
               size="lg"
             >
               {differenceCents === 0
-                ? "Close (No Changes)"
-                : "Confirm & Adjust Balance"}
+                ? t("finance.accounts.mobile.closeNoChanges")
+                : t("finance.accounts.adjust.submit")}
             </Button>
           </View>
         </ScrollView>

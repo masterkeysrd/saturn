@@ -8,7 +8,7 @@ import {
   Coins,
 } from "lucide-react-native"
 import { formatAmount } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import {
   type Transaction,
   type Budget,
@@ -43,6 +43,7 @@ export function TransactionListItem({
 }: TransactionListItemProps) {
   const { colors, getBudgetColors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
 
   const isExpense = item.type === "EXPENSE"
   const isIncome = item.type === "INCOME"
@@ -59,7 +60,9 @@ export function TransactionListItem({
   const accountName =
     account?.name ||
     item.account?.name ||
-    (item.accountId ? "Account" : "No Account (Cash)")
+    (item.accountId
+      ? t("finance.pickers.account.rowLabel")
+      : t("finance.pickers.account.rowPlaceholder"))
   const budgetName = budget?.name || item.budget?.name
   const budgetColor = budget?.color || "indigo"
   const budgetIcon = budget?.icon
@@ -120,7 +123,7 @@ export function TransactionListItem({
           ]}
         >
           <Text style={[styles.tagText, { color: colors.success }]}>
-            Income
+            {t("finance.transactions.list.income")}
           </Text>
         </View>
       ) : null}
@@ -137,7 +140,7 @@ export function TransactionListItem({
         >
           <Repeat size={10} color={colors.accent} />
           <Text style={[styles.tagText, { color: colors.accent }]}>
-            Recurring
+            {t("finance.transactions.recurring")}
           </Text>
         </View>
       )}
@@ -155,10 +158,10 @@ export function TransactionListItem({
           <Coins size={10} color={colors.warning} />
           <Text style={[styles.tagText, { color: colors.warning }]}>
             {borrowingRole === "REPAYMENT"
-              ? "Repayment"
+              ? t("finance.transactions.repayment")
               : borrowingRole === "INITIAL_FUNDING" && isExpense
-                ? "Lend"
-                : "Borrow"}
+                ? t("finance.transactions.lend")
+                : t("finance.transactions.borrow")}
           </Text>
         </View>
       )}
@@ -211,7 +214,7 @@ export function TransactionListItem({
         {/* Row 1: Description & Primary Amount */}
         <View style={styles.row1}>
           <Text style={styles.description} numberOfLines={1}>
-            {item.description || "Unnamed"}
+            {item.description || t("finance.transactions.detail.unnamed")}
           </Text>
           <MonoAmount
             size="md"

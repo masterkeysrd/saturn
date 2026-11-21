@@ -7,7 +7,9 @@ import BottomSheet, {
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Check } from "lucide-react-native"
 import { type Budget } from "@saturn/api/saturn/finance/v1/finance"
-import { formatAmount, formatInterval } from "@saturn/core"
+import { formatAmount } from "@saturn/core"
+import { useI18n } from "@saturn/hooks"
+import { getLocalizedIntervalLabel } from "@saturn/i18n"
 import { useTheme } from "@/lib/theme"
 import { getBudgetIcon } from "@/lib/budget-icons"
 import { haptics } from "@/lib/haptics"
@@ -37,6 +39,7 @@ export const BudgetPickerSheet = forwardRef<
     ref
   ) => {
     const { colors, getBudgetColors } = useTheme()
+    const { t, locale } = useI18n()
     const sheetStyles = useSheetStyles()
     const insets = useSafeAreaInsets()
 
@@ -61,7 +64,10 @@ export const BudgetPickerSheet = forwardRef<
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
-            <BottomSheetHeader title="Select Budget" onClose={handleClose} />
+            <BottomSheetHeader
+              title={t("finance.pickers.budget.defaultTitle")}
+              onClose={handleClose}
+            />
           }
           ListEmptyComponent={
             isLoading ? (
@@ -73,7 +79,7 @@ export const BudgetPickerSheet = forwardRef<
             ) : (
               <View style={sheetStyles.emptySheetBox}>
                 <Text style={sheetStyles.emptySheetText}>
-                  No active budgets found.
+                  {t("finance.pickers.budget.noBudgetsFound")}
                 </Text>
               </View>
             )
@@ -145,7 +151,7 @@ export const BudgetPickerSheet = forwardRef<
                       </Text>
                       <View style={sheetStyles.budgetIntervalBadge}>
                         <Text style={sheetStyles.budgetIntervalText}>
-                          {formatInterval(b.interval)}
+                          {getLocalizedIntervalLabel(b.interval, locale)}
                         </Text>
                       </View>
                     </View>
@@ -156,7 +162,7 @@ export const BudgetPickerSheet = forwardRef<
                       ]}
                     >
                       {isOver
-                        ? "Over budget"
+                        ? t("finance.pickers.budget.overBudget")
                         : `${formatAmount(String(remainingCents), b.currency)}`}
                     </Text>
                   </View>
@@ -178,8 +184,10 @@ export const BudgetPickerSheet = forwardRef<
 
                   <View style={sheetStyles.budgetMetaRow}>
                     <Text style={sheetStyles.budgetMetaText}>
-                      {formatAmount(String(spentCents), b.currency)} spent of{" "}
-                      {formatAmount(b.limitAmount, b.currency)}
+                      {t("finance.pickers.budget.spentOf", {
+                        spent: formatAmount(String(spentCents), b.currency),
+                        limit: formatAmount(b.limitAmount, b.currency),
+                      })}
                     </Text>
                     <Text
                       style={[

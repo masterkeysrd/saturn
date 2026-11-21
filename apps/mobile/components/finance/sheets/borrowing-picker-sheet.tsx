@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { HandCoins } from "lucide-react-native"
 import { type Borrowing } from "@saturn/api/saturn/finance/v1/finance"
 import { formatAmount } from "@saturn/core"
+import { useI18n } from "@saturn/hooks"
 import { useTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet, BottomSheetHeader } from "@/components/ui/bottom-sheet"
@@ -38,6 +39,7 @@ export const BorrowingPickerSheet = forwardRef<
     const { colors } = useTheme()
     const sheetStyles = useSheetStyles()
     const insets = useSafeAreaInsets()
+    const { t } = useI18n()
 
     const handleClose = () => {
       if (ref && "current" in ref && ref.current) {
@@ -61,7 +63,7 @@ export const BorrowingPickerSheet = forwardRef<
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             <BottomSheetHeader
-              title="Select Loan Agreement"
+              title={t("finance.pickers.borrowing.defaultTitle")}
               onClose={handleClose}
             />
           }
@@ -75,7 +77,7 @@ export const BorrowingPickerSheet = forwardRef<
             ) : (
               <View style={sheetStyles.emptySheetBox}>
                 <Text style={sheetStyles.emptySheetText}>
-                  No active loan agreements found.
+                  {t("finance.pickers.borrowing.noAgreementsFound")}
                 </Text>
               </View>
             )
@@ -102,12 +104,13 @@ export const BorrowingPickerSheet = forwardRef<
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={sheetStyles.accountItemTitle}>
-                    {b.counterparty || "Agreement"}
+                    {b.counterparty ||
+                      t("finance.borrowing.mobile.agreementFallback")}
                   </Text>
                   <Text style={sheetStyles.accountItemSubtitle}>
                     {b.direction === "LENT"
-                      ? "Lending (They owe you)"
-                      : "Borrowing (You owe)"}
+                      ? t("finance.pickers.borrowing.lendingTheyOwe")
+                      : t("finance.pickers.borrowing.borrowingYouOwe")}
                   </Text>
                 </View>
                 <Text style={sheetStyles.scheduledItemAmount}>

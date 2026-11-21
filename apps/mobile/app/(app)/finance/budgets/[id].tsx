@@ -42,13 +42,14 @@ import {
   type Budget,
   type Budget_Status,
 } from "@saturn/api/saturn/finance/v1/finance"
+import { formatAmount, parseDate } from "@saturn/core"
 import {
-  formatAmount,
-  formatInterval,
-  groupTransactionsByDate,
-  parseDate,
-} from "@saturn/core"
-import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
+  invalidateFinanceQueries,
+  useDateSections,
+  useI18n,
+  useTimezone,
+} from "@saturn/hooks"
+import { getLocalizedIntervalLabel, type TranslationKey } from "@saturn/i18n"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { getBudgetIcon } from "@/lib/budget-icons"
@@ -117,11 +118,26 @@ function calculateDaysLeft(
   return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)))
 }
 
+type BudgetStatusAction = "Paused" | "Resumed" | "Closed" | "Reopened"
+
+const STATUS_ACTION_KEYS: Record<BudgetStatusAction, TranslationKey> = {
+  Paused: "finance.budgets.mobile.statusAction.Paused",
+  Resumed: "finance.budgets.mobile.statusAction.Resumed",
+  Closed: "finance.budgets.mobile.statusAction.Closed",
+  Reopened: "finance.budgets.mobile.statusAction.Reopened",
+}
+
+function capitalizeAction(action: string): BudgetStatusAction {
+  return (action.charAt(0).toUpperCase() +
+    action.slice(1)) as BudgetStatusAction
+}
+
 export default function BudgetDetailScreen() {
   const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { t, locale } = useI18n()
   const queryClient = useQueryClient()
   const toast = useToast()
   const { colors, resolvedMode, getBudgetColors } = useTheme()
@@ -234,10 +250,7 @@ export default function BudgetDetailScreen() {
     [txnsData?.transactions]
   )
 
-  const sections = useMemo(
-    () => groupTransactionsByDate(periodTransactions, tz.timezone),
-    [periodTransactions, tz.timezone]
-  )
+  const sections = useDateSections(periodTransactions)
 
   const transactionsSpentInPeriodCents = useMemo(() => {
     return periodTransactions.reduce(
@@ -286,9 +299,13 @@ export default function BudgetDetailScreen() {
         },
       })
       haptics.success()
+      const action = t(STATUS_ACTION_KEYS[capitalizeAction(actionLabel)])
       toast.show({
-        title: `Budget ${actionLabel.charAt(0).toUpperCase() + actionLabel.slice(1)}`,
-        message: `"${budget.name}" has been ${actionLabel}.`,
+        title: t("finance.budgets.mobile.toastStatusTitle", { action }),
+        message: t("finance.budgets.mobile.toastStatusDesc", {
+          name: budget.name,
+          action,
+        }),
         type: "success",
       })
       await invalidateFinanceQueries(queryClient)
@@ -298,9 +315,11 @@ export default function BudgetDetailScreen() {
     } catch (err: any) {
       haptics.error()
       toast.show({
-        title: "Action Failed",
+        title: t("finance.budgets.mobile.toastActionFailed"),
         message:
-          err instanceof Error ? err.message : "Failed to update budget status",
+          err instanceof Error
+            ? err.message
+            : t("finance.budgets.mobile.toastStatusFailed"),
         type: "error",
       })
     }
@@ -311,12 +330,12 @@ export default function BudgetDetailScreen() {
     if (!budgetId) return
     haptics.warning()
     Alert.alert(
-      "Delete Budget",
-      `Are you sure you want to delete budget "${budget.name}"? This action cannot be undone.`,
+      t("finance.budgets.mobile.menuDelete"),
+      t("finance.budgets.mobile.deleteAlertDesc", { name: budget.name }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -326,8 +345,10 @@ export default function BudgetDetailScreen() {
               })
               haptics.success()
               toast.show({
-                title: "Budget Deleted",
-                message: `"${budget.name}" was removed.`,
+                title: t("finance.budgets.deletedTitle"),
+                message: t("finance.budgets.mobile.toastDeletedDesc", {
+                  name: budget.name,
+                }),
                 type: "info",
               })
               await invalidateFinanceQueries(queryClient)
@@ -335,8 +356,9 @@ export default function BudgetDetailScreen() {
             } catch (err: any) {
               haptics.error()
               toast.show({
-                title: "Delete Failed",
-                message: err?.message || "Could not delete budget.",
+                title: t("finance.budgets.deleteFailedTitle"),
+                message:
+                  err?.message || t("finance.budgets.mobile.toastDeleteFailed"),
                 type: "error",
               })
             }
@@ -358,34 +380,40 @@ export default function BudgetDetailScreen() {
 
     if (currentStatus === "ACTIVE") {
       options.push({
-        text: "Pause Budget",
+        text: t("finance.budgets.pauseBudget"),
         onPress: () => handleUpdateStatus("PAUSED", "paused"),
       })
       options.push({
-        text: "Close Budget",
+        text: t("finance.budgets.closeBudget"),
         style: "destructive",
         onPress: () => handleUpdateStatus("CLOSED", "closed"),
       })
     } else if (currentStatus === "PAUSED") {
       options.push({
-        text: "Resume Budget",
+        text: t("finance.budgets.resumeBudget"),
         onPress: () => handleUpdateStatus("ACTIVE", "resumed"),
       })
       options.push({
-        text: "Close Budget",
+        text: t("finance.budgets.closeBudget"),
         style: "destructive",
         onPress: () => handleUpdateStatus("CLOSED", "closed"),
       })
     } else if (currentStatus === "CLOSED") {
       options.push({
-        text: "Reopen Budget",
+        text: t("finance.budgets.reopenBudget"),
         onPress: () => handleUpdateStatus("ACTIVE", "reopened"),
       })
     }
 
-    options.push({ text: "Cancel", style: "cancel" })
+    options.push({ text: t("common.cancel"), style: "cancel" })
 
-    Alert.alert("Manage Status", `Current: ${currentStatus}`, options)
+    Alert.alert(
+      t("finance.budgets.mobile.manageStatus"),
+      t("finance.budgets.mobile.manageStatusCurrent", {
+        status: currentStatus,
+      }),
+      options
+    )
   }
 
   // Stepping historical periods
@@ -430,16 +458,20 @@ export default function BudgetDetailScreen() {
     return (
       <View style={styles.errorContainer}>
         <AlertCircle size={36} color={colors.destructive} />
-        <Text style={styles.errorTitle}>Budget Not Found</Text>
+        <Text style={styles.errorTitle}>
+          {t("finance.budgets.mobile.notFoundTitle")}
+        </Text>
         <Text style={styles.errorSubtitle}>
-          The requested budget allocation could not be loaded.
+          {t("finance.budgets.mobile.notFoundSubtitle")}
         </Text>
         <TouchableOpacity
           style={styles.backToBudgetsBtn}
           onPress={() => router.replace("/(app)/finance/budgets")}
           activeOpacity={0.7}
         >
-          <Text style={styles.backToBudgetsText}>Back to Budgets</Text>
+          <Text style={styles.backToBudgetsText}>
+            {t("finance.budgets.mobile.backToBudgets")}
+          </Text>
         </TouchableOpacity>
       </View>
     )
@@ -487,10 +519,10 @@ export default function BudgetDetailScreen() {
     : ""
   const dateRangeStr =
     budget.interval === "ONE_TIME"
-      ? "Lifetime Allocation"
+      ? t("finance.budgets.mobile.lifetimeAllocation")
       : startStr && endStr
         ? `${startStr} - ${endStr}`
-        : "Current Period"
+        : t("finance.budgets.mobile.currentPeriod")
 
   const barColor = isOver
     ? colors.destructive
@@ -541,7 +573,7 @@ export default function BudgetDetailScreen() {
               <View style={styles.periodRow}>
                 <View style={styles.intervalBadge}>
                   <Text style={styles.intervalBadgeText}>
-                    {formatInterval(budget.interval)}
+                    {getLocalizedIntervalLabel(budget.interval, locale)}
                   </Text>
                 </View>
 
@@ -571,7 +603,7 @@ export default function BudgetDetailScreen() {
                         { color: colors.destructive },
                       ]}
                     >
-                      Closed
+                      {t("finance.budgets.mobile.badgeClosed")}
                     </Text>
                   </View>
                 ) : budget.status === "PAUSED" ? (
@@ -590,7 +622,7 @@ export default function BudgetDetailScreen() {
                         { color: colors.warning },
                       ]}
                     >
-                      Paused
+                      {t("finance.budgets.mobile.badgePaused")}
                     </Text>
                   </View>
                 ) : null}
@@ -655,7 +687,9 @@ export default function BudgetDetailScreen() {
                 style={styles.periodResetBadge}
                 activeOpacity={0.7}
               >
-                <Text style={styles.periodResetText}>Current</Text>
+                <Text style={styles.periodResetText}>
+                  {t("finance.budgets.mobile.periodResetCurrent")}
+                </Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -671,8 +705,10 @@ export default function BudgetDetailScreen() {
           <View style={styles.exchangeRateWarning}>
             <AlertTriangle size={14} color={colors.warning} />
             <Text style={styles.exchangeRateWarningText}>
-              Exchange Rate Required: No conversion rate configured from{" "}
-              {budget.currency} to {baseCurrency}.
+              {t("finance.budgets.mobile.rateRequiredInline", {
+                from: budget.currency,
+                to: baseCurrency,
+              })}
             </Text>
           </View>
         ) : null}
@@ -684,8 +720,10 @@ export default function BudgetDetailScreen() {
               1 {budget.currency} = {rateToBase.toFixed(4)} {baseCurrency}
             </Text>
             <Text style={styles.crossCurrencyValuesText}>
-              Limit: {formatAmount(limitInBaseCents, baseCurrency)} • Spent:{" "}
-              {formatAmount(spentInBaseCents, baseCurrency)}
+              {t("finance.budgets.mobile.limitSpentStrip", {
+                limit: formatAmount(limitInBaseCents, baseCurrency),
+                spent: formatAmount(spentInBaseCents, baseCurrency),
+              })}
             </Text>
           </View>
         ) : null}
@@ -707,7 +745,9 @@ export default function BudgetDetailScreen() {
         {/* Financial Metrics Grid */}
         <View style={styles.metricsGrid}>
           <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>Spent</Text>
+            <Text style={styles.metricLabel}>
+              {t("finance.budgets.thSpent")}
+            </Text>
             <Text
               style={[
                 styles.metricValue,
@@ -719,7 +759,9 @@ export default function BudgetDetailScreen() {
           </View>
           <View style={styles.metricDivider} />
           <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>Limit</Text>
+            <Text style={styles.metricLabel}>
+              {t("finance.budgets.thLimit")}
+            </Text>
             <Text style={styles.metricValue}>
               {formatAmount(budget.limitAmount, budget.currency)}
             </Text>
@@ -727,7 +769,9 @@ export default function BudgetDetailScreen() {
           <View style={styles.metricDivider} />
           <View style={styles.metricItem}>
             <Text style={styles.metricLabel}>
-              {isOver ? "Over Budget" : "Remaining"}
+              {isOver
+                ? t("finance.budgets.progress.overBudget")
+                : t("finance.budgets.progress.remaining")}
             </Text>
             <Text
               style={[
@@ -752,15 +796,21 @@ export default function BudgetDetailScreen() {
           />
           <Text style={styles.allowanceText}>
             {isOver ? (
-              <Text>Limit exceeded. Spending paused for this cycle.</Text>
+              <Text>{t("finance.budgets.mobile.limitExceeded")}</Text>
             ) : (
               <Text>
-                Daily Allowance:{" "}
+                {t("finance.budgets.mobile.dailyAllowanceLabel")}{" "}
                 <Text style={styles.allowanceBold}>
-                  {formatAmount(String(dailyAllowanceCents), budget.currency)} /
-                  day
+                  {formatAmount(String(dailyAllowanceCents), budget.currency)}{" "}
+                  {t("finance.budgets.mobile.perDay")}
                 </Text>{" "}
-                ({daysLeft} {daysLeft === 1 ? "day" : "days"} left)
+                {t("finance.budgets.mobile.allowanceDaysLeft", {
+                  days: daysLeft,
+                  unit:
+                    daysLeft === 1
+                      ? t("finance.budgets.mobile.daysUnitOne")
+                      : t("finance.budgets.mobile.daysUnitMany"),
+                })}
               </Text>
             )}
           </Text>
@@ -793,7 +843,7 @@ export default function BudgetDetailScreen() {
         >
           <Plus size={16} color={colors.primaryForeground} />
           <Text style={styles.actionBtnPrimaryText} numberOfLines={1}>
-            Add Expense
+            {t("finance.budgets.mobile.addExpense")}
           </Text>
         </TouchableOpacity>
 
@@ -812,7 +862,7 @@ export default function BudgetDetailScreen() {
         >
           <Edit3 size={16} color={colors.textPrimary} />
           <Text style={styles.actionBtnSecondaryText} numberOfLines={1}>
-            Edit
+            {t("common.edit")}
           </Text>
         </TouchableOpacity>
 
@@ -833,21 +883,21 @@ export default function BudgetDetailScreen() {
                 ]}
                 numberOfLines={1}
               >
-                Reopen
+                {t("finance.budgets.mobile.actionReopen")}
               </Text>
             </>
           ) : budget.status === "PAUSED" ? (
             <>
               <Play size={16} color={colors.primary} />
               <Text style={styles.actionBtnSecondaryText} numberOfLines={1}>
-                Resume
+                {t("finance.budgets.mobile.actionResume")}
               </Text>
             </>
           ) : (
             <>
               <Pause size={16} color={colors.textMuted} />
               <Text style={styles.actionBtnSecondaryText} numberOfLines={1}>
-                Status
+                {t("finance.budgets.mobile.actionStatus")}
               </Text>
             </>
           )}
@@ -855,7 +905,9 @@ export default function BudgetDetailScreen() {
       </View>
 
       <Caption style={styles.ledgerHeader}>
-        TRANSACTIONS ({periodTransactions.length})
+        {t("finance.budgets.mobile.transactionsN", {
+          count: periodTransactions.length,
+        })}
       </Caption>
     </View>
   )
@@ -870,7 +922,7 @@ export default function BudgetDetailScreen() {
                 unstable_headerRightItems: () => [
                   {
                     type: "menu",
-                    label: "Actions",
+                    label: t("finance.budgets.mobile.menuActions"),
                     icon: { type: "sfSymbol", name: "ellipsis" },
                     menu: {
                       title: budget.name,
@@ -879,7 +931,7 @@ export default function BudgetDetailScreen() {
                           ? [
                               {
                                 type: "action" as const,
-                                label: "Record Expense",
+                                label: t("finance.budgets.recordExpense"),
                                 icon: {
                                   type: "sfSymbol" as const,
                                   name: "plus.circle" as const,
@@ -904,7 +956,7 @@ export default function BudgetDetailScreen() {
                           ? [
                               {
                                 type: "action" as const,
-                                label: "Resume Budget",
+                                label: t("finance.budgets.resumeBudget"),
                                 icon: {
                                   type: "sfSymbol" as const,
                                   name: "play.circle" as const,
@@ -918,7 +970,7 @@ export default function BudgetDetailScreen() {
                             : [
                                 {
                                   type: "action" as const,
-                                  label: "Pause Budget",
+                                  label: t("finance.budgets.pauseBudget"),
                                   icon: {
                                     type: "sfSymbol" as const,
                                     name: "pause.circle" as const,
@@ -931,7 +983,7 @@ export default function BudgetDetailScreen() {
                           ? [
                               {
                                 type: "action" as const,
-                                label: "Reopen Budget",
+                                label: t("finance.budgets.reopenBudget"),
                                 icon: {
                                   type: "sfSymbol" as const,
                                   name: "arrow.uturn.backward.circle" as const,
@@ -943,7 +995,7 @@ export default function BudgetDetailScreen() {
                           : [
                               {
                                 type: "action" as const,
-                                label: "Close Budget",
+                                label: t("finance.budgets.closeBudget"),
                                 icon: {
                                   type: "sfSymbol" as const,
                                   name: "xmark.circle" as const,
@@ -954,7 +1006,7 @@ export default function BudgetDetailScreen() {
                             ]),
                         {
                           type: "action",
-                          label: "Edit Budget",
+                          label: t("finance.budgets.mobile.menuEdit"),
                           icon: { type: "sfSymbol", name: "pencil" } as const,
                           onPress: () => {
                             haptics.light()
@@ -966,7 +1018,7 @@ export default function BudgetDetailScreen() {
                         },
                         {
                           type: "action",
-                          label: "Delete Budget",
+                          label: t("finance.budgets.mobile.menuDelete"),
                           icon: { type: "sfSymbol", name: "trash" } as const,
                           destructive: true,
                           onPress: handleDeleteBudget,
@@ -1017,7 +1069,7 @@ export default function BudgetDetailScreen() {
                         ? [
                             {
                               id: "expense",
-                              title: "Record Expense",
+                              title: t("finance.budgets.recordExpense"),
                               image: addExpenseIcon,
                             },
                           ]
@@ -1026,7 +1078,7 @@ export default function BudgetDetailScreen() {
                         ? [
                             {
                               id: "resume",
-                              title: "Resume Budget",
+                              title: t("finance.budgets.resumeBudget"),
                               image: resumeIcon,
                             },
                           ]
@@ -1035,7 +1087,7 @@ export default function BudgetDetailScreen() {
                           : [
                               {
                                 id: "pause",
-                                title: "Pause Budget",
+                                title: t("finance.budgets.pauseBudget"),
                                 image: pauseIcon,
                               },
                             ]),
@@ -1043,25 +1095,25 @@ export default function BudgetDetailScreen() {
                         ? [
                             {
                               id: "reopen",
-                              title: "Reopen Budget",
+                              title: t("finance.budgets.reopenBudget"),
                               image: reopenIcon,
                             },
                           ]
                         : [
                             {
                               id: "close",
-                              title: "Close Budget",
+                              title: t("finance.budgets.closeBudget"),
                               image: closeIcon,
                             },
                           ]),
                       {
                         id: "edit",
-                        title: "Edit Budget",
+                        title: t("finance.budgets.mobile.menuEdit"),
                         image: editIcon,
                       },
                       {
                         id: "delete",
-                        title: "Delete Budget",
+                        title: t("finance.budgets.mobile.menuDelete"),
                         image: deleteIcon,
                         attributes: { destructive: true },
                       },
@@ -1124,17 +1176,17 @@ export default function BudgetDetailScreen() {
                   icon={<ReceiptText size={32} color={colors.textMuted} />}
                   title={
                     isHistorical
-                      ? "No transactions in this period"
-                      : "No expenses recorded"
+                      ? t("finance.budgets.mobile.emptyHistoricalTitle")
+                      : t("finance.budgets.mobile.emptyNoExpensesTitle")
                   }
                   description={
                     isHistorical
-                      ? "There were no expenses logged for this historical budget cycle."
-                      : "Add expenses to this category to track your progress against the budget limit."
+                      ? t("finance.budgets.mobile.emptyHistoricalDesc")
+                      : t("finance.budgets.mobile.emptyNoExpensesDesc")
                   }
                   actionLabel={
                     budget.status === "ACTIVE" || !budget.status
-                      ? "Add Expense"
+                      ? t("finance.budgets.mobile.addExpense")
                       : undefined
                   }
                   onAction={
@@ -1474,6 +1526,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     marginTop: 20,
     marginBottom: 8,
     letterSpacing: 0.6,
+    textTransform: "uppercase" as const,
   },
   emptyWrap: {
     paddingTop: 16,

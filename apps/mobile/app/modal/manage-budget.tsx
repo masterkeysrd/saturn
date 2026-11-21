@@ -46,6 +46,8 @@ import {
   invalidateFinanceQueries,
   useCurrencyConversionPreview,
 } from "@saturn/hooks/finance"
+import { useI18n } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -69,6 +71,7 @@ export default function ManageBudgetModal() {
   const isEditMode = Boolean(editBudgetId)
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { t, locale } = useI18n()
   const { colors, getBudgetColors } = useTheme()
   const styles = useThemedStyles(createStyles)
 
@@ -231,8 +234,10 @@ export default function ManageBudgetModal() {
         })
         haptics.success()
         toast.show({
-          title: "Budget Updated",
-          message: `"${values.name.trim()}" has been updated.`,
+          title: t("finance.budgets.mobile.toastUpdatedTitle"),
+          message: t("finance.budgets.mobile.toastUpdatedDesc", {
+            name: values.name.trim(),
+          }),
           type: "success",
         })
       } else {
@@ -250,8 +255,10 @@ export default function ManageBudgetModal() {
         })
         haptics.success()
         toast.show({
-          title: "Budget Created",
-          message: `"${values.name.trim()}" is now active.`,
+          title: t("finance.budgets.mobile.toastCreatedTitle"),
+          message: t("finance.budgets.mobile.toastCreatedDesc", {
+            name: values.name.trim(),
+          }),
           type: "success",
         })
       }
@@ -261,8 +268,8 @@ export default function ManageBudgetModal() {
     } catch (err: any) {
       haptics.error()
       toast.show({
-        title: "Save Failed",
-        message: err?.message || "Could not save budget allocation.",
+        title: t("calendar.saveFailed"),
+        message: err?.message || t("finance.budgets.mobile.toastSaveFailed"),
         type: "error",
       })
     }
@@ -273,12 +280,12 @@ export default function ManageBudgetModal() {
     const budgetName = getValues("name")
     haptics.warning()
     Alert.alert(
-      "Delete Budget",
-      `Are you sure you want to delete "${budgetName}"? This cannot be undone.`,
+      t("finance.budgets.mobile.menuDelete"),
+      t("finance.budgets.mobile.deleteAlertDesc", { name: budgetName }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -291,8 +298,10 @@ export default function ManageBudgetModal() {
               })
               haptics.success()
               toast.show({
-                title: "Budget Deleted",
-                message: `"${budgetName}" was deleted.`,
+                title: t("finance.budgets.deletedTitle"),
+                message: t("finance.budgets.mobile.toastDeleteDesc", {
+                  name: budgetName,
+                }),
                 type: "info",
               })
               await invalidateFinanceQueries(queryClient)
@@ -303,8 +312,9 @@ export default function ManageBudgetModal() {
             } catch (err: any) {
               haptics.error()
               toast.show({
-                title: "Delete Failed",
-                message: err?.message || "Could not delete budget.",
+                title: t("finance.budgets.deleteFailedTitle"),
+                message:
+                  err?.message || t("finance.budgets.mobile.toastDeleteFailed"),
                 type: "error",
               })
             }
@@ -326,13 +336,15 @@ export default function ManageBudgetModal() {
     <>
       <Stack.Screen
         options={{
-          headerTitle: isEditMode ? "Edit Budget" : "New Budget",
+          headerTitle: isEditMode
+            ? t("finance.budgets.mobile.sheetTitleEdit")
+            : t("finance.budgets.mobile.sheetTitleNew"),
           ...(Platform.OS === "ios"
             ? {
                 unstable_headerLeftItems: () => [
                   {
                     type: "button",
-                    label: "Close",
+                    label: t("common.close"),
                     icon: { type: "sfSymbol", name: "xmark" },
                     onPress: () => router.back(),
                   },
@@ -351,7 +363,7 @@ export default function ManageBudgetModal() {
                       }
                     : {
                         type: "button",
-                        label: "Save",
+                        label: t("common.save"),
                         variant: "done",
                         onPress: () => handleSubmit(onValid)(),
                       },
@@ -377,7 +389,9 @@ export default function ManageBudgetModal() {
                     {isSaving ? (
                       <ActivityIndicator size="small" color={colors.primary} />
                     ) : (
-                      <Text style={styles.headerSaveBtnText}>Save</Text>
+                      <Text style={styles.headerSaveBtnText}>
+                        {t("common.save")}
+                      </Text>
                     )}
                   </TouchableOpacity>
                 ),
@@ -398,7 +412,7 @@ export default function ManageBudgetModal() {
           <HeroAmountInput
             control={control}
             name="limit"
-            label="BUDGET LIMIT AMOUNT"
+            label={t("finance.budgets.mobile.heroLabel").toUpperCase()}
             currency={currency}
             currencySymbol={getCurrencySymbol(currency)}
             currencyDisabled={isEditMode}
@@ -440,18 +454,22 @@ export default function ManageBudgetModal() {
 
           {/* Budget Name Card */}
           <Card style={styles.sectionCard}>
-            <Text style={styles.sectionHeaderLabel}>BUDGET DETAILS</Text>
+            <Text style={styles.sectionHeaderLabel}>
+              {t("finance.budgets.mobile.detailsSection").toUpperCase()}
+            </Text>
             <TextInput
               control={control}
               name="name"
-              label="Budget Name"
-              placeholder="e.g. Dining & Restaurants, Groceries, Rent"
+              label={t("finance.budgets.sheet.nameLabel")}
+              placeholder={t("finance.budgets.mobile.namePlaceholder")}
               placeholderTextColor={colors.textMuted}
               containerStyle={{ marginBottom: 16 }}
             />
 
             {/* Recurrence Interval */}
-            <Text style={styles.fieldSubLabel}>Recurrence Frequency</Text>
+            <Text style={styles.fieldSubLabel}>
+              {t("finance.budgets.mobile.recurrenceFrequency")}
+            </Text>
             {isEditMode ? (
               <View style={styles.intervalRow}>
                 <View
@@ -471,8 +489,12 @@ export default function ManageBudgetModal() {
                       { color: activeColorMeta.text },
                     ]}
                   >
-                    {INTERVAL_OPTIONS.find((opt) => opt.value === interval)
-                      ?.label || interval}
+                    {getLocalizedEnumLabel(
+                      "finance",
+                      "interval",
+                      interval,
+                      locale
+                    )}
                   </Text>
                 </View>
               </View>
@@ -480,7 +502,15 @@ export default function ManageBudgetModal() {
               <FormPillGroup
                 control={control}
                 name="interval"
-                options={INTERVAL_OPTIONS}
+                options={INTERVAL_OPTIONS.map((opt) => ({
+                  ...opt,
+                  label: getLocalizedEnumLabel(
+                    "finance",
+                    "interval",
+                    opt.value,
+                    locale
+                  ),
+                }))}
                 activeColor={activeColorMeta.bar}
                 activeBg={activeColorMeta.bg}
                 activeBorder={activeColorMeta.bar}
@@ -493,7 +523,7 @@ export default function ManageBudgetModal() {
             {isEditMode && (
               <>
                 <Text style={[styles.fieldSubLabel, { marginTop: 16 }]}>
-                  Limit Propagation Rule
+                  {t("finance.budgets.sheet.propagationLabel")}
                 </Text>
                 <View style={styles.intervalRow}>
                   {PROPAGATION_OPTIONS.map((opt) => {
@@ -523,7 +553,12 @@ export default function ManageBudgetModal() {
                           ]}
                           numberOfLines={1}
                         >
-                          {opt.label}
+                          {getLocalizedEnumLabel(
+                            "finance",
+                            "limitPropagation",
+                            opt.value,
+                            locale
+                          )}
                         </Text>
                       </TouchableOpacity>
                     )
@@ -531,8 +566,8 @@ export default function ManageBudgetModal() {
                 </View>
                 <Text style={styles.fieldHelperText}>
                   {propagation === "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
-                    ? "Applies to the current period and all future periods."
-                    : "Applies limit modification only to the current active period."}
+                    ? t("finance.budgets.mobile.propagationHelperFuture")
+                    : t("finance.budgets.mobile.propagationHelperCurrent")}
                 </Text>
               </>
             )}
@@ -541,7 +576,7 @@ export default function ManageBudgetModal() {
             {isEditMode && (
               <>
                 <Text style={[styles.fieldSubLabel, { marginTop: 16 }]}>
-                  Budget Status
+                  {t("finance.budgets.sheet.statusLabel")}
                 </Text>
                 <FormPillGroup
                   control={control}
@@ -549,21 +584,36 @@ export default function ManageBudgetModal() {
                   options={[
                     {
                       value: "ACTIVE" as Budget_Status,
-                      label: "Active",
+                      label: getLocalizedEnumLabel(
+                        "finance",
+                        "status",
+                        "ACTIVE",
+                        locale
+                      ),
                       activeBorder: activeColorMeta.bar,
                       activeBg: activeColorMeta.bg,
                       activeTextColor: activeColorMeta.text,
                     },
                     {
                       value: "PAUSED" as Budget_Status,
-                      label: "Paused",
+                      label: getLocalizedEnumLabel(
+                        "finance",
+                        "status",
+                        "PAUSED",
+                        locale
+                      ),
                       activeBorder: colors.warning,
                       activeBg: colors.warningSubtle,
                       activeTextColor: colors.warning,
                     },
                     {
                       value: "CLOSED" as Budget_Status,
-                      label: "Closed",
+                      label: getLocalizedEnumLabel(
+                        "finance",
+                        "status",
+                        "CLOSED",
+                        locale
+                      ),
                       activeBorder: colors.destructive,
                       activeBg: colors.destructiveSubtle,
                       activeTextColor: colors.destructive,
@@ -573,17 +623,17 @@ export default function ManageBudgetModal() {
                 />
                 <Text style={styles.fieldHelperText}>
                   {status === "ACTIVE"
-                    ? "Budget is active and open for transaction allocations."
+                    ? t("finance.budgets.mobile.statusHelperActive")
                     : status === "PAUSED"
-                      ? "Budget is temporarily suspended. Transactions are blocked."
-                      : "Budget is closed. Template is archived and no longer tracks expenses."}
+                      ? t("finance.budgets.mobile.statusHelperPaused")
+                      : t("finance.budgets.mobile.statusHelperClosed")}
                 </Text>
               </>
             )}
 
             {/* Default Account Selector */}
             <Text style={[styles.fieldSubLabel, { marginTop: 16 }]}>
-              Default Account (Optional)
+              {t("finance.budgets.mobile.defaultAccountOptional")}
             </Text>
             <AccountCardSelect
               account={selectedAccount}
@@ -591,17 +641,21 @@ export default function ManageBudgetModal() {
                 Keyboard.dismiss()
                 accountSheetRef.current?.expand()
               }}
-              placeholder="None (Any Account)"
-              subtitle="Any linked payment method"
+              placeholder={t("finance.budgets.mobile.anyAccountPlaceholder")}
+              subtitle={t("finance.budgets.mobile.anyAccountSubtitle")}
             />
           </Card>
 
           {/* Color & Icon Customization Card */}
           <Card style={styles.sectionCard}>
-            <Text style={styles.sectionHeaderLabel}>APPEARANCE</Text>
+            <Text style={styles.sectionHeaderLabel}>
+              {t("finance.budgets.mobile.appearanceSection").toUpperCase()}
+            </Text>
 
             {/* Color Palette */}
-            <Text style={styles.fieldSubLabel}>Color Accent</Text>
+            <Text style={styles.fieldSubLabel}>
+              {t("finance.budgets.mobile.colorAccent")}
+            </Text>
             <FormColorPicker
               control={control}
               name="color"
@@ -611,7 +665,9 @@ export default function ManageBudgetModal() {
 
             {/* Category Icon */}
             <View style={styles.iconHeaderRow}>
-              <Text style={styles.fieldSubLabel}>Category Icon</Text>
+              <Text style={styles.fieldSubLabel}>
+                {t("finance.budgets.mobile.categoryIcon")}
+              </Text>
               <View
                 style={[
                   styles.iconPreviewBadge,
@@ -679,7 +735,9 @@ export default function ManageBudgetModal() {
               variant="primary"
               size="lg"
             >
-              {isEditMode ? "Save Changes" : "Create Budget"}
+              {isEditMode
+                ? t("finance.budgets.sheet.editSubmit")
+                : t("finance.budgets.mobile.createSubmit")}
             </Button>
 
             {isEditMode && (
@@ -693,7 +751,9 @@ export default function ManageBudgetModal() {
                 ) : (
                   <>
                     <Trash2 size={16} color={colors.destructive} />
-                    <Text style={styles.deleteBtnText}>Delete Budget</Text>
+                    <Text style={styles.deleteBtnText}>
+                      {t("finance.budgets.mobile.menuDelete")}
+                    </Text>
                   </>
                 )}
               </TouchableOpacity>

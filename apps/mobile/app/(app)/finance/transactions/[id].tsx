@@ -36,7 +36,7 @@ import {
   type TransactionEvent,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useSpace } from "@/lib/space-context"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { BudgetCategoryIcon } from "@/lib/budget-icons"
 import { haptics } from "@/lib/haptics"
@@ -56,24 +56,27 @@ export default function TransactionDetailScreen() {
   const queryClient = useQueryClient()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { colors, getBudgetColors } = useTheme()
   const styles = useThemedStyles(createStyles)
 
   const formatDateString = (dateStr?: string): string => {
-    if (!dateStr) return "N/A"
+    if (!dateStr) return t("finance.transactions.scheduled.notAvailable")
     return (
       tz.format(dateStr, {
         weekday: "short",
         month: "short",
         day: "numeric",
         year: "numeric",
-      }) || "N/A"
+      }) || t("finance.transactions.scheduled.notAvailable")
     )
   }
 
   const formatTimeString = (dateStr?: string): string => {
-    if (!dateStr) return "N/A"
-    return tz.formatTime(dateStr) || "N/A"
+    if (!dateStr) return t("finance.transactions.scheduled.notAvailable")
+    return (
+      tz.formatTime(dateStr) || t("finance.transactions.scheduled.notAvailable")
+    )
   }
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -206,8 +209,8 @@ export default function TransactionDetailScreen() {
       haptics.success()
       toast.show({
         type: "success",
-        title: "Transaction Deleted",
-        message: "The transaction has been removed.",
+        title: t("finance.transactions.deletedSuccessTitle"),
+        message: t("finance.transactions.detail.deletedDesc"),
       })
 
       setDeleteDialogOpen(false)
@@ -216,8 +219,9 @@ export default function TransactionDetailScreen() {
       haptics.error()
       toast.show({
         type: "error",
-        title: "Delete Failed",
-        message: err?.message || "Could not delete transaction.",
+        title: t("finance.transactions.deleteFailedTitle"),
+        message:
+          err?.message || t("finance.transactions.detail.deleteFailedDesc"),
       })
     } finally {
       setIsDeleting(false)
@@ -231,7 +235,7 @@ export default function TransactionDetailScreen() {
     haptics.light()
     toast.show({
       type: "success",
-      title: "Copied Transaction ID",
+      title: t("finance.transactions.detail.copiedIdToast"),
       message: value,
     })
   }
@@ -251,13 +255,14 @@ export default function TransactionDetailScreen() {
     return (
       <View style={styles.emptyContainer}>
         <ReceiptText size={48} color={colors.textMuted} />
-        <Text style={styles.emptyTitle}>Transaction Not Found</Text>
+        <Text style={styles.emptyTitle}>
+          {t("finance.transactions.detail.notFoundTitle")}
+        </Text>
         <Text style={styles.emptySubtitle}>
-          The requested transaction could not be loaded or may have been
-          deleted.
+          {t("finance.transactions.detail.notFoundSubtitle")}
         </Text>
         <Button variant="secondary" size="md" onPress={() => router.back()}>
-          Go Back
+          {t("finance.transactions.detail.goBack")}
         </Button>
       </View>
     )
@@ -274,13 +279,13 @@ export default function TransactionDetailScreen() {
                 unstable_headerRightItems: () => [
                   {
                     type: "button",
-                    label: "Edit",
+                    label: t("common.edit"),
                     icon: { type: "sfSymbol", name: "pencil" },
                     onPress: handleEdit,
                   },
                   {
                     type: "button",
-                    label: "Delete",
+                    label: t("common.delete"),
                     icon: { type: "sfSymbol", name: "trash" },
                     tintColor: colors.destructive,
                     sharesBackground: false,
@@ -365,7 +370,7 @@ export default function TransactionDetailScreen() {
 
           {/* Bold Merchant / Description Title */}
           <Text style={styles.heroMerchantTitle} numberOfLines={2}>
-            {tx.description || "Unnamed Transaction"}
+            {tx.description || t("finance.transactions.detail.unnamed")}
           </Text>
 
           {/* Big Primary Amount */}
@@ -387,8 +392,10 @@ export default function TransactionDetailScreen() {
           {/* Converted Base Value (if cross-currency) */}
           {isCrossCurrency && tx.amountInBase ? (
             <Text style={styles.heroBaseAmountText}>
-              ≈ {displaySign}
-              {formatAmount(tx.amountInBase, baseCurrency)} in Base
+              {t("finance.transactions.detail.inBase", {
+                sign: displaySign,
+                amount: formatAmount(tx.amountInBase, baseCurrency),
+              })}
             </Text>
           ) : null}
 
@@ -396,7 +403,9 @@ export default function TransactionDetailScreen() {
           <View style={styles.heroBadgesRow}>
             <View style={styles.statusPill}>
               <View style={styles.statusDot} />
-              <Text style={styles.statusText}>COMPLETED</Text>
+              <Text style={styles.statusText}>
+                {t("finance.transactions.detail.statusCompleted")}
+              </Text>
             </View>
 
             <Badge
@@ -404,11 +413,21 @@ export default function TransactionDetailScreen() {
                 isExpense ? "destructive" : isIncome ? "success" : "default"
               }
               size="md"
-              label={tx.type}
+              label={
+                tx.type === "EXPENSE"
+                  ? t("finance.inbox.sheet.flowExpense")
+                  : tx.type === "INCOME"
+                    ? t("finance.inbox.sheet.flowIncome")
+                    : t("finance.inbox.sheet.flowTransfer")
+              }
             />
 
             {isRecurring ? (
-              <Badge variant="primary" size="md" label="Recurring" />
+              <Badge
+                variant="primary"
+                size="md"
+                label={t("finance.transactions.recurring")}
+              />
             ) : null}
 
             {isBorrowing && borrowingRole ? (
@@ -417,10 +436,10 @@ export default function TransactionDetailScreen() {
                 size="md"
                 label={
                   borrowingRole === "REPAYMENT"
-                    ? "Repayment"
+                    ? t("finance.transactions.repayment")
                     : borrowingRole === "INITIAL_FUNDING" && isExpense
-                      ? "Lending"
-                      : "Borrowing"
+                      ? t("finance.transactions.detail.badgeLending")
+                      : t("finance.reconcile.row.badgeBorrowing")
                 }
               />
             ) : null}
@@ -430,7 +449,9 @@ export default function TransactionDetailScreen() {
         {/* Card 1: PAYMENT & ALLOCATION */}
         <View style={styles.sectionHeaderRow}>
           <Caption style={styles.sectionHeader}>
-            {isIncome ? "PAYMENT ACCOUNT" : "PAYMENT & CATEGORY"}
+            {isIncome
+              ? t("finance.transactions.scheduled.paymentAccount")
+              : t("finance.transactions.detail.sectionPaymentCategory")}
           </Caption>
         </View>
 
@@ -439,12 +460,16 @@ export default function TransactionDetailScreen() {
           <View style={styles.tableRow}>
             <View style={styles.rowLabelGroup}>
               <Landmark size={15} color={colors.textMuted} />
-              <Text style={styles.rowLabel}>Account</Text>
+              <Text style={styles.rowLabel}>
+                {t("finance.transactions.inspector.account")}
+              </Text>
             </View>
             <Text style={styles.rowValue} numberOfLines={1}>
               {account?.name ||
                 tx.account?.name ||
-                (tx.accountId ? "Account" : "No Account (Cash)")}
+                (tx.accountId
+                  ? t("finance.transactions.facetAccount")
+                  : t("finance.transactions.detail.noAccountCash"))}
             </Text>
           </View>
 
@@ -455,7 +480,9 @@ export default function TransactionDetailScreen() {
               <View style={styles.tableRow}>
                 <View style={styles.rowLabelGroup}>
                   <Tag size={15} color={colors.textMuted} />
-                  <Text style={styles.rowLabel}>Budget</Text>
+                  <Text style={styles.rowLabel}>
+                    {t("finance.transactions.inspector.budget")}
+                  </Text>
                 </View>
                 {hasBudget ? (
                   <View
@@ -484,7 +511,9 @@ export default function TransactionDetailScreen() {
                     </Text>
                   </View>
                 ) : (
-                  <Text style={styles.rowMutedValue}>General / None</Text>
+                  <Text style={styles.rowMutedValue}>
+                    {t("finance.transactions.detail.budgetNone")}
+                  </Text>
                 )}
               </View>
             </>
@@ -493,7 +522,9 @@ export default function TransactionDetailScreen() {
 
         {/* Card 2: TRANSACTION DETAILS */}
         <View style={styles.sectionHeaderRow}>
-          <Caption style={styles.sectionHeader}>TRANSACTION DETAILS</Caption>
+          <Caption style={styles.sectionHeader}>
+            {t("finance.transactions.inspector.title")}
+          </Caption>
         </View>
 
         <Card style={styles.insetCard}>
@@ -501,7 +532,9 @@ export default function TransactionDetailScreen() {
           <View style={styles.tableRow}>
             <View style={styles.rowLabelGroup}>
               <Calendar size={15} color={colors.textMuted} />
-              <Text style={styles.rowLabel}>Date</Text>
+              <Text style={styles.rowLabel}>
+                {t("finance.transactions.inspector.transactionDate")}
+              </Text>
             </View>
             <Text style={styles.rowValue}>
               {formatDateString(tx.transactionDate)}
@@ -514,7 +547,9 @@ export default function TransactionDetailScreen() {
           <View style={styles.tableRow}>
             <View style={styles.rowLabelGroup}>
               <Clock size={15} color={colors.textMuted} />
-              <Text style={styles.rowLabel}>Time</Text>
+              <Text style={styles.rowLabel}>
+                {t("finance.transactions.detail.rowTime")}
+              </Text>
             </View>
             <Text style={styles.rowValue}>
               {formatTimeString(tx.transactionDate)}
@@ -527,11 +562,15 @@ export default function TransactionDetailScreen() {
           <View style={styles.tableRow}>
             <View style={styles.rowLabelGroup}>
               <Zap size={15} color={colors.textMuted} />
-              <Text style={styles.rowLabel}>Settlement</Text>
+              <Text style={styles.rowLabel}>
+                {t("finance.transactions.detail.rowSettlement")}
+              </Text>
             </View>
             <Text style={styles.rowValue}>
               {isSameDaySettlement
-                ? `Same day (${formatDateString(tx.transactionDate)})`
+                ? t("finance.transactions.detail.settlementSameDay", {
+                    date: formatDateString(tx.transactionDate),
+                  })
                 : formatDateString(tx.effectiveDate)}
             </Text>
           </View>
@@ -546,7 +585,9 @@ export default function TransactionDetailScreen() {
           >
             <View style={styles.rowLabelGroup}>
               <ReceiptText size={15} color={colors.textMuted} />
-              <Text style={styles.rowLabel}>Transaction ID</Text>
+              <Text style={styles.rowLabel}>
+                {t("finance.transactions.detail.rowTxId")}
+              </Text>
             </View>
             <View style={styles.copyableRow}>
               <Text style={styles.monoIdText} numberOfLines={1}>
@@ -563,7 +604,9 @@ export default function TransactionDetailScreen() {
         {isCrossCurrency && tx.amountInBase ? (
           <>
             <View style={styles.sectionHeaderRow}>
-              <Caption style={styles.sectionHeader}>CURRENCY EXCHANGE</Caption>
+              <Caption style={styles.sectionHeader}>
+                {t("finance.transactions.detail.sectionCurrencyExchange")}
+              </Caption>
             </View>
 
             <Card style={styles.insetCard}>
@@ -572,7 +615,9 @@ export default function TransactionDetailScreen() {
                   <View style={styles.tableRow}>
                     <View style={styles.rowLabelGroup}>
                       <Coins size={15} color={colors.textMuted} />
-                      <Text style={styles.rowLabel}>Effective Rate</Text>
+                      <Text style={styles.rowLabel}>
+                        {t("finance.transactions.detail.rowEffectiveRate")}
+                      </Text>
                     </View>
                     <Text style={styles.rowValue}>{exchangeRateText}</Text>
                   </View>
@@ -583,7 +628,9 @@ export default function TransactionDetailScreen() {
               <View style={styles.tableRow}>
                 <View style={styles.rowLabelGroup}>
                   <Landmark size={15} color={colors.textMuted} />
-                  <Text style={styles.rowLabel}>Base Equivalent</Text>
+                  <Text style={styles.rowLabel}>
+                    {t("finance.transactions.inspector.baseEquivalent")}
+                  </Text>
                 </View>
                 <Text style={styles.rowValue}>
                   {displaySign}
@@ -598,7 +645,9 @@ export default function TransactionDetailScreen() {
         {events.length > 0 && (
           <>
             <View style={styles.sectionHeaderRow}>
-              <Caption style={styles.sectionHeader}>ACTIVITY HISTORY</Caption>
+              <Caption style={styles.sectionHeader}>
+                {t("finance.transactions.detail.sectionActivityHistory")}
+              </Caption>
             </View>
 
             <Card style={styles.insetCard}>
@@ -609,8 +658,10 @@ export default function TransactionDetailScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.eventTitle}>{evt.eventType}</Text>
                       <Text style={styles.eventTime}>
-                        {formatDateString(evt.createTime)} at{" "}
-                        {formatTimeString(evt.createTime)}
+                        {t("finance.transactions.detail.eventAt", {
+                          date: formatDateString(evt.createTime),
+                          time: formatTimeString(evt.createTime),
+                        })}
                       </Text>
                     </View>
                   </View>
@@ -627,10 +678,10 @@ export default function TransactionDetailScreen() {
       {/* Confirmation Dialog for Deletion */}
       <ConfirmDialog
         visible={deleteDialogOpen}
-        title="Delete Transaction"
-        message="Are you sure you want to delete this transaction? All associated account balances and budget period totals will be restored."
-        confirmText="Delete"
-        cancelText="Cancel"
+        title={t("finance.transactions.deleteTitle")}
+        message={t("finance.transactions.detail.deleteDesc")}
+        confirmText={t("common.delete")}
+        cancelText={t("common.cancel")}
         isDestructive={true}
         loading={isDeleting}
         onConfirm={handleConfirmDelete}
@@ -758,6 +809,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     fontWeight: "800" as const,
     color: t.colors.success,
     letterSpacing: 0.5,
+    textTransform: "uppercase" as const,
   },
   sectionHeaderRow: {
     paddingHorizontal: 4,
@@ -767,6 +819,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     letterSpacing: 0.8,
     fontSize: 11,
     fontWeight: "700" as const,
+    textTransform: "uppercase" as const,
   },
   insetCard: {
     paddingHorizontal: 16,

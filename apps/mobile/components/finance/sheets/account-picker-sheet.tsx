@@ -21,6 +21,8 @@ import {
   useListInstitutionsQuery,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { formatAmount, getInstitutionLogoUrl } from "@saturn/core"
+import { useI18n } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import { useSpace } from "@/lib/space-context"
 import { useTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -51,19 +53,14 @@ function renderAccountTypeIcon(type: Account_Type | undefined, color: string) {
   }
 }
 
-function formatAccountType(type?: Account_Type): string {
-  switch (type) {
-    case "CREDIT_CARD":
-      return "Credit Card"
-    case "CASH":
-      return "Cash"
-    case "DIGITAL_ACCOUNT":
-      return "Digital Wallet"
-    case "BANK":
-      return "Checking / Bank"
-    default:
-      return "Account"
-  }
+function formatAccountType(
+  type: Account_Type | undefined,
+  locale: string
+): string {
+  return (
+    getLocalizedEnumLabel("finance", "accountType", type, locale) ||
+    getLocalizedEnumLabel("finance", "accountType", "BANK", locale)
+  )
 }
 
 function AccountLogoBadge({
@@ -131,7 +128,7 @@ export const AccountPickerSheet = forwardRef<
 >(
   (
     {
-      title = "Select Account",
+      title,
       accounts,
       institutions: propInstitutions,
       selectedAccountId,
@@ -143,6 +140,7 @@ export const AccountPickerSheet = forwardRef<
     ref
   ) => {
     const { colors, isDark, getBudgetColors } = useTheme()
+    const { t, locale } = useI18n()
     const sheetStyles = useSheetStyles()
     const insets = useSafeAreaInsets()
     const { activeSpaceId } = useSpace()
@@ -173,12 +171,14 @@ export const AccountPickerSheet = forwardRef<
         const nameMatch = (acc.name || "").toLowerCase().includes(q)
         const lastFourMatch = (acc.lastFour || "").toLowerCase().includes(q)
         const currencyMatch = (acc.currency || "").toLowerCase().includes(q)
-        const typeMatch = formatAccountType(acc.type).toLowerCase().includes(q)
+        const typeMatch = formatAccountType(acc.type, locale)
+          .toLowerCase()
+          .includes(q)
         return (
           instMatch || nameMatch || lastFourMatch || currencyMatch || typeMatch
         )
       })
-    }, [accounts, search, instMap])
+    }, [accounts, search, instMap, locale])
 
     const handleClose = () => {
       Keyboard.dismiss()
@@ -224,14 +224,17 @@ export const AccountPickerSheet = forwardRef<
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             <View>
-              <BottomSheetHeader title={title} onClose={handleClose} />
+              <BottomSheetHeader
+                title={title ?? t("finance.pickers.account.defaultTitle")}
+                onClose={handleClose}
+              />
 
               {/* Search Bar */}
               <View style={sheetStyles.accountSearchContainer}>
                 <Search size={16} color={colors.textMuted} />
                 <BottomSheetTextInput
                   style={sheetStyles.accountSearchInput}
-                  placeholder="Search by name, institution, last 4..."
+                  placeholder={t("finance.pickers.account.searchPlaceholder")}
                   placeholderTextColor={colors.textMuted}
                   keyboardAppearance={isDark ? "dark" : "light"}
                   value={search}
@@ -265,10 +268,10 @@ export const AccountPickerSheet = forwardRef<
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={sheetStyles.accountItemTitle}>
-                      No Account (Cash / Off-ledger)
+                      {t("finance.pickers.account.noAccount")}
                     </Text>
                     <Text style={sheetStyles.accountItemSubtitle}>
-                      Does not deduct from bank balance
+                      {t("finance.pickers.account.noAccountHint")}
                     </Text>
                   </View>
                   {!selectedAccountId && (
@@ -289,8 +292,10 @@ export const AccountPickerSheet = forwardRef<
               <View style={sheetStyles.emptySheetBox}>
                 <Text style={sheetStyles.emptySheetText}>
                   {search.trim()
-                    ? `No accounts found matching "${search}".`
-                    : "No active accounts found."}
+                    ? t("finance.pickers.account.noAccountsSearch", {
+                        search,
+                      })
+                    : t("finance.pickers.account.noAccountsFound")}
                 </Text>
               </View>
             )
@@ -336,7 +341,7 @@ export const AccountPickerSheet = forwardRef<
                   <View style={sheetStyles.accountMetaRow}>
                     <View style={sheetStyles.accountTypeTag}>
                       <Text style={sheetStyles.accountTypeTagText}>
-                        {formatAccountType(acc.type)}
+                        {formatAccountType(acc.type, locale)}
                       </Text>
                     </View>
                     {acc.lastFour ? (

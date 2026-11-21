@@ -26,7 +26,7 @@ import { Card } from "@/components/ui/card"
 import { useToast } from "@/components/ui/toast"
 import { toLocalISODate } from "@/components/ui/date-picker-sheet"
 import { AccountPickerSheet } from "../sheets"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
 import { AccountRow } from "../account-select"
 import { HeroAmountInput } from "@/components/ui/amount-input"
 import { FormRowInput, FormDateRow } from "@/components/ui/form-primitives"
@@ -51,6 +51,7 @@ export function TransferForm({
   const formStyles = useFormStyles()
   const insets = useSafeAreaInsets()
   const toast = useToast()
+  const { t } = useI18n()
   const queryClient = useQueryClient()
 
   // Sheet Refs
@@ -169,8 +170,12 @@ export function TransferForm({
 
       toast.show({
         type: "success",
-        title: "Transfer Recorded",
-        message: `${currentSymbol}${amountDecimal} from ${sourceAccount?.name} to ${destinationAccount?.name}`,
+        title: t("finance.transactions.transferForm.recordedTitle"),
+        message: t("finance.transactions.transferForm.toastDesc", {
+          amount: `${currentSymbol}${amountDecimal}`,
+          from: sourceAccount?.name ?? "",
+          to: destinationAccount?.name ?? "",
+        }),
       })
 
       await invalidateFinanceQueries(queryClient)
@@ -180,7 +185,7 @@ export function TransferForm({
       const errMsg =
         err instanceof Error
           ? err.message
-          : "An unexpected error occurred while saving."
+          : t("finance.budgets.unexpectedError")
       setSubmissionError(errMsg)
     }
   }
@@ -196,6 +201,9 @@ export function TransferForm({
         <HeroAmountInput
           control={control}
           name="sourceAmount"
+          label={t(
+            "finance.transactions.transferForm.amountLabel"
+          ).toUpperCase()}
           currency={sourceAccount?.currency || "USD"}
           currencySymbol={currentSymbol}
           currencyDisabled
@@ -213,10 +221,12 @@ export function TransferForm({
             />
             <View style={{ flex: 1 }}>
               <Text style={formStyles.conversionAlertTitle}>
-                CROSS-CURRENCY TRANSFER
+                {t("finance.transactions.transferForm.crossCurrencyTitle")}
               </Text>
               <Text style={formStyles.conversionAlertText}>
-                {destinationAccount?.name} will receive approx.{" "}
+                {t("finance.transactions.transferForm.crossCurrencyDesc", {
+                  account: destinationAccount?.name ?? "",
+                })}{" "}
                 <Text style={{ fontWeight: "800", color: colors.warning }}>
                   {getCurrencySymbol(destinationAccount?.currency || "")}
                   {transferDestinationAmount} {destinationAccount?.currency}
@@ -230,7 +240,7 @@ export function TransferForm({
         <Card style={[formStyles.formGroupCard, { marginBottom: 12 }]}>
           {/* Source Account Row */}
           <AccountRow
-            label="From Account"
+            label={t("finance.transactions.transferForm.fromAccount")}
             account={sourceAccount}
             error={errors.sourceAccountId?.message}
             onPress={() => {
@@ -243,7 +253,7 @@ export function TransferForm({
 
           {/* Destination Account Row */}
           <AccountRow
-            label="To Account"
+            label={t("finance.transactions.transferForm.toAccount")}
             account={destinationAccount}
             error={errors.destinationAccountId?.message}
             onPress={() => {
@@ -259,7 +269,7 @@ export function TransferForm({
           <FormDateRow
             control={control}
             name="transferDate"
-            label="Transfer Date"
+            label={t("finance.transactions.transferForm.transferDate")}
           />
 
           {/* Field: Notes / Description */}
@@ -267,9 +277,11 @@ export function TransferForm({
           <FormRowInput
             control={control}
             name="notes"
-            label="Notes"
+            label={t("finance.transactions.transferForm.notesLabel")}
             icon={<FileText size={16} color={colors.textMuted} />}
-            placeholder="Reason or memo (optional)"
+            placeholder={t(
+              "finance.transactions.transferForm.notesPlaceholder"
+            )}
             returnKeyType="done"
           />
         </Card>
@@ -299,7 +311,9 @@ export function TransferForm({
             handleSubmit(onSubmit)()
           }}
         >
-          {`Transfer • ${currentSymbol}${amountDecimal}`}
+          {t("finance.transactions.transferForm.submitWithAmount", {
+            amount: `${currentSymbol}${amountDecimal}`,
+          })}
         </Button>
       </View>
 

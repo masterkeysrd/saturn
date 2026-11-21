@@ -47,7 +47,8 @@ import {
   ACCOUNT_TYPES,
   type AccountTypeIconName,
 } from "@saturn/core"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -83,6 +84,7 @@ function AccountCardPreview({
   baseCurrency,
 }: AccountCardPreviewProps) {
   const watchedValues = useWatch({ control })
+  const { t } = useI18n()
   const name = watchedValues?.name || ""
   const type = (watchedValues?.type || "BANK") as Account_Type
   const currency = watchedValues?.currency || baseCurrency
@@ -97,7 +99,7 @@ function AccountCardPreview({
   const previewAccount: Account = useMemo(
     () => ({
       id: editAccountId || "preview",
-      name: name.trim() || "Account Name",
+      name: name.trim() || t("finance.accounts.mobile.previewFallbackName"),
       type,
       currency,
       currentBalance: toCentsString(initialBalance || "0"),
@@ -127,6 +129,7 @@ function AccountCardPreview({
       isDefault,
       institutionId,
       selectedInstitution,
+      t,
     ]
   )
 
@@ -146,6 +149,7 @@ export default function ManageAccountModal() {
   const isEditMode = Boolean(editAccountId)
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { t, locale } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
 
@@ -305,8 +309,10 @@ export default function ManageAccountModal() {
         })
         haptics.success()
         toast.show({
-          title: "Account Updated",
-          message: `"${values.name.trim()}" has been updated.`,
+          title: t("finance.accounts.mobile.toastUpdatedTitle"),
+          message: t("finance.accounts.mobile.toastUpdatedDesc", {
+            name: values.name.trim(),
+          }),
           type: "success",
         })
       } else {
@@ -327,8 +333,10 @@ export default function ManageAccountModal() {
         })
         haptics.success()
         toast.show({
-          title: "Account Created",
-          message: `"${values.name.trim()}" is now active.`,
+          title: t("finance.accounts.mobile.toastCreatedTitle"),
+          message: t("finance.accounts.mobile.toastCreatedDesc", {
+            name: values.name.trim(),
+          }),
           type: "success",
         })
       }
@@ -338,8 +346,8 @@ export default function ManageAccountModal() {
     } catch (err: any) {
       haptics.error()
       toast.show({
-        title: "Save Failed",
-        message: err?.message || "Could not save account details.",
+        title: t("calendar.saveFailed"),
+        message: err?.message || t("finance.accounts.mobile.toastSaveFailed"),
         type: "error",
       })
     }
@@ -350,12 +358,12 @@ export default function ManageAccountModal() {
     const accountName = getValues("name")
     haptics.warning()
     Alert.alert(
-      "Delete Account",
-      `Are you sure you want to delete "${accountName}"? This action cannot be undone.`,
+      t("finance.accounts.deleteTitle"),
+      t("finance.accounts.mobile.deleteAlertDesc", { name: accountName }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -365,8 +373,10 @@ export default function ManageAccountModal() {
               })
               haptics.success()
               toast.show({
-                title: "Account Deleted",
-                message: `"${accountName}" was deleted.`,
+                title: t("finance.accounts.deleteSuccessTitle"),
+                message: t("finance.accounts.mobile.toastDeleteDesc", {
+                  name: accountName,
+                }),
                 type: "info",
               })
               await invalidateFinanceQueries(queryClient)
@@ -377,8 +387,10 @@ export default function ManageAccountModal() {
             } catch (err: any) {
               haptics.error()
               toast.show({
-                title: "Delete Failed",
-                message: err?.message || "Could not delete account.",
+                title: t("finance.budgets.deleteFailedTitle"),
+                message:
+                  err?.message ||
+                  t("finance.accounts.mobile.toastDeleteFailed"),
                 type: "error",
               })
             }
@@ -400,13 +412,15 @@ export default function ManageAccountModal() {
     <>
       <Stack.Screen
         options={{
-          headerTitle: isEditMode ? "Edit Account" : "New Account",
+          headerTitle: isEditMode
+            ? t("finance.accounts.sheet.editTitle")
+            : t("finance.accounts.sheet.createTitle"),
           ...(Platform.OS === "ios"
             ? {
                 unstable_headerLeftItems: () => [
                   {
                     type: "button",
-                    label: "Close",
+                    label: t("common.close"),
                     icon: { type: "sfSymbol", name: "xmark" },
                     onPress: () => router.back(),
                   },
@@ -425,7 +439,7 @@ export default function ManageAccountModal() {
                       }
                     : {
                         type: "button",
-                        label: "Save",
+                        label: t("common.save"),
                         variant: "done",
                         onPress: () => handleSubmit(onValid)(),
                       },
@@ -451,7 +465,9 @@ export default function ManageAccountModal() {
                     {isSaving ? (
                       <ActivityIndicator size="small" color={colors.primary} />
                     ) : (
-                      <Text style={styles.headerSaveBtnText}>Save</Text>
+                      <Text style={styles.headerSaveBtnText}>
+                        {t("common.save")}
+                      </Text>
                     )}
                   </TouchableOpacity>
                 ),
@@ -469,7 +485,9 @@ export default function ManageAccountModal() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Live Card Preview */}
-          <Text style={styles.sectionHeaderLabel}>CARD PREVIEW</Text>
+          <Text style={styles.sectionHeaderLabel}>
+            {t("finance.accounts.mobile.cardPreview").toUpperCase()}
+          </Text>
           <View style={styles.previewWrapper}>
             <AccountCardPreview
               control={control}
@@ -482,7 +500,7 @@ export default function ManageAccountModal() {
           {/* Account Type Selector */}
           <Card style={styles.sectionCard}>
             <Text style={styles.sectionHeaderLabel}>
-              ACCOUNT CLASSIFICATION
+              {t("finance.accounts.mobile.accountClassification").toUpperCase()}
             </Text>
             {isEditMode ? (
               <View style={styles.selectorRow}>
@@ -491,22 +509,27 @@ export default function ManageAccountModal() {
                     <SelectedTypeIcon size={16} color={colors.primary} />
                   </View>
                   <Text style={styles.selectorValueText}>
-                    {selectedTypeInfo?.label || type}
+                    {getLocalizedEnumLabel(
+                      "finance",
+                      "accountType",
+                      type,
+                      locale
+                    )}
                   </Text>
                 </View>
               </View>
             ) : (
               <View style={styles.typeGrid}>
-                {ACCOUNT_TYPES.map((t) => {
-                  const isSelected = type === t.value
+                {ACCOUNT_TYPES.map((opt) => {
+                  const isSelected = type === opt.value
                   const IconComponent =
-                    ACCOUNT_TYPE_ICONS[t.iconName] || Landmark
+                    ACCOUNT_TYPE_ICONS[opt.iconName] || Landmark
                   return (
                     <TouchableOpacity
-                      key={t.value}
+                      key={opt.value}
                       onPress={() => {
                         haptics.selection()
-                        setValue("type", t.value, { shouldValidate: true })
+                        setValue("type", opt.value, { shouldValidate: true })
                       }}
                       style={[
                         styles.typeGridItem,
@@ -524,7 +547,12 @@ export default function ManageAccountModal() {
                         ]}
                         numberOfLines={1}
                       >
-                        {t.label}
+                        {getLocalizedEnumLabel(
+                          "finance",
+                          "accountType",
+                          opt.value,
+                          locale
+                        )}
                       </Text>
                     </TouchableOpacity>
                   )
@@ -535,19 +563,23 @@ export default function ManageAccountModal() {
 
           {/* General Information Card */}
           <Card style={styles.sectionCard}>
-            <Text style={styles.sectionHeaderLabel}>GENERAL DETAILS</Text>
+            <Text style={styles.sectionHeaderLabel}>
+              {t("finance.accounts.mobile.generalDetails").toUpperCase()}
+            </Text>
 
             <TextInput
               control={control}
               name="name"
-              label="Account Name"
-              placeholder="e.g. Chase Total Checking, Apple Card"
+              label={t("finance.accounts.sheet.nameLabel")}
+              placeholder={t("finance.accounts.mobile.namePlaceholder")}
               placeholderTextColor={colors.textMuted}
               containerStyle={{ marginBottom: 16 }}
             />
 
             {/* Institution Selector */}
-            <Text style={styles.fieldSubLabel}>Financial Institution</Text>
+            <Text style={styles.fieldSubLabel}>
+              {t("finance.accounts.sheet.institutionLabel")}
+            </Text>
             <TouchableOpacity
               onPress={() => {
                 haptics.light()
@@ -577,7 +609,7 @@ export default function ManageAccountModal() {
                 >
                   {selectedInstitution
                     ? selectedInstitution.name
-                    : "Select Bank / Institution (Optional)"}
+                    : t("finance.accounts.mobile.selectInstitutionPlaceholder")}
                 </Text>
               </View>
               <ChevronDown size={16} color={colors.textMuted} />
@@ -585,7 +617,7 @@ export default function ManageAccountModal() {
 
             {/* Currency Selector */}
             <Text style={[styles.fieldSubLabel, { marginTop: 16 }]}>
-              Account Currency
+              {t("finance.accounts.mobile.accountCurrency")}
             </Text>
             <TouchableOpacity
               disabled={isEditMode}
@@ -631,12 +663,18 @@ export default function ManageAccountModal() {
 
           {/* Financial Balances Card */}
           <Card style={styles.sectionCard}>
-            <Text style={styles.sectionHeaderLabel}>BALANCES & LIMITS</Text>
+            <Text style={styles.sectionHeaderLabel}>
+              {t("finance.accounts.mobile.balancesLimits").toUpperCase()}
+            </Text>
 
             <TextInput
               control={control}
               name="initialBalance"
-              label={isEditMode ? "Initial Balance" : "Starting Balance"}
+              label={
+                isEditMode
+                  ? t("finance.accounts.sheet.initialBalanceLabel")
+                  : t("finance.accounts.mobile.startingBalance")
+              }
               editable={!isEditMode}
               placeholder="0.00"
               placeholderTextColor={colors.textMuted}
@@ -657,8 +695,8 @@ export default function ManageAccountModal() {
               <TextInput
                 control={control}
                 name="creditLimit"
-                label="Credit Limit"
-                placeholder="e.g. 5000.00"
+                label={t("finance.accounts.sheet.creditLimitLabel")}
+                placeholder={t("finance.accounts.sheet.creditLimitPlaceholder")}
                 placeholderTextColor={colors.textMuted}
                 keyboardType="decimal-pad"
                 containerStyle={{ marginBottom: 16 }}
@@ -668,8 +706,8 @@ export default function ManageAccountModal() {
             <TextInput
               control={control}
               name="lastFour"
-              label="Last 4 Digits (Optional)"
-              placeholder="e.g. 4210"
+              label={t("finance.accounts.sheet.lastFourLabel")}
+              placeholder={t("finance.accounts.sheet.lastFourPlaceholder")}
               placeholderTextColor={colors.textMuted}
               keyboardType="number-pad"
               maxLength={4}
@@ -678,7 +716,9 @@ export default function ManageAccountModal() {
 
           {/* Card Color Theme */}
           <Card style={styles.sectionCard}>
-            <Text style={styles.sectionHeaderLabel}>CARD COLOR ACCENT</Text>
+            <Text style={styles.sectionHeaderLabel}>
+              {t("finance.accounts.mobile.cardColorAccent").toUpperCase()}
+            </Text>
             <FormColorPicker control={control} name="color" />
           </Card>
 
@@ -690,7 +730,9 @@ export default function ManageAccountModal() {
               variant="primary"
               size="lg"
             >
-              {isEditMode ? "Save Changes" : "Create Account"}
+              {isEditMode
+                ? t("finance.accounts.sheet.saveSubmit")
+                : t("finance.accounts.sheet.createSubmit")}
             </Button>
 
             {isEditMode && (
@@ -704,7 +746,9 @@ export default function ManageAccountModal() {
                 ) : (
                   <>
                     <Trash2 size={16} color={colors.destructive} />
-                    <Text style={styles.deleteBtnText}>Delete Account</Text>
+                    <Text style={styles.deleteBtnText}>
+                      {t("finance.accounts.card.delete")}
+                    </Text>
                   </>
                 )}
               </TouchableOpacity>

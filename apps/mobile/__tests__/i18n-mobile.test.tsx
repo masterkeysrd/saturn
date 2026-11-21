@@ -5,7 +5,7 @@ import {
   getLocalizedDashboardPresetMeta,
   getLocalizedDashboardWidgetMeta,
 } from "@saturn/i18n"
-import { TimezoneProvider, useI18n } from "@saturn/hooks"
+import { TimezoneProvider, useDateSections, useI18n } from "@saturn/hooks"
 import {
   configureZodLocale,
   LoginSchema,
@@ -316,6 +316,161 @@ function I18nLabelsProbe() {
   )
 }
 
+function FinanceI18nProbe() {
+  const { t } = useI18n()
+  return (
+    <div>
+      <span data-testid="fin-pill-expense">
+        {t("finance.transactions.create.mobile.pillExpense")}
+      </span>
+      <span data-testid="fin-new-tx">
+        {t("finance.transactions.create.mobile.newTransaction")}
+      </span>
+      <span data-testid="fin-expense-submit">
+        {t("finance.transactions.expenseForm.submitRecord", {
+          amount: "$12.50",
+        })}
+      </span>
+      <span data-testid="fin-income-recorded">
+        {t("finance.transactions.incomeForm.recordedTitle")}
+      </span>
+      <span data-testid="fin-transfer-title">
+        {t("finance.transactions.transferForm.crossCurrencyTitle")}
+      </span>
+      <span data-testid="fin-pick-account">
+        {t("finance.pickers.account.defaultTitle")}
+      </span>
+      <span data-testid="fin-pick-borrowing">
+        {t("finance.pickers.borrowing.defaultTitle")}
+      </span>
+      <span data-testid="fin-spent-of">
+        {t("finance.pickers.budget.spentOf", {
+          spent: "$40.00",
+          limit: "$100.00",
+        })}
+      </span>
+      <span data-testid="fin-inst-desc">
+        {t("finance.pickers.institution.noInstitutionDesc")}
+      </span>
+      <span data-testid="fin-sched-due">
+        {t("finance.pickers.scheduled.dueLabel", { date: "12 nov" })}
+      </span>
+      <span data-testid="fin-conv-rate">
+        {t("finance.conversion.exchangeRateLine", {
+          from: "USD",
+          rate: "0.9231",
+          to: "EUR",
+        })}
+      </span>
+      <span data-testid="fin-hero-amount">
+        {t("finance.transactions.expenseForm.amountLabel").toUpperCase()}
+      </span>
+      <span data-testid="fin-widget-income">
+        {t("dashboard.widget.net_worth.incomeStat", { month: "nov" })}
+      </span>
+      <span data-testid="fin-widget-networth">
+        {t("dashboard.widget.net_worth.totalNetWorth").toUpperCase()}
+      </span>
+      <span data-testid="fin-widget-accounts">
+        {t("dashboard.widget.net_worth.accountsCount", { count: 3 })}
+      </span>
+      <span data-testid="fin-widget-add-tx">
+        {t("dashboard.widget.net_worth.addTransaction")}
+      </span>
+      <span data-testid="fin-bills-due">
+        {t("dashboard.widget.upcoming_bills.dueLabel", { date: "5 dic" })}
+      </span>
+      <span data-testid="fin-bills-overdue">
+        {t("dashboard.widget.upcoming_bills.overdue")}
+      </span>
+      <span data-testid="fin-total-spent">
+        {t("finance.tab.totalSpentThisMonth").toUpperCase()}
+      </span>
+      <span data-testid="fin-of-limit">
+        {t("finance.tab.ofLimit", { amount: "$100.00" })}
+      </span>
+      <span data-testid="fin-on-track">
+        {t("finance.tab.onTrackLabel", { count: 2 })}
+      </span>
+      <span data-testid="fin-critical">
+        {t("finance.tab.criticalCallout", {
+          name: "Comida",
+          pct: 95,
+          spent: "$95.00",
+          limit: "$100.00",
+        })}
+      </span>
+      <span data-testid="fin-older">
+        {t("finance.transactions.list.older")}
+      </span>
+      <span data-testid="fin-tx-income">
+        {t("finance.transactions.list.income")}
+      </span>
+      <span data-testid="fin-tx-recurring">
+        {t("finance.transactions.recurring")}
+      </span>
+      <span data-testid="fin-tx-unnamed">
+        {t("finance.transactions.detail.unnamed")}
+      </span>
+      <span data-testid="fin-pace-over-badge">
+        {t("dashboard.widget.budget_pace.overPaceBadge")}
+      </span>
+      <span data-testid="fin-pace-ahead-badge">
+        {t("dashboard.widget.budget_pace.aheadBadge")}
+      </span>
+      <span data-testid="fin-pace-on-track-badge">
+        {t("dashboard.widget.budget_pace.onTrackBadge")}
+      </span>
+      <span data-testid="fin-pace-over-limit-badge">
+        {t("dashboard.widget.budget_pace.overLimitBadge")}
+      </span>
+      <span data-testid="fin-pace-active-badge">
+        {t("dashboard.widget.budget_pace.activeBadge", { count: 3 })}
+      </span>
+      <span data-testid="fin-pace-meta">
+        {t("dashboard.widget.budget_pace.paceMeta", { day: 12, pct: 40 })}
+      </span>
+      <span data-testid="fin-pace-over-delta">
+        {t("dashboard.widget.budget_pace.overPaceDelta")}
+      </span>
+      <span data-testid="fin-pace-under-delta">
+        {t("dashboard.widget.budget_pace.underPaceDelta")}
+      </span>
+      <span data-testid="fin-pace-remaining">
+        {t("dashboard.widget.budget_pace.remaining")}
+      </span>
+      <span data-testid="fin-inbox-one">
+        {t("finance.tab.pendingInboxOne")}
+      </span>
+      <span data-testid="fin-inbox-many">
+        {t("finance.tab.pendingInboxMany", { count: 4 })}
+      </span>
+      <span data-testid="fin-inbox-subtitle">
+        {t("finance.tab.pendingInboxSubtitle")}
+      </span>
+    </div>
+  )
+}
+
+const PROBE_TODAY = `${new Date().toISOString().slice(0, 10)}T12:00:00Z`
+const PROBE_YESTERDAY = `${new Date(Date.now() - 24 * 60 * 60 * 1000)
+  .toISOString()
+  .slice(0, 10)}T12:00:00Z`
+
+function DateSectionsProbe() {
+  const sections = useDateSections([
+    { transactionDate: PROBE_TODAY },
+    { transactionDate: PROBE_YESTERDAY },
+    { transactionDate: "2020-03-15" },
+    {},
+  ])
+  return (
+    <span data-testid="date-sections">
+      {sections.map((s) => s.title).join(" | ")}
+    </span>
+  )
+}
+
 function SchemaValidationProbe() {
   const { locale } = useI18n()
   const loginRes = LoginSchema.safeParse({ identifier: "", password: "" })
@@ -429,6 +584,107 @@ describe("Mobile i18n & User-Scoped Regional Preferences", () => {
     expect(getByTestId("quick-action-compose").textContent).toBe(
       "Redactar correo"
     )
+  })
+
+  it("resolves Spanish finance.* transaction form and picker keys via useI18n()", () => {
+    const { getByTestId } = render(
+      <TimezoneProvider timezone="Europe/Madrid" locale="es-ES">
+        <FinanceI18nProbe />
+      </TimezoneProvider>
+    )
+
+    expect(getByTestId("fin-pill-expense").textContent).toBe("Gasto")
+    expect(getByTestId("fin-new-tx").textContent).toBe("Nueva transacción")
+    expect(getByTestId("fin-expense-submit").textContent).toBe(
+      "Registrar gasto • $12.50"
+    )
+    expect(getByTestId("fin-income-recorded").textContent).toBe(
+      "Ingreso registrado"
+    )
+    expect(getByTestId("fin-transfer-title").textContent).toBe(
+      "Transferencia entre monedas"
+    )
+    expect(getByTestId("fin-pick-account").textContent).toBe(
+      "Seleccionar cuenta"
+    )
+    expect(getByTestId("fin-pick-borrowing").textContent).toBe(
+      "Seleccionar acuerdo de préstamo"
+    )
+    expect(getByTestId("fin-spent-of").textContent).toBe("$40.00 de $100.00")
+    expect(getByTestId("fin-inst-desc").textContent).toBe(
+      "Tarjeta independiente o billetera en efectivo"
+    )
+    expect(getByTestId("fin-sched-due").textContent).toBe("Vence: 12 nov")
+    expect(getByTestId("fin-conv-rate").textContent).toBe(
+      "Tipo de cambio: 1 USD = 0.9231 EUR"
+    )
+    expect(getByTestId("fin-hero-amount").textContent).toBe("IMPORTE")
+    expect(getByTestId("fin-widget-income").textContent).toBe("Ingresos (nov)")
+    expect(getByTestId("fin-widget-networth").textContent).toBe(
+      "PATRIMONIO NETO TOTAL"
+    )
+    expect(getByTestId("fin-widget-accounts").textContent).toBe("3 cuentas")
+    expect(getByTestId("fin-widget-add-tx").textContent).toBe(
+      "Añadir transacción"
+    )
+    expect(getByTestId("fin-bills-due").textContent).toBe("Vence 5 dic")
+    expect(getByTestId("fin-bills-overdue").textContent).toBe("Atrasado")
+    expect(getByTestId("fin-total-spent").textContent).toBe(
+      "TOTAL GASTADO ESTE MES"
+    )
+    expect(getByTestId("fin-of-limit").textContent).toBe("de $100.00")
+    expect(getByTestId("fin-on-track").textContent).toBe("2 en control")
+    expect(getByTestId("fin-critical").textContent).toBe(
+      "Comida está al 95% ($95.00 de $100.00)"
+    )
+    expect(getByTestId("fin-older").textContent).toBe("Anteriores")
+    expect(getByTestId("fin-tx-income").textContent).toBe("Ingresos")
+    expect(getByTestId("fin-tx-recurring").textContent).toBe("Recurrente")
+    expect(getByTestId("fin-tx-unnamed").textContent).toBe("Sin nombre")
+    expect(getByTestId("fin-pace-over-badge").textContent).toBe(
+      "Por encima del ritmo"
+    )
+    expect(getByTestId("fin-pace-ahead-badge").textContent).toBe(
+      "Por debajo del ritmo"
+    )
+    expect(getByTestId("fin-pace-on-track-badge").textContent).toBe("En ritmo")
+    expect(getByTestId("fin-pace-over-limit-badge").textContent).toBe(
+      "Límite superado"
+    )
+    expect(getByTestId("fin-pace-active-badge").textContent).toBe("3 activos")
+    expect(getByTestId("fin-pace-meta").textContent).toBe(
+      "Día 12 · 40% del mes"
+    )
+    expect(getByTestId("fin-pace-over-delta").textContent).toBe(
+      "sobre el ritmo"
+    )
+    expect(getByTestId("fin-pace-under-delta").textContent).toBe(
+      "bajo el ritmo"
+    )
+    expect(getByTestId("fin-pace-remaining").textContent).toBe("restante")
+    expect(getByTestId("fin-inbox-one").textContent).toBe(
+      "1 elemento pendiente en la cola"
+    )
+    expect(getByTestId("fin-inbox-many").textContent).toBe(
+      "4 elementos pendientes en la cola"
+    )
+    expect(getByTestId("fin-inbox-subtitle").textContent).toBe(
+      "Toca para revisar y aprobar en tu libro mayor"
+    )
+  })
+
+  it("renders Spanish date section headers via useDateSections", () => {
+    const { getByTestId } = render(
+      <TimezoneProvider timezone="UTC" locale="es-ES">
+        <DateSectionsProbe />
+      </TimezoneProvider>
+    )
+
+    const titles = getByTestId("date-sections").textContent?.split(" | ") ?? []
+    expect(titles[0]).toBe("Hoy")
+    expect(titles[1]).toBe("Ayer")
+    expect(titles[2]).toMatch(/dom.*15.*2020/i)
+    expect(titles[3]).toBe("Anteriores")
   })
 
   it("validates mobile form inputs via @saturn/schemas with Spanish error messages under TimezoneProvider locale='es-419'", async () => {

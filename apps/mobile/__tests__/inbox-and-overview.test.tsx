@@ -10,7 +10,7 @@ import {
   buildUpdateInboxItemRequest,
   canQuickApproveInboxItem,
   decodeInboxRawPayload,
-  getInboxDocTypeLabel,
+  getInboxDocTypeLabelKey,
   parseDecimalToCentsString,
   resolveInboxTransactionType,
 } from "../lib/inbox-triage"
@@ -162,11 +162,19 @@ describe("Finance Inbox Triage Helpers", () => {
       ).toBe("TRANSFER")
     })
 
-    it("maps docType enums to clean display labels", () => {
-      expect(getInboxDocTypeLabel("RECEIPT")).toBe("Receipt")
-      expect(getInboxDocTypeLabel("INVOICE")).toBe("Invoice")
-      expect(getInboxDocTypeLabel("BANK_NOTIFICATION")).toBe("Bank Alert")
-      expect(getInboxDocTypeLabel("UNKNOWN")).toBe("Document")
+    it("maps docType enums to display label keys", () => {
+      expect(getInboxDocTypeLabelKey("RECEIPT")).toBe(
+        "finance.inbox.docTypes.receipt"
+      )
+      expect(getInboxDocTypeLabelKey("INVOICE")).toBe(
+        "finance.inbox.docTypes.invoice"
+      )
+      expect(getInboxDocTypeLabelKey("BANK_NOTIFICATION")).toBe(
+        "finance.inbox.docTypes.bankAlert"
+      )
+      expect(getInboxDocTypeLabelKey("UNKNOWN")).toBe(
+        "finance.inbox.card.document"
+      )
     })
 
     it("decodes base64 raw payloads and falls back safely for plain text", () => {

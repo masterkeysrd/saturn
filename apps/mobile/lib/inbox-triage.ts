@@ -1,4 +1,5 @@
 import { decodeBase64Utf8 } from "@saturn/core"
+import type { TranslationKey } from "@saturn/i18n"
 import type {
   BorrowingLinkType,
   InboxItem,
@@ -74,18 +75,18 @@ export function canQuickApproveInboxItem(
   return true
 }
 
-export function getInboxDocTypeLabel(
+export function getInboxDocTypeLabelKey(
   docType?: InboxItem_DocType | string
-): string {
+): TranslationKey {
   switch (docType) {
     case "RECEIPT":
-      return "Receipt"
+      return "finance.inbox.docTypes.receipt"
     case "INVOICE":
-      return "Invoice"
+      return "finance.inbox.docTypes.invoice"
     case "BANK_NOTIFICATION":
-      return "Bank Alert"
+      return "finance.inbox.docTypes.bankAlert"
     default:
-      return "Document"
+      return "finance.inbox.card.document"
   }
 }
 

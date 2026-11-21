@@ -20,6 +20,8 @@ import {
   type Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { getInstitutionLogoUrl } from "@saturn/core"
+import { useI18n } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { useFormStyles } from "./forms/form-styles"
 
@@ -133,14 +135,15 @@ export function AccountRow({
   account,
   institution,
   onPress,
-  label = "Account",
-  placeholder = "No Account (Cash)",
+  label,
+  placeholder,
   fallbackIcon,
   disabled = false,
   error,
   style,
 }: AccountRowProps) {
   const { colors } = useTheme()
+  const { t } = useI18n()
   const styles = useThemedStyles(createStyles)
   const formStyles = useFormStyles()
 
@@ -160,7 +163,9 @@ export function AccountRow({
             color={colors.textMuted}
             fallbackIcon={fallbackIcon}
           />
-          <Text style={formStyles.formRowLabel}>{label}</Text>
+          <Text style={formStyles.formRowLabel}>
+            {label ?? t("finance.pickers.account.rowLabel")}
+          </Text>
         </View>
         <View style={formStyles.formRowValueGroup}>
           <Text
@@ -170,7 +175,9 @@ export function AccountRow({
             ]}
             numberOfLines={1}
           >
-            {account ? `${account.name} (${account.currency})` : placeholder}
+            {account
+              ? `${account.name} (${account.currency})`
+              : (placeholder ?? t("finance.pickers.account.rowPlaceholder"))}
           </Text>
           <ChevronRight size={14} color={colors.textMuted} />
         </View>
@@ -200,13 +207,14 @@ export function AccountCardSelect({
   account,
   institution,
   onPress,
-  placeholder = "None (Any Account)",
+  placeholder,
   subtitle,
   disabled = false,
   error,
   style,
 }: AccountCardSelectProps) {
   const { colors } = useTheme()
+  const { t, locale } = useI18n()
   const styles = useThemedStyles(createStyles)
 
   return (
@@ -234,12 +242,23 @@ export function AccountCardSelect({
               ]}
               numberOfLines={1}
             >
-              {account ? account.name : placeholder}
+              {account
+                ? account.name
+                : (placeholder ??
+                  t("finance.budgets.mobile.anyAccountPlaceholder"))}
             </Text>
             <Text style={styles.cardSelectSubtitle} numberOfLines={1}>
               {account
-                ? `${account.currency} • ${account.type.replace(/_/g, " ")}`
-                : subtitle || "Default linked payment method"}
+                ? t("finance.pickers.account.cardAccountSubtitle", {
+                    currency: account.currency,
+                    type: getLocalizedEnumLabel(
+                      "finance",
+                      "accountType",
+                      account.type,
+                      locale
+                    ),
+                  })
+                : subtitle || t("finance.pickers.account.cardDefaultSubtitle")}
             </Text>
           </View>
         </View>

@@ -39,7 +39,8 @@ import {
   getCurrencySymbol,
   getScheduledDisplayName,
 } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
+import type { TranslationKey } from "@saturn/i18n"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import {
@@ -119,19 +120,22 @@ export interface InboxReviewSheetProps {
   onDiscard: (item: InboxItem) => void
 }
 
-const FLOW_TYPE_OPTIONS: readonly { value: InboxFlowType; label: string }[] = [
-  { value: "EXPENSE", label: "Expense" },
-  { value: "INCOME", label: "Income" },
-  { value: "TRANSFER", label: "Transfer" },
+const FLOW_TYPE_OPTIONS: readonly {
+  value: InboxFlowType
+  labelKey: TranslationKey
+}[] = [
+  { value: "EXPENSE", labelKey: "finance.inbox.sheet.flowExpense" },
+  { value: "INCOME", labelKey: "finance.inbox.sheet.flowIncome" },
+  { value: "TRANSFER", labelKey: "finance.inbox.sheet.flowTransfer" },
 ]
 
 const DOC_TYPE_OPTIONS: readonly {
   value: InboxEditableDocType
-  label: string
+  labelKey: TranslationKey
 }[] = [
-  { value: "RECEIPT", label: "Receipt" },
-  { value: "INVOICE", label: "Invoice" },
-  { value: "BANK_NOTIFICATION", label: "Bank Alert" },
+  { value: "RECEIPT", labelKey: "finance.inbox.docTypes.receipt" },
+  { value: "INVOICE", labelKey: "finance.inbox.docTypes.invoice" },
+  { value: "BANK_NOTIFICATION", labelKey: "finance.inbox.docTypes.bankAlert" },
 ]
 
 export function InboxReviewSheet({
@@ -163,6 +167,7 @@ export function InboxReviewSheet({
   const styles = useThemedStyles(createStyles)
   const insets = useSafeAreaInsets()
   const tz = useTimezone()
+  const { t } = useI18n()
   const sheetRef = useRef<BottomSheet>(null)
 
   const [payloadExpanded, setPayloadExpanded] = useState(false)
@@ -217,28 +222,28 @@ export function InboxReviewSheet({
     const trimmedVendor = draft.vendorName.trim()
     if (!trimmedVendor) {
       haptics.warning()
-      setLocalError("Vendor / Description is required.")
+      setLocalError(t("finance.inbox.sheet.validation.vendorRequired"))
       return
     }
 
     const parsedAmount = Number.parseFloat(draft.amountStr.replace(/,/g, ""))
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       haptics.warning()
-      setLocalError("Amount must be greater than zero.")
+      setLocalError(t("finance.inbox.sheet.validation.amountPositive"))
       return
     }
 
     if (draft.transactionType === "TRANSFER") {
       if (!draft.accountId || !draft.destinationAccountId) {
         haptics.warning()
-        setLocalError(
-          "Source and Destination accounts are both required for a transfer."
-        )
+        setLocalError(t("finance.inbox.sheet.validation.transferAccountsBoth"))
         return
       }
       if (draft.accountId === draft.destinationAccountId) {
         haptics.warning()
-        setLocalError("Source and Destination accounts must be different.")
+        setLocalError(
+          t("finance.inbox.sheet.validation.transferAccountsDiffer")
+        )
         return
       }
     } else if (
@@ -248,15 +253,13 @@ export function InboxReviewSheet({
       !draft.budgetId
     ) {
       haptics.warning()
-      setLocalError(
-        "Select a Budget category (or link a scheduled bill / loan) before approving."
-      )
+      setLocalError(t("finance.inbox.sheet.validation.budgetRequired"))
       return
     }
 
     if (draft.docType !== "INVOICE" && !draft.accountId) {
       haptics.warning()
-      setLocalError("Select an Account before approving into the ledger.")
+      setLocalError(t("finance.inbox.sheet.validation.accountRequired"))
       return
     }
 
@@ -288,7 +291,7 @@ export function InboxReviewSheet({
   return (
     <AppBottomSheet
       ref={sheetRef}
-      title="Review Inbox Item"
+      title={t("finance.inbox.sheet.title")}
       snapPoints={["88%"]}
       onClose={handleClose}
     >
@@ -303,8 +306,7 @@ export function InboxReviewSheet({
             {!isWritable && (
               <View style={styles.viewerBanner}>
                 <Text style={styles.viewerBannerText}>
-                  Read-only viewer role. Only workspace editors can approve or
-                  discard inbox items.
+                  {t("finance.inbox.sheet.viewerReadOnly")}
                 </Text>
               </View>
             )}
@@ -314,11 +316,11 @@ export function InboxReviewSheet({
                 <AlertTriangle size={16} color={colors.warning} />
                 <View style={styles.bannerTextCol}>
                   <Text style={styles.warningTitle}>
-                    Potential Duplicate Detected
+                    {t("finance.inbox.sheet.duplicateDetected")}
                   </Text>
                   <Text style={styles.warningSubtitle}>
                     {item.metadata.duplicate_reason ||
-                      "A matching transaction may already exist in your ledger."}
+                      t("finance.inbox.sheet.duplicateFallback")}
                   </Text>
                 </View>
               </View>
@@ -339,7 +341,9 @@ export function InboxReviewSheet({
 
             {/* Flow Type Segmented Control */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Transaction Type</Text>
+              <Text style={styles.fieldLabel}>
+                {t("finance.inbox.reviewPanel.transactionType")}
+              </Text>
               <View style={styles.segmentedTrack}>
                 {FLOW_TYPE_OPTIONS.map((opt) => {
                   const selected = draft.transactionType === opt.value
@@ -368,7 +372,7 @@ export function InboxReviewSheet({
                           selected && styles.segmentedTextActive,
                         ]}
                       >
-                        {opt.label}
+                        {t(opt.labelKey)}
                       </Text>
                     </TouchableOpacity>
                   )
@@ -378,7 +382,9 @@ export function InboxReviewSheet({
 
             {/* Document Type Segmented Control */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Document Type</Text>
+              <Text style={styles.fieldLabel}>
+                {t("finance.inbox.sheet.documentType")}
+              </Text>
               <View style={styles.segmentedTrack}>
                 {DOC_TYPE_OPTIONS.map((opt) => {
                   const selected = draft.docType === opt.value
@@ -407,7 +413,7 @@ export function InboxReviewSheet({
                           selected && styles.segmentedTextActive,
                         ]}
                       >
-                        {opt.label}
+                        {t(opt.labelKey)}
                       </Text>
                     </TouchableOpacity>
                   )
@@ -417,7 +423,9 @@ export function InboxReviewSheet({
 
             {/* Vendor / Description */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Vendor / Description</Text>
+              <Text style={styles.fieldLabel}>
+                {t("finance.inbox.reviewPanel.vendorDescription")}
+              </Text>
               <BottomSheetTextInput
                 style={styles.textInput}
                 editable={isWritable}
@@ -426,7 +434,7 @@ export function InboxReviewSheet({
                   setLocalError(null)
                   onChangeDraft((prev) => ({ ...prev, vendorName: text }))
                 }}
-                placeholder="Merchant or description"
+                placeholder={t("finance.inbox.sheet.merchantPlaceholder")}
                 placeholderTextColor={colors.textMuted}
                 keyboardAppearance={isDark ? "dark" : "light"}
                 testID="review-vendor-input"
@@ -435,7 +443,9 @@ export function InboxReviewSheet({
 
             {/* Amount & Currency */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Amount & Currency</Text>
+              <Text style={styles.fieldLabel}>
+                {t("finance.inbox.sheet.amountCurrency")}
+              </Text>
               <View style={styles.amountCurrencyRow}>
                 <View style={styles.amountInputWrap}>
                   <Text style={styles.currencySymbol}>
@@ -477,8 +487,8 @@ export function InboxReviewSheet({
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>
                 {draft.transactionType === "TRANSFER"
-                  ? "Source Account"
-                  : "Account"}
+                  ? t("finance.inbox.sheet.sourceAccount")
+                  : t("finance.inbox.reviewPanel.account")}
               </Text>
               <TouchableOpacity
                 activeOpacity={0.75}
@@ -502,7 +512,7 @@ export function InboxReviewSheet({
                   >
                     {selectedAccount
                       ? `${selectedAccount.name} (${selectedAccount.currency})`
-                      : "Select account"}
+                      : t("finance.inbox.sheet.selectAccount")}
                   </Text>
                 </View>
                 <ChevronRight size={16} color={colors.textMuted} />
@@ -512,7 +522,9 @@ export function InboxReviewSheet({
             {/* Destination Account Selector (for Transfer) */}
             {draft.transactionType === "TRANSFER" && (
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Destination Account</Text>
+                <Text style={styles.fieldLabel}>
+                  {t("finance.inbox.sheet.destinationAccount")}
+                </Text>
                 <TouchableOpacity
                   activeOpacity={0.75}
                   disabled={!isWritable}
@@ -535,7 +547,7 @@ export function InboxReviewSheet({
                     >
                       {selectedDestAccount
                         ? `${selectedDestAccount.name} (${selectedDestAccount.currency})`
-                        : "Select destination account"}
+                        : t("finance.inbox.sheet.selectDestinationAccount")}
                     </Text>
                   </View>
                   <ChevronRight size={16} color={colors.textMuted} />
@@ -546,7 +558,9 @@ export function InboxReviewSheet({
             {/* Budget Selector (for Expense) */}
             {draft.transactionType === "EXPENSE" && (
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Budget Category</Text>
+                <Text style={styles.fieldLabel}>
+                  {t("finance.inbox.sheet.budgetCategory")}
+                </Text>
                 <TouchableOpacity
                   activeOpacity={0.75}
                   disabled={!isWritable}
@@ -582,7 +596,9 @@ export function InboxReviewSheet({
                       ]}
                       numberOfLines={1}
                     >
-                      {selectedBudget ? selectedBudget.name : "Select budget"}
+                      {selectedBudget
+                        ? selectedBudget.name
+                        : t("finance.pickers.budget.placeholder")}
                     </Text>
                   </View>
                   <ChevronRight size={16} color={colors.textMuted} />
@@ -592,7 +608,9 @@ export function InboxReviewSheet({
 
             {/* Optional Links */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Optional Links</Text>
+              <Text style={styles.fieldLabel}>
+                {t("finance.inbox.sheet.optionalLinks")}
+              </Text>
 
               <View style={styles.optionalLinksStack}>
                 <View style={styles.optionalLinkRow}>
@@ -610,12 +628,12 @@ export function InboxReviewSheet({
                     <CalendarClock size={16} color={colors.brandSecondary} />
                     <View style={styles.optionalLinkTextCol}>
                       <Text style={styles.optionalLinkLabel}>
-                        Scheduled Bill
+                        {t("finance.inbox.sheet.scheduledBill")}
                       </Text>
                       <Text style={styles.optionalLinkValue} numberOfLines={1}>
                         {selectedScheduled
                           ? `${getScheduledDisplayName(selectedScheduled, recurringTemplates)} • ${formatAmount(selectedScheduled.amount || "0", selectedScheduled.currency || baseCurrency)}`
-                          : "None linked"}
+                          : t("finance.inbox.sheet.noneLinked")}
                       </Text>
                     </View>
                     <ChevronRight size={15} color={colors.textMuted} />
@@ -631,7 +649,9 @@ export function InboxReviewSheet({
                         }))
                       }}
                       style={styles.clearLinkBtn}
-                      accessibilityLabel="Unlink scheduled bill"
+                      accessibilityLabel={t(
+                        "finance.inbox.sheet.unlinkScheduled"
+                      )}
                     >
                       <X size={14} color={colors.textMuted} />
                     </TouchableOpacity>
@@ -653,12 +673,12 @@ export function InboxReviewSheet({
                     <HandCoins size={16} color={colors.warning} />
                     <View style={styles.optionalLinkTextCol}>
                       <Text style={styles.optionalLinkLabel}>
-                        Debt / Loan Agreement
+                        {t("finance.inbox.sheet.debtLoanAgreement")}
                       </Text>
                       <Text style={styles.optionalLinkValue} numberOfLines={1}>
                         {selectedBorrowing
-                          ? `${selectedBorrowing.counterparty || "Agreement"} • ${formatAmount(selectedBorrowing.remainingAmount || selectedBorrowing.totalAmount, selectedBorrowing.currency || baseCurrency)}`
-                          : "None linked"}
+                          ? `${selectedBorrowing.counterparty || t("finance.inbox.sheet.agreementFallback")} • ${formatAmount(selectedBorrowing.remainingAmount || selectedBorrowing.totalAmount, selectedBorrowing.currency || baseCurrency)}`
+                          : t("finance.inbox.sheet.noneLinked")}
                       </Text>
                     </View>
                     <ChevronRight size={15} color={colors.textMuted} />
@@ -674,7 +694,7 @@ export function InboxReviewSheet({
                         }))
                       }}
                       style={styles.clearLinkBtn}
-                      accessibilityLabel="Unlink loan agreement"
+                      accessibilityLabel={t("finance.inbox.sheet.unlinkLoan")}
                     >
                       <X size={14} color={colors.textMuted} />
                     </TouchableOpacity>
@@ -696,7 +716,9 @@ export function InboxReviewSheet({
               >
                 <View style={styles.payloadHeaderLeft}>
                   <FileText size={15} color={colors.textMuted} />
-                  <Text style={styles.payloadTitle}>Source Payload</Text>
+                  <Text style={styles.payloadTitle}>
+                    {t("finance.inbox.sheet.sourcePayload")}
+                  </Text>
                 </View>
                 {payloadExpanded ? (
                   <ChevronUp size={16} color={colors.textMuted} />
@@ -712,12 +734,14 @@ export function InboxReviewSheet({
                   contentContainerStyle={styles.payloadBodyContent}
                 >
                   <Text style={styles.payloadText} selectable>
-                    {decodedPayload || "No source payload attached."}
+                    {decodedPayload || t("finance.inbox.sheet.noPayload")}
                   </Text>
                   {item.createTime ? (
                     <Text style={styles.payloadMeta}>
-                      Ingested {tz.formatDate(item.createTime)} ·{" "}
-                      {tz.formatTime(item.createTime)}
+                      {t("finance.inbox.sheet.ingested", {
+                        date: tz.formatDate(item.createTime),
+                        time: tz.formatTime(item.createTime),
+                      })}
                     </Text>
                   ) : null}
                 </ScrollView>
@@ -743,7 +767,7 @@ export function InboxReviewSheet({
                 style={styles.footerDiscardBtn}
                 testID="review-discard-btn"
               >
-                Discard
+                {t("common.discard")}
               </Button>
               <Button
                 variant="primary"
@@ -755,7 +779,7 @@ export function InboxReviewSheet({
                 style={styles.footerApproveBtn}
                 testID="review-approve-btn"
               >
-                Approve & Record
+                {t("finance.inbox.sheet.approveAndRecord")}
               </Button>
             </View>
           )}

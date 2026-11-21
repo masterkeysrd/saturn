@@ -26,7 +26,7 @@ import {
 } from "lucide-react-native"
 import { Icon } from "@expo/ui"
 import { ActionMenu } from "@/components/ui/action-menu"
-import { formatAmount, formatInterval, parseDate } from "@saturn/core"
+import { formatAmount, parseDate } from "@saturn/core"
 import {
   useListBudgetsQuery,
   useGetSettingsQuery,
@@ -37,7 +37,8 @@ import {
   type Budget_Status,
   type Account,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n, useTimezone } from "@saturn/hooks"
+import { getLocalizedIntervalLabel, type TranslationKey } from "@saturn/i18n"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { getBudgetIcon } from "@/lib/budget-icons"
@@ -90,10 +91,20 @@ const deleteIcon = Icon.select({
   android: require("@expo/material-symbols/delete.xml"),
 })
 
+type BudgetStatusAction = "Paused" | "Resumed" | "Closed" | "Reopened"
+
+const STATUS_ACTION_KEYS: Record<BudgetStatusAction, TranslationKey> = {
+  Paused: "finance.budgets.mobile.statusAction.Paused",
+  Resumed: "finance.budgets.mobile.statusAction.Resumed",
+  Closed: "finance.budgets.mobile.statusAction.Closed",
+  Reopened: "finance.budgets.mobile.statusAction.Reopened",
+}
+
 export default function BudgetsScreen() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { t, locale } = useI18n()
   const queryClient = useQueryClient()
   const toast = useToast()
   const { colors, resolvedMode, isDark, getBudgetColors } = useTheme()
@@ -221,7 +232,7 @@ export default function BudgetsScreen() {
   const handleUpdateStatus = async (
     b: Budget,
     newStatus: Budget_Status,
-    actionLabel: string
+    actionLabel: BudgetStatusAction
   ) => {
     if (!b.id) return
     haptics.medium()
@@ -241,8 +252,13 @@ export default function BudgetsScreen() {
       })
       haptics.success()
       toast.show({
-        title: `Budget ${actionLabel}`,
-        message: `"${b.name}" is now ${actionLabel.toLowerCase()}.`,
+        title: t("finance.budgets.mobile.toastStatusTitle", {
+          action: t(STATUS_ACTION_KEYS[actionLabel]),
+        }),
+        message: t("finance.budgets.mobile.toastStatusDesc", {
+          name: b.name,
+          action: t(STATUS_ACTION_KEYS[actionLabel]),
+        }),
         type: "success",
       })
       await invalidateFinanceQueries(queryClient)
@@ -250,8 +266,8 @@ export default function BudgetsScreen() {
     } catch (err: any) {
       haptics.error()
       toast.show({
-        title: "Action Failed",
-        message: err?.message || "Failed to update budget status.",
+        title: t("finance.budgets.mobile.toastActionFailed"),
+        message: err?.message || t("finance.budgets.mobile.toastStatusFailed"),
         type: "error",
       })
     }
@@ -262,12 +278,12 @@ export default function BudgetsScreen() {
     if (!budgetId) return
     haptics.warning()
     Alert.alert(
-      "Delete Budget",
-      `Are you sure you want to delete budget "${b.name}"? This action cannot be undone.`,
+      t("finance.budgets.mobile.menuDelete"),
+      t("finance.budgets.mobile.deleteAlertDesc", { name: b.name }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -277,8 +293,10 @@ export default function BudgetsScreen() {
               })
               haptics.success()
               toast.show({
-                title: "Budget Deleted",
-                message: `"${b.name}" was removed.`,
+                title: t("finance.budgets.deletedTitle"),
+                message: t("finance.budgets.mobile.toastDeletedDesc", {
+                  name: b.name,
+                }),
                 type: "info",
               })
               await invalidateFinanceQueries(queryClient)
@@ -286,8 +304,9 @@ export default function BudgetsScreen() {
             } catch (err: any) {
               haptics.error()
               toast.show({
-                title: "Delete Failed",
-                message: err?.message || "Could not delete budget.",
+                title: t("finance.budgets.deleteFailedTitle"),
+                message:
+                  err?.message || t("finance.budgets.mobile.toastDeleteFailed"),
                 type: "error",
               })
             }
@@ -301,13 +320,13 @@ export default function BudgetsScreen() {
     <View style={styles.safeArea}>
       <Stack.Screen
         options={{
-          headerTitle: "Budgets",
+          headerTitle: t("nav.budgets"),
           ...(Platform.OS === "ios"
             ? {
                 unstable_headerRightItems: () => [
                   {
                     type: "button",
-                    label: "New Budget",
+                    label: t("finance.budgets.mobile.menuNew"),
                     icon: { type: "sfSymbol", name: "plus" },
                     tintColor: colors.primary,
                     onPress: () => {
@@ -353,7 +372,9 @@ export default function BudgetsScreen() {
               <PieChart size={20} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.summaryLabel}>ACTIVE LIMITS TOTAL</Text>
+              <Text style={styles.summaryLabel}>
+                {t("finance.budgets.mobile.summaryActiveLimits")}
+              </Text>
               <MonoAmount size="lg" color={colors.textPrimary}>
                 {formatAmount(totalLimitBaseCents, baseCurrency)}
               </MonoAmount>
@@ -370,10 +391,14 @@ export default function BudgetsScreen() {
           <View style={styles.summaryProgressSection}>
             <View style={styles.summaryProgressHeader}>
               <Text style={styles.summaryProgressSpent}>
-                Spent {formatAmount(totalSpentBaseCents, baseCurrency)}
+                {t("finance.budgets.mobile.summarySpent", {
+                  amount: formatAmount(totalSpentBaseCents, baseCurrency),
+                })}
               </Text>
               <Text style={styles.summaryProgressPercent}>
-                {overallUtilization}% utilized
+                {t("finance.budgets.mobile.summaryUtilized", {
+                  pct: overallUtilization,
+                })}
               </Text>
             </View>
             <View style={styles.summaryProgressTrack}>
@@ -397,9 +422,16 @@ export default function BudgetsScreen() {
           {/* Meta footer row */}
           <View style={styles.summaryFooterRow}>
             <Text style={styles.summaryFooterText}>
-              {budgets.length} template(s) tracked • {activeBudgetsCount} active
+              {t("finance.budgets.mobile.summaryTemplates", {
+                total: budgets.length,
+                active: activeBudgetsCount,
+              })}
             </Text>
-            <Text style={styles.summaryFooterBase}>Base: {baseCurrency}</Text>
+            <Text style={styles.summaryFooterBase}>
+              {t("finance.budgets.mobile.summaryBase", {
+                currency: baseCurrency,
+              })}
+            </Text>
           </View>
         </Card>
 
@@ -408,7 +440,7 @@ export default function BudgetsScreen() {
           <Search size={16} color={colors.textMuted} />
           <RNTextInput
             style={styles.searchInput}
-            placeholder="Search budgets, currency, accounts..."
+            placeholder={t("finance.budgets.mobile.searchPlaceholder")}
             placeholderTextColor={colors.textMuted}
             keyboardAppearance={isDark ? "dark" : "light"}
             value={searchQuery}
@@ -430,10 +462,19 @@ export default function BudgetsScreen() {
         <View style={styles.filterRow}>
           {(
             [
-              { key: "ACTIVE", label: "Active" },
-              { key: "PAUSED", label: "Paused" },
-              { key: "CLOSED", label: "Closed" },
-              { key: "ALL", label: "All" },
+              {
+                key: "ACTIVE",
+                labelKey: "finance.budgets.mobile.filterActive",
+              },
+              {
+                key: "PAUSED",
+                labelKey: "finance.budgets.mobile.filterPaused",
+              },
+              {
+                key: "CLOSED",
+                labelKey: "finance.budgets.mobile.filterClosed",
+              },
+              { key: "ALL", labelKey: "common.all" },
             ] as const
           ).map((filter) => {
             const isSelected = statusFilter === filter.key
@@ -456,7 +497,7 @@ export default function BudgetsScreen() {
                     isSelected && styles.filterPillTextActive,
                   ]}
                 >
-                  {filter.label}
+                  {t(filter.labelKey)}
                 </Text>
               </TouchableOpacity>
             )
@@ -465,12 +506,12 @@ export default function BudgetsScreen() {
 
         <Caption style={styles.sectionHeader}>
           {statusFilter === "ALL"
-            ? "ALL BUDGETS"
+            ? t("finance.budgets.mobile.headerAll")
             : statusFilter === "PAUSED"
-              ? "PAUSED BUDGETS"
+              ? t("finance.budgets.mobile.headerPaused")
               : statusFilter === "CLOSED"
-                ? "CLOSED BUDGETS"
-                : "ACTIVE BUDGETS"}{" "}
+                ? t("finance.budgets.mobile.headerClosed")
+                : t("finance.budgets.mobile.headerActive")}{" "}
           ({filteredBudgets.length})
         </Caption>
 
@@ -484,12 +525,16 @@ export default function BudgetsScreen() {
           <EmptyState
             icon={<PiggyBank size={28} color={colors.textMuted} />}
             title={
-              searchQuery.trim() ? "No matching budgets" : "No budgets created"
+              searchQuery.trim()
+                ? t("finance.budgets.mobile.emptyNoMatch")
+                : t("finance.budgets.mobile.emptyNone")
             }
             description={
               searchQuery.trim()
-                ? `No budget found matching "${searchQuery}".`
-                : "Create your first budget to start tracking category spending."
+                ? t("finance.budgets.mobile.emptyNoMatchDesc", {
+                    query: searchQuery,
+                  })
+                : t("finance.budgets.mobile.emptyNoneDesc")
             }
           />
         ) : (
@@ -545,7 +590,7 @@ export default function BudgetsScreen() {
                 : ""
               const dateRangeStr =
                 b.interval === "ONE_TIME"
-                  ? "Lifetime"
+                  ? t("finance.budgets.progress.lifetime")
                   : startStr && endStr
                     ? `${startStr} - ${endStr}`
                     : ""
@@ -607,7 +652,7 @@ export default function BudgetsScreen() {
                             </Text>
                             <View style={styles.intervalBadge}>
                               <Text style={styles.intervalText}>
-                                {formatInterval(b.interval)}
+                                {getLocalizedIntervalLabel(b.interval, locale)}
                               </Text>
                             </View>
                             {b.status === "CLOSED" ? (
@@ -626,7 +671,7 @@ export default function BudgetsScreen() {
                                     { color: colors.destructive },
                                   ]}
                                 >
-                                  Closed
+                                  {t("finance.budgets.mobile.badgeClosed")}
                                 </Text>
                               </View>
                             ) : b.status === "PAUSED" ? (
@@ -645,7 +690,7 @@ export default function BudgetsScreen() {
                                     { color: colors.warning },
                                   ]}
                                 >
-                                  Paused
+                                  {t("finance.budgets.mobile.badgePaused")}
                                 </Text>
                               </View>
                             ) : null}
@@ -752,14 +797,14 @@ export default function BudgetsScreen() {
                       actions={[
                         {
                           id: "details",
-                          title: "View Details & Activity",
+                          title: t("finance.budgets.mobile.menuViewDetails"),
                           image: detailsIcon,
                         },
                         ...(b.status === "ACTIVE" || !b.status
                           ? [
                               {
                                 id: "expense",
-                                title: "Record Expense",
+                                title: t("finance.budgets.recordExpense"),
                                 image: addExpenseIcon,
                               },
                             ]
@@ -768,7 +813,7 @@ export default function BudgetsScreen() {
                           ? [
                               {
                                 id: "resume",
-                                title: "Resume Budget",
+                                title: t("finance.budgets.resumeBudget"),
                                 image: resumeIcon,
                               },
                             ]
@@ -777,7 +822,7 @@ export default function BudgetsScreen() {
                             : [
                                 {
                                   id: "pause",
-                                  title: "Pause Budget",
+                                  title: t("finance.budgets.pauseBudget"),
                                   image: pauseIcon,
                                 },
                               ]),
@@ -785,25 +830,25 @@ export default function BudgetsScreen() {
                           ? [
                               {
                                 id: "reopen",
-                                title: "Reopen Budget",
+                                title: t("finance.budgets.reopenBudget"),
                                 image: reopenIcon,
                               },
                             ]
                           : [
                               {
                                 id: "close",
-                                title: "Close Budget",
+                                title: t("finance.budgets.closeBudget"),
                                 image: closeIcon,
                               },
                             ]),
                         {
                           id: "edit",
-                          title: "Edit Budget",
+                          title: t("finance.budgets.mobile.menuEdit"),
                           image: editIcon,
                         },
                         {
                           id: "delete",
-                          title: "Delete Budget",
+                          title: t("finance.budgets.mobile.menuDelete"),
                           image: deleteIcon,
                           attributes: { destructive: true },
                         },
@@ -825,8 +870,10 @@ export default function BudgetsScreen() {
                       <View style={styles.exchangeRateWarning}>
                         <AlertTriangle size={13} color={colors.warning} />
                         <Text style={styles.exchangeRateWarningText}>
-                          Exchange Rate Required: No conversion rate configured
-                          from {b.currency} to {baseCurrency}.
+                          {t("finance.budgets.mobile.rateRequiredInline", {
+                            from: b.currency,
+                            to: baseCurrency,
+                          })}
                         </Text>
                       </View>
                     ) : null}
@@ -839,8 +886,13 @@ export default function BudgetsScreen() {
                           {baseCurrency}
                         </Text>
                         <Text style={styles.crossCurrencyLimitText}>
-                          Limit in {baseCurrency}:{" "}
-                          {formatAmount(limitInBaseCents, baseCurrency)}
+                          {t("finance.budgets.mobile.limitInBase", {
+                            currency: baseCurrency,
+                            amount: formatAmount(
+                              limitInBaseCents,
+                              baseCurrency
+                            ),
+                          })}
                         </Text>
                       </View>
                     ) : null}
@@ -860,7 +912,7 @@ export default function BudgetsScreen() {
 
                     <View style={styles.budgetFooter}>
                       <Text style={styles.spentText}>
-                        Spent:{" "}
+                        {t("finance.budgets.mobile.spentLabel")}{" "}
                         <Text
                           style={[
                             styles.whiteText,
@@ -877,8 +929,18 @@ export default function BudgetsScreen() {
                         ]}
                       >
                         {isOver
-                          ? `Over by ${formatAmount(String(overCents), b.currency)}`
-                          : `${formatAmount(String(remainingCents), b.currency)} left`}
+                          ? t("finance.budgets.mobile.overBy", {
+                              amount: formatAmount(
+                                String(overCents),
+                                b.currency
+                              ),
+                            })
+                          : t("finance.budgets.mobile.amountLeft", {
+                              amount: formatAmount(
+                                String(remainingCents),
+                                b.currency
+                              ),
+                            })}
                       </Text>
                     </View>
 
@@ -886,15 +948,19 @@ export default function BudgetsScreen() {
                       <View style={styles.allowanceSubRow}>
                         <Sparkles size={11} color={colors.primary} />
                         <Text style={styles.allowanceSubText}>
-                          Pace:{" "}
+                          {t("finance.budgets.mobile.paceLabel")}{" "}
                           <Text style={styles.allowanceSubBold}>
                             {formatAmount(
                               String(dailyAllowanceCents),
                               b.currency
                             )}{" "}
-                            / day
+                            {t("finance.budgets.mobile.perDay")}
                           </Text>{" "}
-                          ({daysLeft}d left)
+                          (
+                          {t("finance.budgets.progress.daysLeft", {
+                            days: daysLeft,
+                          })}
+                          )
                         </Text>
                       </View>
                     ) : null}
@@ -952,6 +1018,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     color: t.colors.textMuted,
     letterSpacing: 0.6,
     marginBottom: 2,
+    textTransform: "uppercase" as const,
   },
   summaryProgressSection: {
     gap: 6,
@@ -1020,6 +1087,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
   sectionHeader: {
     letterSpacing: 0.8,
     paddingHorizontal: 4,
+    textTransform: "uppercase" as const,
   },
   budgetList: {
     gap: 12,

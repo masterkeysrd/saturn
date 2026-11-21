@@ -37,14 +37,18 @@ import {
 import {
   formatCents,
   formatAmount,
-  formatInterval,
   formatNextDueDate,
   getScheduledDisplayName,
   isStatusActive,
   parseDate,
   getStartOfDay,
 } from "@saturn/core"
-import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n, useTimezone } from "@saturn/hooks"
+import {
+  getLocalizedEnumLabel,
+  getLocalizedIntervalLabel,
+  type TranslationKey,
+} from "@saturn/i18n"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
@@ -95,7 +99,16 @@ const deleteIcon = Icon.select({
   android: require("@expo/material-symbols/delete.xml"),
 })
 
-function getDueDateBadge(dueDateStr?: string, timezone: string = "UTC") {
+type DueBadge =
+  | { kind: "overdue"; days: number }
+  | { kind: "today" }
+  | { kind: "tomorrow" }
+  | { kind: "soon"; days: number }
+
+function getDueDateBadge(
+  dueDateStr?: string,
+  timezone: string = "UTC"
+): DueBadge | null {
   if (!dueDateStr) return null
   const due = parseDate(dueDateStr)
   if (!due) return null
@@ -108,32 +121,31 @@ function getDueDateBadge(dueDateStr?: string, timezone: string = "UTC") {
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
 
   if (diffDays < 0) {
-    const overdueDays = Math.abs(diffDays)
-    return {
-      label: overdueDays === 1 ? "Overdue (1d)" : `Overdue (${overdueDays}d)`,
-      isOverdue: true,
-      isToday: false,
-    }
+    return { kind: "overdue", days: Math.abs(diffDays) }
   } else if (diffDays === 0) {
-    return {
-      label: "Due Today",
-      isOverdue: false,
-      isToday: true,
-    }
+    return { kind: "today" }
   } else if (diffDays === 1) {
-    return {
-      label: "Due Tomorrow",
-      isOverdue: false,
-      isToday: false,
-    }
+    return { kind: "tomorrow" }
   } else if (diffDays <= 7) {
-    return {
-      label: `In ${diffDays} days`,
-      isOverdue: false,
-      isToday: false,
-    }
+    return { kind: "soon", days: diffDays }
   }
   return null
+}
+
+function getDueBadgeLabel(
+  badge: DueBadge,
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+): string {
+  switch (badge.kind) {
+    case "overdue":
+      return t("finance.tab.overdueBadge", { days: badge.days })
+    case "today":
+      return t("finance.tab.dueToday")
+    case "tomorrow":
+      return t("finance.tab.dueTomorrow")
+    default:
+      return t("finance.recurring.mobile.inDays", { count: badge.days })
+  }
 }
 
 type TabType = "upcoming" | "templates"
@@ -143,6 +155,7 @@ export default function RecurringScreen() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { t, locale } = useI18n()
   const queryClient = useQueryClient()
   const toast = useToast()
   const { colors, resolvedMode } = useTheme()
@@ -317,12 +330,14 @@ export default function RecurringScreen() {
   const promptSkipScheduled = (st: ScheduledTransaction) => {
     haptics.warning()
     Alert.alert(
-      "Skip Upcoming Cycle?",
-      `Are you sure you want to skip "${getScheduledDisplayName(st, recurringList)}"? It will not be logged as an expense.`,
+      t("finance.tab.skipCycleConfirmTitle"),
+      t("finance.tab.skipCycleConfirmDesc", {
+        name: getScheduledDisplayName(st, recurringList),
+      }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Skip Cycle",
+          text: t("finance.recurring.skipCycle"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -333,16 +348,17 @@ export default function RecurringScreen() {
               })
               haptics.success()
               toast.show({
-                title: "Cycle Skipped",
-                message: "Scheduled cycle has been skipped.",
+                title: t("finance.tab.cycleSkipped"),
+                message: t("finance.tab.cycleSkippedDesc"),
                 type: "info",
               })
               await invalidateFinanceQueries(queryClient)
             } catch (err: any) {
               haptics.error()
               toast.show({
-                title: "Skip Failed",
-                message: err?.message || "Could not skip cycle.",
+                title: t("finance.tab.cycleSkipFailed"),
+                message:
+                  err?.message || t("finance.tab.cycleSkipFailedDefault"),
                 type: "error",
               })
             }
@@ -373,16 +389,28 @@ export default function RecurringScreen() {
       })
       haptics.success()
       toast.show({
-        title: nextStatus === "ACTIVE" ? "Template Resumed" : "Template Paused",
-        message: `"${rt.name}" is now ${nextStatus.toLowerCase()}.`,
+        title:
+          nextStatus === "ACTIVE"
+            ? t("finance.recurring.mobile.toastResumed")
+            : t("finance.recurring.mobile.toastPaused"),
+        message: t("finance.recurring.mobile.toastStatusDesc", {
+          name: rt.name,
+          status: getLocalizedEnumLabel(
+            "finance",
+            "status",
+            nextStatus,
+            locale
+          ).toLowerCase(),
+        }),
         type: "success",
       })
       await invalidateFinanceQueries(queryClient)
     } catch (err: any) {
       haptics.error()
       toast.show({
-        title: "Update Failed",
-        message: err?.message || "Could not update status.",
+        title: t("finance.recurring.mobile.toastUpdateFailed"),
+        message:
+          err?.message || t("finance.recurring.mobile.toastStatusFailed"),
         type: "error",
       })
     }
@@ -394,12 +422,12 @@ export default function RecurringScreen() {
     haptics.warning()
 
     Alert.alert(
-      "Delete Recurring Template?",
-      `Are you sure you want to delete "${rt.name}"? Future scheduled instances will no longer generate.`,
+      t("finance.recurring.delete.title"),
+      t("finance.recurring.delete.descriptionExpense", { name: rt.name }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -412,16 +440,20 @@ export default function RecurringScreen() {
               })
               haptics.success()
               toast.show({
-                title: "Template Deleted",
-                message: `"${rt.name}" was deleted.`,
+                title: t("finance.recurring.delete.deletedTitle"),
+                message: t("finance.recurring.mobile.toastDeletedDesc", {
+                  name: rt.name,
+                }),
                 type: "info",
               })
               await invalidateFinanceQueries(queryClient)
             } catch (err: any) {
               haptics.error()
               toast.show({
-                title: "Delete Failed",
-                message: err?.message || "Could not delete template.",
+                title: t("finance.recurring.delete.failedTitle"),
+                message:
+                  err?.message ||
+                  t("finance.recurring.delete.failedDescription"),
                 type: "error",
               })
             }
@@ -437,13 +469,13 @@ export default function RecurringScreen() {
     <View style={styles.safeArea}>
       <Stack.Screen
         options={{
-          headerTitle: "Recurring & Bills",
+          headerTitle: t("finance.recurring.mobile.headerTitle"),
           ...(Platform.OS === "ios"
             ? {
                 unstable_headerRightItems: () => [
                   {
                     type: "button",
-                    label: "New Recurring",
+                    label: t("finance.recurring.mobile.newRecurring"),
                     icon: { type: "sfSymbol", name: "plus" },
                     tintColor: colors.primary,
                     onPress: () => {
@@ -495,7 +527,9 @@ export default function RecurringScreen() {
               >
                 <TrendingUp size={16} color={colors.success} />
               </View>
-              <Caption style={styles.overviewLabel}>RECURRING INCOME</Caption>
+              <Caption style={styles.overviewLabel}>
+                {t("finance.recurring.mobile.recurringIncome").toUpperCase()}
+              </Caption>
             </View>
             <Text style={[styles.overviewAmount, { color: colors.success }]}>
               +
@@ -504,7 +538,11 @@ export default function RecurringScreen() {
                 maximumFractionDigits: 2,
               })}
             </Text>
-            <Text style={styles.overviewUnit}>{baseCurrency} / month</Text>
+            <Text style={styles.overviewUnit}>
+              {t("finance.recurring.mobile.perMonth", {
+                currency: baseCurrency,
+              })}
+            </Text>
           </Card>
 
           <Card style={styles.overviewCard}>
@@ -517,7 +555,9 @@ export default function RecurringScreen() {
               >
                 <TrendingDown size={16} color={colors.destructive} />
               </View>
-              <Caption style={styles.overviewLabel}>FIXED OVERHEAD</Caption>
+              <Caption style={styles.overviewLabel}>
+                {t("finance.recurring.mobile.fixedOverhead").toUpperCase()}
+              </Caption>
             </View>
             <Text
               style={[styles.overviewAmount, { color: colors.textPrimary }]}
@@ -528,7 +568,11 @@ export default function RecurringScreen() {
                 maximumFractionDigits: 2,
               })}
             </Text>
-            <Text style={styles.overviewUnit}>{baseCurrency} / month</Text>
+            <Text style={styles.overviewUnit}>
+              {t("finance.recurring.mobile.perMonth", {
+                currency: baseCurrency,
+              })}
+            </Text>
           </Card>
         </View>
 
@@ -537,9 +581,11 @@ export default function RecurringScreen() {
           <View style={styles.forecastLeft}>
             <Calendar size={18} color={colors.warning} />
             <View>
-              <Text style={styles.forecastTitle}>Next 30 Days Outflows</Text>
+              <Text style={styles.forecastTitle}>
+                {t("finance.recurring.mobile.next30Outflows")}
+              </Text>
               <Text style={styles.forecastSubtitle}>
-                Estimated upcoming fixed commitments
+                {t("finance.recurring.mobile.next30Subtitle")}
               </Text>
             </View>
           </View>
@@ -577,7 +623,9 @@ export default function RecurringScreen() {
                 activeTab === "upcoming" && styles.tabTextActive,
               ]}
             >
-              Upcoming Cycles ({scheduledList.length})
+              {t("finance.recurring.mobile.tabUpcoming", {
+                count: scheduledList.length,
+              })}
             </Text>
           </TouchableOpacity>
 
@@ -604,7 +652,9 @@ export default function RecurringScreen() {
                 activeTab === "templates" && styles.tabTextActive,
               ]}
             >
-              Recurring Rules ({recurringList.length})
+              {t("finance.recurring.mobile.tabRules", {
+                count: recurringList.length,
+              })}
             </Text>
           </TouchableOpacity>
         </View>
@@ -613,9 +663,15 @@ export default function RecurringScreen() {
         <View style={styles.filterRow}>
           {(
             [
-              { key: "ALL", label: "All" },
-              { key: "EXPENSE", label: "Bills & Expenses" },
-              { key: "INCOME", label: "Salaries & Income" },
+              { key: "ALL", label: t("common.all") },
+              {
+                key: "EXPENSE",
+                label: t("finance.recurring.mobile.filterBills"),
+              },
+              {
+                key: "INCOME",
+                label: t("finance.recurring.mobile.filterIncome"),
+              },
             ] as const
           ).map((filter) => {
             const isSelected = typeFilter === filter.key
@@ -657,11 +713,17 @@ export default function RecurringScreen() {
           filteredScheduled.length === 0 ? (
             <EmptyState
               icon={<CalendarClock size={32} color={colors.textMuted} />}
-              title="No upcoming scheduled items"
+              title={t("finance.recurring.mobile.emptyUpcomingTitle")}
               description={
                 typeFilter === "ALL"
-                  ? "All upcoming recurring bills and deposits are up to date."
-                  : `No upcoming ${typeFilter.toLowerCase()} scheduled items.`
+                  ? t("finance.recurring.mobile.emptyUpcomingAll")
+                  : t("finance.recurring.mobile.emptyUpcomingType", {
+                      type: t(
+                        typeFilter === "INCOME"
+                          ? "finance.recurring.mobile.typeIncome"
+                          : "finance.recurring.mobile.typeExpense"
+                      ),
+                    })
               }
             />
           ) : (
@@ -726,7 +788,7 @@ export default function RecurringScreen() {
                             {isIncome ? (
                               <Badge
                                 size="sm"
-                                label="Deposit Due"
+                                label={t("finance.tab.depositDue")}
                                 bg={colors.successSubtle}
                                 border="rgba(16, 185, 129, 0.3)"
                                 color={colors.success}
@@ -734,25 +796,25 @@ export default function RecurringScreen() {
                             ) : dueBadge ? (
                               <Badge
                                 size="sm"
-                                label={dueBadge.label}
+                                label={getDueBadgeLabel(dueBadge, t)}
                                 bg={
-                                  dueBadge.isOverdue
+                                  dueBadge.kind === "overdue"
                                     ? colors.destructiveSubtle
-                                    : dueBadge.isToday
+                                    : dueBadge.kind === "today"
                                       ? colors.warningSubtle
                                       : colors.surfaceHighlight
                                 }
                                 border={
-                                  dueBadge.isOverdue
+                                  dueBadge.kind === "overdue"
                                     ? "rgba(244, 63, 94, 0.3)"
-                                    : dueBadge.isToday
+                                    : dueBadge.kind === "today"
                                       ? "rgba(245, 158, 11, 0.3)"
                                       : colors.border
                                 }
                                 color={
-                                  dueBadge.isOverdue
+                                  dueBadge.kind === "overdue"
                                     ? colors.destructive
-                                    : dueBadge.isToday
+                                    : dueBadge.kind === "today"
                                       ? colors.warning
                                       : colors.textMuted
                                 }
@@ -792,12 +854,14 @@ export default function RecurringScreen() {
                       actions={[
                         {
                           id: "confirm",
-                          title: isIncome ? "Confirm Deposit" : "Confirm / Pay",
+                          title: isIncome
+                            ? t("finance.transactions.scheduled.confirmDeposit")
+                            : t("finance.tab.confirmPay"),
                           image: isIncome ? depositIcon : confirmIcon,
                         },
                         {
                           id: "skip",
-                          title: "Skip Cycle",
+                          title: t("finance.recurring.skipCycle"),
                           attributes: {
                             destructive: true,
                           },
@@ -818,11 +882,17 @@ export default function RecurringScreen() {
         filteredRecurring.length === 0 ? (
           <EmptyState
             icon={<Layers size={32} color={colors.textMuted} />}
-            title="No recurring templates"
+            title={t("finance.recurring.mobile.emptyTemplatesTitle")}
             description={
               typeFilter === "ALL"
-                ? "Tap the '+' button at the top to create a recurring rule."
-                : `No ${typeFilter.toLowerCase()} recurring rules configured.`
+                ? t("finance.recurring.mobile.emptyTemplatesDesc")
+                : t("finance.recurring.mobile.emptyTemplatesType", {
+                    type: t(
+                      typeFilter === "INCOME"
+                        ? "finance.recurring.mobile.typeIncome"
+                        : "finance.recurring.mobile.typeExpense"
+                    ),
+                  })
             }
           />
         ) : (
@@ -878,19 +948,26 @@ export default function RecurringScreen() {
                         <View style={styles.badgeRow}>
                           <Badge
                             size="sm"
-                            label={formatInterval(rt.interval)}
+                            label={getLocalizedIntervalLabel(
+                              rt.interval,
+                              locale
+                            )}
                             bg={colors.surfaceHighlight}
                             border={colors.border}
                             color={colors.textSecondary}
                           />
                           {nextDueStr !== "N/A" ? (
                             <Text style={styles.txMeta}>
-                              Next: {nextDueStr}
+                              {t("finance.recurring.nextLabel")} {nextDueStr}
                             </Text>
                           ) : null}
                           <Badge
                             size="sm"
-                            label={isActive ? "Active" : "Paused"}
+                            label={
+                              isActive
+                                ? t("finance.recurring.mobile.badgeActive")
+                                : t("finance.recurring.mobile.badgePaused")
+                            }
                             bg={
                               isActive
                                 ? colors.primarySubtle
@@ -936,17 +1013,19 @@ export default function RecurringScreen() {
                     actions={[
                       {
                         id: "edit",
-                        title: "Edit Template",
+                        title: t("finance.budgets.editTemplate"),
                         image: editIcon,
                       },
                       {
                         id: "toggle-status",
-                        title: isActive ? "Pause Rule" : "Resume Rule",
+                        title: isActive
+                          ? t("finance.recurring.mobile.pauseRule")
+                          : t("finance.recurring.mobile.resumeRule"),
                         image: isActive ? pauseIcon : resumeIcon,
                       },
                       {
                         id: "delete",
-                        title: "Delete",
+                        title: t("common.delete"),
                         attributes: {
                           destructive: true,
                         },

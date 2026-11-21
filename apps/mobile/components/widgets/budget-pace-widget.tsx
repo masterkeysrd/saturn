@@ -136,13 +136,30 @@ export function BudgetPaceWidget() {
 
   const badgeConfig = summary.isMonthlyMode
     ? summary.paceStatus === "over_pace"
-      ? { variant: "destructive" as const, label: "Over pace" }
+      ? {
+          variant: "destructive" as const,
+          label: t("dashboard.widget.budget_pace.overPaceBadge"),
+        }
       : summary.paceStatus === "ahead"
-        ? { variant: "success" as const, label: "Ahead of pace" }
-        : { variant: "primary" as const, label: "On track" }
+        ? {
+            variant: "success" as const,
+            label: t("dashboard.widget.budget_pace.aheadBadge"),
+          }
+        : {
+            variant: "primary" as const,
+            label: t("dashboard.widget.budget_pace.onTrackBadge"),
+          }
     : summary.spentPct > 100
-      ? { variant: "destructive" as const, label: "Over limit" }
-      : { variant: "default" as const, label: `${summary.otherCount} active` }
+      ? {
+          variant: "destructive" as const,
+          label: t("dashboard.widget.budget_pace.overLimitBadge"),
+        }
+      : {
+          variant: "default" as const,
+          label: t("dashboard.widget.budget_pace.activeBadge", {
+            count: summary.otherCount,
+          }),
+        }
 
   const barColor =
     summary.paceStatus === "over_pace"
@@ -192,7 +209,7 @@ export function BudgetPaceWidget() {
 
       {!isFinanceConfigured ? (
         <Text style={styles.emptyText}>
-          Configure your base currency in Finance to track budget limits.
+          {t("dashboard.widget.budget_pace.configureBase")}
         </Text>
       ) : summary.totalCount === 0 ? (
         <Text style={styles.emptyText}>
@@ -206,7 +223,12 @@ export function BudgetPaceWidget() {
                 {formatAmount(String(summary.totalSpentCents), baseCurrency)}
               </MonoAmount>
               <Text style={styles.ofText}>
-                of {formatAmount(String(summary.totalLimitCents), baseCurrency)}
+                {t("finance.tab.ofLimit", {
+                  amount: formatAmount(
+                    String(summary.totalLimitCents),
+                    baseCurrency
+                  ),
+                })}
               </Text>
             </View>
             <MonoAmount size="sm" color={colors.textMuted}>
@@ -229,7 +251,10 @@ export function BudgetPaceWidget() {
             {summary.isMonthlyMode && (
               <View
                 style={[styles.todayMarker, { left: `${summary.elapsedPct}%` }]}
-                accessibilityLabel={`Today marker: ${summary.elapsedPct}% of month elapsed`}
+                accessibilityLabel={t(
+                  "dashboard.widget.budget_pace.markerAria",
+                  { pct: summary.elapsedPct }
+                )}
               />
             )}
           </View>
@@ -237,8 +262,15 @@ export function BudgetPaceWidget() {
           <View style={styles.metaRow}>
             <Text style={styles.metaText}>
               {summary.isMonthlyMode
-                ? `Day ${summary.dayOfMonth} · ${summary.elapsedPct}% of month`
-                : `${summary.otherCount} active ${summary.otherCount === 1 ? "budget" : "budgets"}`}
+                ? t("dashboard.widget.budget_pace.paceMeta", {
+                    day: summary.dayOfMonth,
+                    pct: summary.elapsedPct,
+                  })
+                : summary.otherCount === 1
+                  ? t("dashboard.widget.budget_pace.singleActiveMeta")
+                  : t("dashboard.widget.budget_pace.aheadMeta", {
+                      count: summary.otherCount,
+                    })}
             </Text>
             {summary.isMonthlyMode ? (
               <View style={styles.paceDeltaWrap}>
@@ -256,7 +288,9 @@ export function BudgetPaceWidget() {
                   )}
                 </MonoAmount>
                 <Text style={styles.metaText}>
-                  {summary.paceDeltaCents >= 0 ? "under pace" : "over pace"}
+                  {summary.paceDeltaCents >= 0
+                    ? t("dashboard.widget.budget_pace.underPaceDelta")
+                    : t("dashboard.widget.budget_pace.overPaceDelta")}
                 </Text>
               </View>
             ) : (
@@ -272,7 +306,9 @@ export function BudgetPaceWidget() {
                     baseCurrency
                   )}
                 </MonoAmount>
-                <Text style={styles.metaText}>remaining</Text>
+                <Text style={styles.metaText}>
+                  {t("dashboard.widget.budget_pace.remaining")}
+                </Text>
               </View>
             )}
           </View>
