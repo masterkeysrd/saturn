@@ -1,9 +1,11 @@
 import { Stack } from "expo-router"
 import { Platform } from "react-native"
+import { useI18n } from "@saturn/hooks"
 import { useTheme } from "@/lib/theme"
 
 export default function AILayout() {
   const { colors, resolvedMode } = useTheme()
+  const { t } = useI18n()
 
   return (
     <Stack
@@ -27,25 +29,25 @@ export default function AILayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: "AI Assistant",
+          title: t("menu.aiAssistant"),
         }}
       />
       <Stack.Screen
         name="threads/[threadId]"
         options={{
-          title: "Chat",
+          title: t("ai.chatMobile.chatTitle"),
         }}
       />
       <Stack.Screen
         name="agents"
         options={{
-          title: "Agents & Recent Runs",
+          title: t("ai.agentsMobile.title"),
         }}
       />
       <Stack.Screen
         name="runs/[runId]"
         options={{
-          title: "AI Run Trace",
+          title: t("ai.chatMobile.runTraceTitle"),
         }}
       />
     </Stack>

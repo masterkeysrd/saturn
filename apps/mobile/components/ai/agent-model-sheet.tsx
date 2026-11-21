@@ -5,6 +5,7 @@ import {
   useListAgentsQuery,
   useListModelsQuery,
 } from "@saturn/api/saturn/platform/ai/v1/ai"
+import { useI18n } from "@saturn/hooks"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -26,6 +27,7 @@ export const AgentModelSheet = forwardRef<BottomSheet, AgentModelSheetProps>(
   ) => {
     const { colors } = useTheme()
     const styles = useThemedStyles(createStyles)
+    const { t } = useI18n()
     const { data: agentsData } = useListAgentsQuery({})
     const { data: modelsData } = useListModelsQuery({ isEnabled: true })
 
@@ -35,12 +37,14 @@ export const AgentModelSheet = forwardRef<BottomSheet, AgentModelSheetProps>(
     return (
       <AppBottomSheet
         ref={ref}
-        title="Assistant & Model"
+        title={t("ai.chatMobile.agentModelTitle")}
         snapPoints={["65%", "90%"]}
         onClose={onClose}
       >
         <BottomSheetScrollView contentContainerStyle={styles.body}>
-          <Text style={styles.sectionLabel}>AGENT</Text>
+          <Text style={styles.sectionLabel}>
+            {t("ai.chatMobile.agentSection").toUpperCase()}
+          </Text>
           {agents.map((a) => {
             const active = a.id === selectedAgentId
             return (
@@ -68,7 +72,9 @@ export const AgentModelSheet = forwardRef<BottomSheet, AgentModelSheetProps>(
             )
           })}
 
-          <Text style={[styles.sectionLabel, styles.sectionSpaced]}>MODEL</Text>
+          <Text style={[styles.sectionLabel, styles.sectionSpaced]}>
+            {t("ai.chatMobile.modelSection").toUpperCase()}
+          </Text>
           <TouchableOpacity
             style={[styles.row, !selectedModelId && styles.rowActive]}
             onPress={() => {
@@ -79,8 +85,12 @@ export const AgentModelSheet = forwardRef<BottomSheet, AgentModelSheetProps>(
           >
             <Sparkles size={16} color={colors.primary} />
             <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>Workspace Default</Text>
-              <Text style={styles.rowSub}>Uses workspace default model</Text>
+              <Text style={styles.rowTitle}>
+                {t("ai.conversation.workspaceDefault")}
+              </Text>
+              <Text style={styles.rowSub}>
+                {t("ai.chatMobile.workspaceDefaultModelDesc")}
+              </Text>
             </View>
             {!selectedModelId && <Check size={16} color={colors.primary} />}
           </TouchableOpacity>

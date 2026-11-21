@@ -10,6 +10,7 @@ import {
 } from "@saturn/core"
 import type { ThreadMessage } from "@saturn/api/saturn/platform/ai/v1/ai"
 import type { StreamingAssistantDraft } from "@saturn/hooks/ai"
+import { useI18n } from "@saturn/hooks"
 import {
   Bot,
   Brain,
@@ -33,6 +34,7 @@ import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { MarkdownText } from "./markdown-text"
 import { StreamingDots } from "./streaming-dots"
+import { getToolDomainLabelKey } from "./tool-domain-label"
 
 export interface ToolResultEntry {
   result?: Record<string, unknown>
@@ -111,6 +113,7 @@ export function ChatMessageBubble({
 }: ChatMessageBubbleProps) {
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
   const [thinkingOpen, setThinkingOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
   const [expandedToolIds, setExpandedToolIds] = useState<
@@ -123,12 +126,32 @@ export function ChatMessageBubble({
     setExpandedToolIds((prev) => ({ ...prev, [id]: !prev[id] }))
   }
 
+  const renderDomainLabel = (desc: {
+    domain: ToolDomain
+    domainLabel: string
+  }) =>
+    desc.domain === "mcp"
+      ? desc.domainLabel
+      : t(getToolDomainLabelKey(desc.domain))
+
   if (streamingDraft) {
     const phaseLabel =
+      (streamPhase === "connecting"
+        ? t("ai.streamPhase.starting")
+        : streamPhase === "thinking"
+          ? streamingDraft.toolCalls.length > 0
+            ? t("ai.streamPhase.reviewing")
+            : t("ai.conversation.thinking")
+          : streamPhase === "generating"
+            ? t("ai.streamPhase.generating")
+            : streamPhase === "awaiting_approval"
+              ? t("ai.streamPhase.waitingApproval")
+              : "") ||
       getStreamPhaseLabel(streamPhase, {
         activeToolName,
         hasCompletedTools: streamingDraft.toolCalls.length > 0,
-      }) || "Thinking…"
+      }) ||
+      t("ai.streamPhase.runningTool")
     const trimmedThinking = streamingDraft.thinking.trim()
     const trimmedText = streamingDraft.text.trimStart()
     const hasText = trimmedText.trim().length > 0
@@ -152,7 +175,9 @@ export function ChatMessageBubble({
           >
             <Brain size={12} color={colors.primary} />
             <Text style={styles.pillText}>
-              {streamPhase === "thinking" ? "Thinking…" : "Thought process"}
+              {streamPhase === "thinking"
+                ? t("ai.conversation.thinking")
+                : t("ai.chatMobile.thoughtProcess")}
             </Text>
             {thinkingOpen ? (
               <ChevronDown size={12} color={colors.textMuted} />
@@ -178,7 +203,9 @@ export function ChatMessageBubble({
               >
                 <CheckCircle2 size={12} color={colors.success} />
                 <Text style={styles.pillText}>
-                  {streamingDraft.toolCalls.length} tool steps completed
+                  {t("ai.chatMobile.chatStepsCompleted", {
+                    count: streamingDraft.toolCalls.length,
+                  })}
                 </Text>
                 <ChevronRight size={12} color={colors.textMuted} />
               </TouchableOpacity>
@@ -207,7 +234,7 @@ export function ChatMessageBubble({
                   >
                     <DomainIcon domain={desc.domain} />
                     <Text style={styles.toolDomainText}>
-                      {desc.domainLabel}
+                      {renderDomainLabel(desc)}
                     </Text>
                     <Text style={styles.pillText} numberOfLines={1}>
                       {label}
@@ -326,7 +353,9 @@ export function ChatMessageBubble({
           }}
         >
           <Brain size={12} color={colors.textMuted} />
-          <Text style={styles.pillText}>Thought process</Text>
+          <Text style={styles.pillText}>
+            {t("ai.chatMobile.thoughtProcess")}
+          </Text>
           {thinkingOpen ? (
             <ChevronDown size={12} color={colors.textMuted} />
           ) : (
@@ -351,7 +380,9 @@ export function ChatMessageBubble({
             >
               <CheckCircle2 size={12} color={colors.success} />
               <Text style={styles.pillText}>
-                {toolBlocks.length} tool steps
+                {t("ai.chatMobile.chatStepsCount", {
+                  count: toolBlocks.length,
+                })}
               </Text>
               {groupOpen ? (
                 <ChevronDown size={12} color={colors.textMuted} />
@@ -384,7 +415,7 @@ export function ChatMessageBubble({
                   >
                     <DomainIcon domain={desc.domain} />
                     <Text style={styles.toolDomainText}>
-                      {desc.domainLabel}
+                      {renderDomainLabel(desc)}
                     </Text>
                     <Text style={styles.pillText} numberOfLines={1}>
                       {res && !res.isError ? desc.completedLabel : desc.label}
@@ -427,7 +458,7 @@ export function ChatMessageBubble({
             style={styles.actionBtn}
             onPress={() => void handleCopyResponse()}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            accessibilityLabel="Copy response"
+            accessibilityLabel={t("ai.chatMobile.copyAria")}
           >
             {copied ? (
               <Check size={13} color={colors.success} />
@@ -435,7 +466,7 @@ export function ChatMessageBubble({
               <Copy size={13} color={colors.textMuted} />
             )}
             <Text style={[styles.actionText, copied && styles.copiedText]}>
-              {copied ? "Copied" : "Copy"}
+              {copied ? t("ai.chatMobile.copied") : t("ai.chatMobile.copy")}
             </Text>
           </TouchableOpacity>
 
@@ -443,10 +474,10 @@ export function ChatMessageBubble({
             style={styles.actionBtn}
             onPress={() => void handleShareResponse()}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            accessibilityLabel="Share response"
+            accessibilityLabel={t("ai.chatMobile.shareAria")}
           >
             <Share2 size={13} color={colors.textMuted} />
-            <Text style={styles.actionText}>Share</Text>
+            <Text style={styles.actionText}>{t("ai.chatMobile.share")}</Text>
           </TouchableOpacity>
         </View>
       ) : null}

@@ -222,6 +222,12 @@
       "system": "System",
       "workspaceDefaultModel": "Workspace Default Model"
     },
+    "agentsMobile": {
+      "manageAria": "Manage AI Agents",
+      "recentRuns": "Recent AI Runs",
+      "title": "Agents & Recent Runs",
+      "workspaceAgents": "Workspace Agents"
+    },
     "approval": {
       "deleteEventWarning": "This will permanently delete the calendar event.",
       "executeWorkflow": "Execute Workflow",
@@ -248,6 +254,40 @@
       "pinned": "Pinned",
       "threads": "Threads",
       "unpinThread": "Unpin thread"
+    },
+    "chatMobile": {
+      "agentModelTitle": "Assistant & Model",
+      "agentSection": "Agent",
+      "aiExecutionFailed": "AI execution failed",
+      "approvalAria": "{action} {tool}",
+      "attachFileAria": "Attach file",
+      "attachmentFallback": "attachment",
+      "chatSheetTitle": "Chat Threads",
+      "chatStepsCompleted": "{count} tool steps completed",
+      "chatStepsCount": "{count} tool steps",
+      "chatTitle": "Chat",
+      "confirmTool": "Confirm {tool} ({domain})",
+      "copied": "Copied",
+      "copy": "Copy",
+      "copyAria": "Copy response",
+      "copyCodeAria": "Copy code block",
+      "emptyDescMobile": "Ask about your budgets, calendar, mail, or workflows. Mutating actions prompt for your approval before executing.",
+      "fileTooLargeBody": "{name} exceeds the 10 MB attachment limit.",
+      "fileTooLargeTitle": "File Too Large",
+      "messagePlaceholder": "Message Saturn AI...",
+      "modelSection": "Model",
+      "newChatThread": "New Chat Thread",
+      "noSavedThreads": "No saved threads yet.",
+      "removeAttachmentAria": "Remove {name}",
+      "runTraceTitle": "AI Run Trace",
+      "scrollBottomAria": "Scroll to bottom",
+      "sendAria": "Send message",
+      "share": "Share",
+      "shareAria": "Share response",
+      "stopAria": "Stop streaming",
+      "streamingAria": "Streaming indicator",
+      "thoughtProcess": "Thought process",
+      "workspaceDefaultModelDesc": "Uses workspace default model"
     },
     "connect": {
       "descAfter": ").",
@@ -281,6 +321,11 @@
       "turnFailed": "Failed to execute AI turn",
       "via": "via {server}",
       "workspaceDefault": "Workspace Default"
+    },
+    "domain": {
+      "agent": "Agent",
+      "mcp": "MCP",
+      "tool": "Tool"
     },
     "drawer": {
       "approvalNeeded": "Approval needed in '{title}'",
@@ -521,6 +566,13 @@
       "disabled": "Disabled",
       "enabled": "Enabled",
       "saveChanges": "Save Changes"
+    },
+    "streamPhase": {
+      "generating": "Generating response…",
+      "reviewing": "Reviewing tool results…",
+      "runningTool": "Running tool…",
+      "starting": "Starting turn…",
+      "waitingApproval": "Waiting for approval"
     },
     "trace": {
       "estCost": "Est. Cost:",

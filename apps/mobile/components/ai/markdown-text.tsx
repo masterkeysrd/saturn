@@ -9,6 +9,7 @@ import {
 } from "react-native"
 import * as Clipboard from "expo-clipboard"
 import { Check, Copy } from "lucide-react-native"
+import { useI18n } from "@saturn/hooks"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import {
@@ -118,6 +119,7 @@ function CodeBlockView({
 }) {
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -135,7 +137,7 @@ function CodeBlockView({
           style={styles.copyBtn}
           onPress={() => void handleCopy()}
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-          accessibilityLabel="Copy code block"
+          accessibilityLabel={t("ai.chatMobile.copyCodeAria")}
         >
           {copied ? (
             <Check size={12} color={colors.success} />
@@ -143,7 +145,7 @@ function CodeBlockView({
             <Copy size={12} color={colors.textMuted} />
           )}
           <Text style={[styles.copyText, copied && styles.copiedText]}>
-            {copied ? "Copied" : "Copy"}
+            {copied ? t("ai.chatMobile.copied") : t("ai.chatMobile.copy")}
           </Text>
         </TouchableOpacity>
       </View>

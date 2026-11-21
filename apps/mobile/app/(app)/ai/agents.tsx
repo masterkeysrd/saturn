@@ -4,7 +4,7 @@ import {
   useListAgentsQuery,
   useListRunsQuery,
 } from "@saturn/api/saturn/platform/ai/v1/ai"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
@@ -14,6 +14,7 @@ import { Bot, ChevronRight, History } from "lucide-react-native"
 export default function MobileAIAgentsScreen() {
   const router = useRouter()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
   const { data: agentsData } = useListAgentsQuery({})
@@ -24,7 +25,9 @@ export default function MobileAIAgentsScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.sectionTitle}>WORKSPACE AGENTS</Text>
+      <Text style={styles.sectionTitle}>
+        {t("ai.agentsMobile.workspaceAgents").toUpperCase()}
+      </Text>
       {agents.map((ag) => (
         <Card key={ag.id} style={styles.card}>
           <View style={styles.rowBetween}>
@@ -33,21 +36,25 @@ export default function MobileAIAgentsScreen() {
               <Text style={styles.cardTitle}>{ag.name}</Text>
             </View>
             {ag.isSystem && (
-              <Badge variant="default" size="sm" label="System" />
+              <Badge
+                variant="default"
+                size="sm"
+                label={t("ai.agents.system")}
+              />
             )}
           </View>
           {ag.description ? (
             <Text style={styles.cardSub}>{ag.description}</Text>
           ) : null}
           <Text style={styles.metaMono}>
-            {ag.modelDisplayName || "Workspace Default Model"} ·{" "}
+            {ag.modelDisplayName || t("ai.agents.workspaceDefaultModel")} ·{" "}
             {ag.config?.execution?.approvalPolicy || "confirm_writes"}
           </Text>
         </Card>
       ))}
 
       <Text style={[styles.sectionTitle, styles.sectionSpaced]}>
-        RECENT AI RUNS
+        {t("ai.agentsMobile.recentRuns").toUpperCase()}
       </Text>
       {runs.map((r) => (
         <TouchableOpacity
@@ -67,7 +74,7 @@ export default function MobileAIAgentsScreen() {
                 <Badge
                   variant={r.status === "failed" ? "destructive" : "default"}
                   size="sm"
-                  label={r.status ?? "unknown"}
+                  label={r.status ?? t("common.unknown")}
                 />
                 <ChevronRight size={14} color={colors.textMuted} />
               </View>

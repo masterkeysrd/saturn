@@ -222,6 +222,12 @@
       "system": "Sistema",
       "workspaceDefaultModel": "Modelo predeterminado del espacio"
     },
+    "agentsMobile": {
+      "manageAria": "Gestionar agentes de IA",
+      "recentRuns": "Ejecuciones recientes de IA",
+      "title": "Agentes y ejecuciones recientes",
+      "workspaceAgents": "Agentes del espacio"
+    },
     "approval": {
       "deleteEventWarning": "Esto eliminará permanentemente el evento del calendario.",
       "executeWorkflow": "Ejecutar flujo",
@@ -248,6 +254,40 @@
       "pinned": "Fijados",
       "threads": "Conversaciones",
       "unpinThread": "Dejar de fijar conversación"
+    },
+    "chatMobile": {
+      "agentModelTitle": "Asistente y modelo",
+      "agentSection": "Agente",
+      "aiExecutionFailed": "Error al ejecutar la IA",
+      "approvalAria": "{action} {tool}",
+      "attachFileAria": "Adjuntar archivo",
+      "attachmentFallback": "archivo adjunto",
+      "chatSheetTitle": "Conversaciones de chat",
+      "chatStepsCompleted": "{count} pasos de herramienta completados",
+      "chatStepsCount": "{count} pasos de herramienta",
+      "chatTitle": "Chat",
+      "confirmTool": "Confirmar {tool} ({domain})",
+      "copied": "Copiado",
+      "copy": "Copiar",
+      "copyAria": "Copiar respuesta",
+      "copyCodeAria": "Copiar bloque de código",
+      "emptyDescMobile": "Pregunta sobre tus presupuestos, calendario, correo o flujos. Las acciones que modifican datos piden tu aprobación antes de ejecutarse.",
+      "fileTooLargeBody": "{name} supera el límite de adjuntos de 10 MB.",
+      "fileTooLargeTitle": "Archivo demasiado grande",
+      "messagePlaceholder": "Escribe a Saturn IA...",
+      "modelSection": "Modelo",
+      "newChatThread": "Nueva conversación de chat",
+      "noSavedThreads": "Aún no hay conversaciones guardadas.",
+      "removeAttachmentAria": "Quitar {name}",
+      "runTraceTitle": "Rastro de ejecución de IA",
+      "scrollBottomAria": "Desplazar al final",
+      "sendAria": "Enviar mensaje",
+      "share": "Compartir",
+      "shareAria": "Compartir respuesta",
+      "stopAria": "Detener transmisión",
+      "streamingAria": "Indicador de transmisión",
+      "thoughtProcess": "Proceso de razonamiento",
+      "workspaceDefaultModelDesc": "Usa el modelo predeterminado del espacio"
     },
     "connect": {
       "descAfter": ").",
@@ -281,6 +321,11 @@
       "turnFailed": "Error al ejecutar el turno de IA",
       "via": "vía {server}",
       "workspaceDefault": "Predeterminado del espacio"
+    },
+    "domain": {
+      "agent": "Agente",
+      "mcp": "MCP",
+      "tool": "Herramienta"
     },
     "drawer": {
       "approvalNeeded": "Aprobación requerida en '{title}'",
@@ -521,6 +566,13 @@
       "disabled": "Desactivado",
       "enabled": "Activado",
       "saveChanges": "Guardar cambios"
+    },
+    "streamPhase": {
+      "generating": "Generando respuesta…",
+      "reviewing": "Revisando resultados de herramientas…",
+      "runningTool": "Ejecutando herramienta…",
+      "starting": "Iniciando turno…",
+      "waitingApproval": "Esperando aprobación"
     },
     "trace": {
       "estCost": "Coste est.:",

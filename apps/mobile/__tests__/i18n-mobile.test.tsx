@@ -12,6 +12,7 @@ import {
   RegisterSchema,
 } from "@saturn/schemas"
 import { SpaceAvatarButton } from "../components/app-header"
+import { getToolDomainLabelKey } from "../components/ai/tool-domain-label"
 import { CustomizeOverviewSheet } from "../components/widgets/customize-overview-sheet"
 import {
   DatePickerSheet,
@@ -462,6 +463,33 @@ function FinanceI18nProbe() {
       </span>
       <span data-testid="menu-switch">{t("menu.switchWorkspace")}</span>
       <span data-testid="menu-approval-needed">{t("menu.approvalNeeded")}</span>
+      <span data-testid="ai-starter-2">{t("ai.conversation.starter2")}</span>
+      <span data-testid="ai-phase-generating">
+        {t("ai.streamPhase.generating")}
+      </span>
+      <span data-testid="ai-thought-process">
+        {t("ai.chatMobile.thoughtProcess")}
+      </span>
+      <span data-testid="ai-steps-count">
+        {t("ai.chatMobile.chatStepsCount", { count: 3 })}
+      </span>
+      <span data-testid="ai-confirm-tool">
+        {t("ai.chatMobile.confirmTool", {
+          tool: "Crear transacción",
+          domain: t("nav.finance"),
+        })}
+      </span>
+      <span data-testid="ai-domain-space">
+        {t(getToolDomainLabelKey("space"))}
+      </span>
+      <span data-testid="ai-copy">{t("ai.chatMobile.copy")}</span>
+      <span data-testid="ai-placeholder">
+        {t("ai.chatMobile.messagePlaceholder")}
+      </span>
+      <span data-testid="ai-chat-sheet-title">
+        {t("ai.chatMobile.chatSheetTitle")}
+      </span>
+      <span data-testid="ai-agents-title">{t("ai.agentsMobile.title")}</span>
     </div>
   )
 }
@@ -702,6 +730,34 @@ describe("Mobile i18n & User-Scoped Regional Preferences", () => {
     expect(getByTestId("menu-switch").textContent).toBe("Cambiar")
     expect(getByTestId("menu-approval-needed").textContent).toBe(
       "Aprobación requerida"
+    )
+    expect(getByTestId("ai-starter-2").textContent).toBe(
+      "¿Qué eventos tengo en el calendario esta semana?"
+    )
+    expect(getByTestId("ai-phase-generating").textContent).toBe(
+      "Generando respuesta…"
+    )
+    expect(getByTestId("ai-thought-process").textContent).toBe(
+      "Proceso de razonamiento"
+    )
+    expect(getByTestId("ai-steps-count").textContent).toBe(
+      "3 pasos de herramienta"
+    )
+    expect(getByTestId("ai-confirm-tool").textContent).toBe(
+      "Confirmar Crear transacción (Finanzas)"
+    )
+    expect(getByTestId("ai-domain-space").textContent).toBe(
+      "Espacio de trabajo"
+    )
+    expect(getByTestId("ai-copy").textContent).toBe("Copiar")
+    expect(getByTestId("ai-placeholder").textContent).toBe(
+      "Escribe a Saturn IA..."
+    )
+    expect(getByTestId("ai-chat-sheet-title").textContent).toBe(
+      "Conversaciones de chat"
+    )
+    expect(getByTestId("ai-agents-title").textContent).toBe(
+      "Agentes y ejecuciones recientes"
     )
   })
 

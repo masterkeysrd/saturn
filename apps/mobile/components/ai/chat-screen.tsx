@@ -25,6 +25,7 @@ import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import type BottomSheet from "@gorhom/bottom-sheet"
 import { useThreadStream, type StreamAttachmentInput } from "@saturn/hooks/ai"
+import { useI18n } from "@saturn/hooks"
 import {
   useListAgentsQuery,
   useListModelsQuery,
@@ -48,12 +49,13 @@ import {
   Square,
   X,
 } from "lucide-react-native"
+import type { TranslationKey } from "@saturn/i18n"
 
-const STARTER_PROMPTS = [
-  "Summarize my spending this month vs budget",
-  "What events are on my calendar this week?",
-  "Check unread emails for action items",
-  "List active workflows and recent runs",
+const STARTER_PROMPT_KEYS: readonly TranslationKey[] = [
+  "ai.conversation.starter1",
+  "ai.conversation.starter2",
+  "ai.conversation.starter3",
+  "ai.conversation.starter4",
 ]
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
@@ -74,6 +76,7 @@ export function MobileChatScreen({
 }: MobileChatScreenProps) {
   const { colors, isDark } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { activeSpaceId } = useSpace()
@@ -297,14 +300,14 @@ export function MobileChatScreen({
         const sizeBytes = asset.size ?? 0
         if (sizeBytes > MAX_ATTACHMENT_BYTES) {
           Alert.alert(
-            "File Too Large",
-            `${asset.name} exceeds the 10 MB attachment limit.`
+            t("ai.chatMobile.fileTooLargeTitle"),
+            t("ai.chatMobile.fileTooLargeBody", { name: asset.name })
           )
           continue
         }
         const item: LocalAttachment = {
           id: `${asset.name}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          filename: asset.name || "attachment",
+          filename: asset.name || t("ai.chatMobile.attachmentFallback"),
           contentType: asset.mimeType || "application/octet-stream",
         }
         if (Platform.OS === "web" && asset.file) {
@@ -375,7 +378,7 @@ export function MobileChatScreen({
           >
             <List size={14} color={colors.textSecondary} />
             <Text style={styles.toolbarText} numberOfLines={1}>
-              {thread?.title || "New Chat"}
+              {thread?.title || t("ai.chat.newChat")}
             </Text>
           </TouchableOpacity>
 
@@ -388,7 +391,7 @@ export function MobileChatScreen({
           >
             <Bot size={14} color={colors.primary} />
             <Text style={styles.toolbarText} numberOfLines={1}>
-              {activeAgent?.name || "Assistant"}
+              {activeAgent?.name || t("menu.aiAssistant")}
               {activeModel ? ` · ${activeModel.displayName}` : ""}
             </Text>
           </TouchableOpacity>
@@ -399,7 +402,7 @@ export function MobileChatScreen({
               haptics.light()
               router.push("/(app)/ai/agents" as never)
             }}
-            accessibilityLabel="Manage AI Agents"
+            accessibilityLabel={t("ai.agentsMobile.manageAria")}
           >
             <History size={16} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -424,21 +427,20 @@ export function MobileChatScreen({
                   <Sparkles size={24} color={colors.primary} />
                 </View>
                 <Text style={styles.emptyTitle}>
-                  {activeAgent?.name || "Saturn Assistant"}
+                  {activeAgent?.name || t("ai.conversation.saturnAssistant")}
                 </Text>
                 <Text style={styles.emptySub}>
-                  Ask about your budgets, calendar, mail, or workflows. Mutating
-                  actions prompt for your approval before executing.
+                  {t("ai.chatMobile.emptyDescMobile")}
                 </Text>
                 <View style={styles.starterChips}>
-                  {STARTER_PROMPTS.map((prompt) => (
+                  {STARTER_PROMPT_KEYS.map((promptKey) => (
                     <TouchableOpacity
-                      key={prompt}
+                      key={promptKey}
                       style={styles.starterChip}
                       activeOpacity={0.7}
-                      onPress={() => void handleSend(prompt)}
+                      onPress={() => void handleSend(t(promptKey))}
                     >
-                      <Text style={styles.starterChipText}>{prompt}</Text>
+                      <Text style={styles.starterChipText}>{t(promptKey)}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -488,7 +490,7 @@ export function MobileChatScreen({
                 {error && (
                   <View style={styles.errorBanner}>
                     <Text style={styles.errorText}>
-                      {error.message || "AI execution failed"}
+                      {error.message || t("ai.chatMobile.aiExecutionFailed")}
                     </Text>
                   </View>
                 )}
@@ -505,7 +507,7 @@ export function MobileChatScreen({
                 setIsNearBottom(true)
                 scrollRef.current?.scrollToEnd({ animated: true })
               }}
-              accessibilityLabel="Scroll to bottom"
+              accessibilityLabel={t("ai.chatMobile.scrollBottomAria")}
             >
               <ArrowDown size={16} color={colors.textPrimary} />
             </TouchableOpacity>
@@ -544,7 +546,12 @@ export function MobileChatScreen({
                       )
                     }}
                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    accessibilityLabel={`Remove ${att.filename}`}
+                    accessibilityLabel={t(
+                      "ai.chatMobile.removeAttachmentAria",
+                      {
+                        name: att.filename,
+                      }
+                    )}
                   >
                     <X size={12} color={colors.textMuted} />
                   </TouchableOpacity>
@@ -558,7 +565,7 @@ export function MobileChatScreen({
               style={styles.attachBtn}
               onPress={() => void handlePickAttachments()}
               disabled={isStreaming || attachments.length >= MAX_ATTACHMENTS}
-              accessibilityLabel="Attach file"
+              accessibilityLabel={t("ai.chatMobile.attachFileAria")}
             >
               <Paperclip
                 size={18}
@@ -574,7 +581,7 @@ export function MobileChatScreen({
               style={styles.input}
               value={input}
               onChangeText={setInput}
-              placeholder="Message Saturn AI..."
+              placeholder={t("ai.chatMobile.messagePlaceholder")}
               placeholderTextColor={colors.textMuted}
               keyboardAppearance={isDark ? "dark" : "light"}
               multiline
@@ -586,7 +593,7 @@ export function MobileChatScreen({
                   haptics.medium()
                   void stop()
                 }}
-                accessibilityLabel="Stop streaming"
+                accessibilityLabel={t("ai.chatMobile.stopAria")}
               >
                 <Square size={16} color="#ffffff" />
               </TouchableOpacity>
@@ -600,7 +607,7 @@ export function MobileChatScreen({
                 ]}
                 onPress={() => void handleSend()}
                 disabled={!input.trim() && attachments.length === 0}
-                accessibilityLabel="Send message"
+                accessibilityLabel={t("ai.chatMobile.sendAria")}
               >
                 <Send size={16} color={colors.primaryForeground} />
               </TouchableOpacity>

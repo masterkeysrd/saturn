@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated"
 import { useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
+import { useI18n } from "@saturn/hooks"
 
 function PulseDot({ delayMs }: { delayMs: number }) {
   const styles = useThemedStyles(createStyles)
@@ -50,8 +51,12 @@ function PulseDot({ delayMs }: { delayMs: number }) {
 
 export function StreamingDots() {
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
   return (
-    <View style={styles.row} accessibilityLabel="Streaming indicator">
+    <View
+      style={styles.row}
+      accessibilityLabel={t("ai.chatMobile.streamingAria")}
+    >
       <PulseDot delayMs={0} />
       <PulseDot delayMs={140} />
       <PulseDot delayMs={280} />

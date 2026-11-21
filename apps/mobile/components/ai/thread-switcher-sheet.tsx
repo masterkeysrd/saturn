@@ -2,7 +2,7 @@ import { forwardRef } from "react"
 import { Text, TouchableOpacity, View } from "react-native"
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useListThreadsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
 import { Button } from "@/components/ui/button"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
@@ -22,6 +22,7 @@ export const ThreadSwitcherSheet = forwardRef<
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
   const tz = useTimezone()
+  const { t } = useI18n()
   const { data } = useListThreadsQuery({
     isArchived: false,
     pageSize: 40,
@@ -32,7 +33,7 @@ export const ThreadSwitcherSheet = forwardRef<
   return (
     <AppBottomSheet
       ref={ref}
-      title="Chat Threads"
+      title={t("ai.chatMobile.chatSheetTitle")}
       snapPoints={["55%", "85%"]}
       onClose={onClose}
     >
@@ -47,11 +48,13 @@ export const ThreadSwitcherSheet = forwardRef<
             onClose()
           }}
         >
-          New Chat Thread
+          {t("ai.chatMobile.newChatThread")}
         </Button>
 
         {threads.length === 0 ? (
-          <Text style={styles.emptyText}>No saved threads yet.</Text>
+          <Text style={styles.emptyText}>
+            {t("ai.chatMobile.noSavedThreads")}
+          </Text>
         ) : (
           threads.map((th) => {
             const selected = th.id === activeThreadId
@@ -72,10 +75,10 @@ export const ThreadSwitcherSheet = forwardRef<
                 />
                 <View style={styles.rowText}>
                   <Text style={styles.rowTitle} numberOfLines={1}>
-                    {th.title || "New Chat"}
+                    {th.title || t("ai.chat.newChat")}
                   </Text>
                   <Text style={styles.rowSub}>
-                    {th.agentName || "Saturn Assistant"}
+                    {th.agentName || t("ai.conversation.saturnAssistant")}
                     {ts ? ` · ${tz.format(ts, { dateStyle: "short" })}` : ""}
                   </Text>
                 </View>

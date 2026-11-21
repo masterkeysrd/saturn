@@ -2,9 +2,11 @@ import { useEffect } from "react"
 import { Text, TouchableOpacity, View } from "react-native"
 import { describeToolCall } from "@saturn/core"
 import type { PendingToolApproval } from "@saturn/api/saturn/platform/ai/v1/ai"
+import { useI18n } from "@saturn/hooks"
 import { ShieldAlert, Check, X } from "lucide-react-native"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
+import { getToolDomainLabelKey } from "./tool-domain-label"
 
 interface ToolApprovalCardProps {
   approval: PendingToolApproval
@@ -19,6 +21,7 @@ export function ToolApprovalCard({
 }: ToolApprovalCardProps) {
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
 
   useEffect(() => {
     haptics.warning()
@@ -30,20 +33,35 @@ export function ToolApprovalCard({
     mcpServerName: approval.mcpServerName,
     arguments: approval.arguments,
   })
+  const domainLabel =
+    desc.domain === "mcp"
+      ? desc.domainLabel
+      : t(getToolDomainLabelKey(desc.domain))
+  const approvalAria = (action: string) =>
+    t("ai.chatMobile.approvalAria", {
+      action,
+      tool: approval.toolName ?? "",
+    })
 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <ShieldAlert size={16} color={colors.warning} />
         <Text style={styles.title}>
-          Confirm {desc.label} ({desc.domainLabel})
+          {t("ai.chatMobile.confirmTool", {
+            tool: desc.label,
+            domain: domainLabel,
+          })}
         </Text>
       </View>
 
       <Text style={styles.toolLine}>
         <Text style={styles.toolName}>{approval.toolName}</Text>
         {approval.mcpServerName ? (
-          <Text style={styles.serverName}> via {approval.mcpServerName}</Text>
+          <Text style={styles.serverName}>
+            {" "}
+            {t("ai.conversation.via", { server: approval.mcpServerName })}
+          </Text>
         ) : null}
         {desc.summary ? (
           <Text style={styles.serverName}> · {desc.summary}</Text>
@@ -66,10 +84,10 @@ export function ToolApprovalCard({
             onReject(callId)
           }}
           accessibilityRole="button"
-          accessibilityLabel={`Reject ${approval.toolName}`}
+          accessibilityLabel={approvalAria(t("ai.conversation.reject"))}
         >
           <X size={14} color={colors.textSecondary} />
-          <Text style={styles.rejectText}>Reject</Text>
+          <Text style={styles.rejectText}>{t("ai.conversation.reject")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -79,10 +97,10 @@ export function ToolApprovalCard({
             onApprove(callId)
           }}
           accessibilityRole="button"
-          accessibilityLabel={`Approve ${approval.toolName}`}
+          accessibilityLabel={approvalAria(t("ai.conversation.approve"))}
         >
           <Check size={14} color={colors.primaryForeground} />
-          <Text style={styles.approveText}>Approve</Text>
+          <Text style={styles.approveText}>{t("ai.conversation.approve")}</Text>
         </TouchableOpacity>
       </View>
     </View>
