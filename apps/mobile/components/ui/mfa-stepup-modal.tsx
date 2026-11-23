@@ -12,6 +12,7 @@ import { KeyRound } from "lucide-react-native"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { MfaStepUpSchema, type MfaStepUpFormValues } from "@saturn/schemas"
+import { useI18n } from "@saturn/hooks"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Button } from "./button"
 import { OTPInput, type OTPTextInputRef } from "./otp-input"
@@ -34,11 +35,12 @@ export function MfaStepUpModal({
   onConfirm,
   loading = false,
   error = null,
-  title = "MFA Verification Required",
-  subtitle = "Please enter the 6-digit code from your authenticator app to authorize this device.",
-  confirmText = "Verify & Enroll",
+  title,
+  subtitle,
+  confirmText,
 }: MfaStepUpModalProps) {
   const { colors } = useTheme()
+  const { t } = useI18n()
   const styles = useThemedStyles(createStyles)
   const [localError, setLocalError] = useState<string | null>(null)
   const otpInputRef = useRef<OTPTextInputRef>(null)
@@ -99,8 +101,12 @@ export function MfaStepUpModal({
           <View style={styles.modalIconBox}>
             <KeyRound size={24} color={colors.primary} />
           </View>
-          <Text style={styles.modalTitle}>{title}</Text>
-          <Text style={styles.modalSubtitle}>{subtitle}</Text>
+          <Text style={styles.modalTitle}>
+            {title ?? t("settings.mfa.mobile.stepUpTitle")}
+          </Text>
+          <Text style={styles.modalSubtitle}>
+            {subtitle ?? t("settings.mfa.mobile.stepUpSubtitle")}
+          </Text>
 
           <View style={styles.otpModalWrapper}>
             <OTPInput
@@ -128,7 +134,7 @@ export function MfaStepUpModal({
               onPress={handleClose}
               disabled={isPending}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               variant="primary"
@@ -138,7 +144,7 @@ export function MfaStepUpModal({
               disabled={isPending}
               onPress={handleSubmit(onValid)}
             >
-              {confirmText}
+              {confirmText ?? t("settings.mfa.mobile.stepUpConfirm")}
             </Button>
           </View>
         </View>

@@ -110,19 +110,21 @@ export default function LoginScreen() {
       await loginWithBiometrics()
       toast.show({
         type: "success",
-        title: "Welcome back!",
-        message: "Signed in with biometrics",
+        title: t("auth.mobile.welcomeBackExclaim"),
+        message: t("auth.mobile.signedInBiometrics"),
       })
       router.replace("/(app)/(tabs)")
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : "Biometric sign-in failed"
+        err instanceof Error
+          ? err.message
+          : t("auth.mobile.biometricFailed")
       // If user dismissed the prompt, avoid intrusive error
       if (!msg.toLowerCase().includes("cancel")) {
         setError(msg)
         toast.show({
           type: "error",
-          title: "Biometric sign-in failed",
+          title: t("auth.mobile.biometricFailed"),
           message: msg,
         })
       }
@@ -130,7 +132,7 @@ export default function LoginScreen() {
       isBiometricInProgressRef.current = false
       setBiometricLoading(false)
     }
-  }, [loginWithBiometrics, router, toast])
+  }, [loginWithBiometrics, router, toast, t])
 
   // Offer automatic biometric prompt once when enrolled device opens
   useEffect(() => {
@@ -179,16 +181,16 @@ export default function LoginScreen() {
 
       toast.show({
         type: "success",
-        title: "Welcome back!",
-        message: "Logged in successfully",
+        title: t("auth.mobile.welcomeBackExclaim"),
+        message: t("auth.mobile.loggedInSuccess"),
       })
       router.replace("/(app)/(tabs)")
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to sign in"
+      const msg = err instanceof Error ? err.message : t("auth.mobile.signInFailed")
       setError(msg)
       toast.show({
         type: "error",
-        title: "Sign in failed",
+        title: t("auth.mobile.signInFailedToast"),
         message: msg,
       })
     } finally {
@@ -221,16 +223,17 @@ export default function LoginScreen() {
 
       toast.show({
         type: "success",
-        title: "Welcome back!",
-        message: "Verified successfully",
+        title: t("auth.mobile.welcomeBackExclaim"),
+        message: t("auth.mobile.verifiedSuccess"),
       })
       router.replace("/(app)/(tabs)")
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to verify code"
+      const msg =
+        err instanceof Error ? err.message : t("auth.mobile.verifyCodeFailed")
       setError(msg)
       toast.show({
         type: "error",
-        title: "Verification failed",
+        title: t("auth.mobile.verificationFailed"),
         message: msg,
       })
     } finally {
@@ -261,7 +264,7 @@ export default function LoginScreen() {
             router.push("/server-settings")
           }}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          accessibilityLabel="Server Settings"
+          accessibilityLabel={t("settings.server.title")}
         >
           <Settings size={18} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -287,12 +290,12 @@ export default function LoginScreen() {
                   )}
                 </View>
                 <Header1 style={styles.brandTitle}>
-                  Two-Factor Verification
+                  {t("auth.mobile.twoFactorVerification")}
                 </Header1>
                 <Subtitle style={styles.subtitle}>
                   {useBackupCode
-                    ? "Enter an 8-character emergency recovery code"
-                    : "Enter the 6-digit code from your authenticator app"}
+                    ? t("auth.mobile.recoveryCodeDesc")
+                    : t("auth.mobile.totpCodeDesc")}
                 </Subtitle>
               </View>
 
@@ -301,7 +304,7 @@ export default function LoginScreen() {
                   <TextInput
                     control={mfaForm.control}
                     name="code"
-                    label="Recovery Code"
+                    label={t("auth.mobile.recoveryCode")}
                     placeholder="ABCD-EFGH"
                     autoCapitalize="characters"
                     autoCorrect={false}
@@ -310,7 +313,7 @@ export default function LoginScreen() {
                 ) : (
                   <View style={styles.otpWrapper}>
                     <Text style={styles.otpLabel}>
-                      6-Digit Verification Code
+                      {t("auth.mobile.digitCode")}
                     </Text>
                     <OTPInput
                       control={mfaForm.control}
@@ -337,7 +340,7 @@ export default function LoginScreen() {
                   }
                   style={styles.button}
                 >
-                  Verify & Sign In
+                  {t("auth.mobile.verifyAndSignIn")}
                 </Button>
 
                 <TouchableOpacity
@@ -352,8 +355,8 @@ export default function LoginScreen() {
                 >
                   <Text style={styles.switchModeText}>
                     {useBackupCode
-                      ? "Use Authenticator app code instead"
-                      : "Lost access to your app? Use a recovery code"}
+                      ? t("auth.mobile.useAuthenticatorCode")
+                      : t("auth.mobile.useRecoveryCode")}
                   </Text>
                 </TouchableOpacity>
 
@@ -363,7 +366,9 @@ export default function LoginScreen() {
                   onPress={handleBackToLogin}
                 >
                   <ArrowLeft size={16} color={colors.textSecondary} />
-                  <Text style={styles.backButtonText}>Back to sign in</Text>
+                  <Text style={styles.backButtonText}>
+                    {t("auth.mobile.backToSignIn")}
+                  </Text>
                 </TouchableOpacity>
               </Card>
             </>
@@ -380,7 +385,7 @@ export default function LoginScreen() {
                 </View>
                 <Header1 style={styles.brandTitle}>Saturn</Header1>
                 <Subtitle style={styles.subtitle}>
-                  Sign in to your Personal Life OS
+                  {t("auth.mobile.signInTagline")}
                 </Subtitle>
               </View>
 
@@ -397,13 +402,15 @@ export default function LoginScreen() {
                       }
                       style={styles.biometricButton}
                     >
-                      {`Sign in with ${biometricLabel || "Biometrics"}`}
+                      {t("auth.mobile.signInWith", {
+                        label: biometricLabel || t("auth.mobile.biometrics"),
+                      })}
                     </Button>
 
                     <View style={styles.dividerRow}>
                       <View style={styles.dividerLine} />
                       <Text style={styles.dividerText}>
-                        or continue with password
+                        {t("auth.mobile.orContinueWithPassword")}
                       </Text>
                       <View style={styles.dividerLine} />
                     </View>
@@ -414,7 +421,7 @@ export default function LoginScreen() {
                   control={loginForm.control}
                   name="identifier"
                   label={t("auth.usernameOrEmail")}
-                  placeholder="user@example.com or username"
+                  placeholder={t("auth.mobile.identifierPlaceholder")}
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoComplete="username"
@@ -459,7 +466,7 @@ export default function LoginScreen() {
 
               <View style={styles.footer}>
                 <Text style={styles.footerText}>
-                  {"Don't have an account? "}
+                  {t("auth.mobile.noAccount")}
                 </Text>
                 <Link href="/(auth)/register" asChild>
                   <TouchableOpacity>

@@ -47,8 +47,9 @@ import {
   useGetSettingsQuery,
   useUpdateSettingsMutation as useUpdateFinanceSettingsMutation,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { FISCAL_YEAR_MONTHS, getFiscalMonthOption } from "@saturn/core"
+import { FISCAL_YEAR_MONTHS } from "@saturn/core"
 import { SUPPORTED_UI_LOCALES } from "@saturn/i18n"
+import type { TranslationKey } from "@saturn/i18n"
 import { useI18n } from "@saturn/hooks"
 import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
@@ -69,13 +70,29 @@ import { haptics } from "@/lib/haptics"
 
 const APPEARANCE_OPTIONS: readonly {
   value: ThemeMode
-  label: string
+  labelKey: TranslationKey
   Icon: typeof Sun
 }[] = [
-  { value: "light", label: "Light", Icon: Sun },
-  { value: "dark", label: "Dark", Icon: Moon },
-  { value: "system", label: "System", Icon: Smartphone },
+  { value: "light", labelKey: "menu.light", Icon: Sun },
+  { value: "dark", labelKey: "menu.dark", Icon: Moon },
+  { value: "system", labelKey: "menu.system", Icon: Smartphone },
 ]
+
+const FISCAL_MONTH_DESCRIPTION_KEYS: Record<string, TranslationKey> = {
+  "Calendar Year (Default)": "settings.finance.monthDescCalendar",
+  "Retail 4-5-4 Calendar": "settings.finance.monthDescRetail",
+  "Custom Fiscal Cycle": "settings.finance.monthDescCustom",
+  "United Kingdom, India, Japan, Canada":
+    "settings.finance.monthDescCommonwealth",
+  "Australia, New Zealand, Academic": "settings.finance.monthDescOceania",
+  "United States Federal": "settings.finance.monthDescUsFederal",
+}
+
+function formatMonthName(month: number, language: string): string {
+  const date = new Date(2000, month - 1, 1)
+  const name = new Intl.DateTimeFormat(language, { month: "long" }).format(date)
+  return name.charAt(0).toUpperCase() + name.slice(1)
+}
 
 export default function SettingsScreen() {
   const router = useRouter()
@@ -102,7 +119,7 @@ export default function SettingsScreen() {
     weekStartsOn,
     updateRegionalPreferences,
   } = useSpace()
-  const { t, supportedLocales } = useI18n()
+  const { t, language, supportedLocales } = useI18n()
 
   // 1. Query active sessions for device count indicator
   const { data: sessionsData } = useListActiveSessionsQuery({})
@@ -120,7 +137,6 @@ export default function SettingsScreen() {
   const baseCurrency = financeSettings?.baseCurrency || "USD"
   const updateFinanceSettingsMutation = useUpdateFinanceSettingsMutation()
   const currentFiscalMonth = financeSettings?.fiscalYearStartMonth || 1
-  const fiscalMonthOption = getFiscalMonthOption(currentFiscalMonth)
 
   const [signOutModalVisible, setSignOutModalVisible] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
@@ -153,11 +169,11 @@ export default function SettingsScreen() {
       haptics.error()
       toast.show({
         type: "error",
-        title: "Update Failed",
+        title: t("menu.updateFailed"),
         message:
           err instanceof Error
             ? err.message
-            : "Failed to update regional preferences",
+            : t("settings.hub.mobile.updateFailedDefaultRegional"),
       })
     }
   }
@@ -186,15 +202,19 @@ export default function SettingsScreen() {
       setFiscalYearModalVisible(false)
       toast.show({
         type: "success",
-        title: "Fiscal Year Updated",
-        message: `Fiscal year start month set to ${getFiscalMonthOption(month).name}.`,
+        title: t("settings.hub.mobile.fiscalUpdatedToast"),
+        message: t("settings.finance.saveOkDesc", {
+          month: formatMonthName(month, language),
+        }),
       })
     } catch (err: unknown) {
       toast.show({
         type: "error",
-        title: "Update Failed",
+        title: t("menu.updateFailed"),
         message:
-          err instanceof Error ? err.message : "Failed to update fiscal year",
+          err instanceof Error
+            ? err.message
+            : t("settings.hub.mobile.updateFailedDefaultFiscal"),
       })
     }
   }
@@ -205,8 +225,8 @@ export default function SettingsScreen() {
       await logout()
       toast.show({
         type: "info",
-        title: "Signed Out",
-        message: "You have been logged out",
+        title: t("settings.hub.mobile.signedOutToast"),
+        message: t("settings.hub.mobile.signedOutToastDesc"),
       })
       router.replace("/(auth)/login")
     } catch {
@@ -222,14 +242,16 @@ export default function SettingsScreen() {
         haptics.light()
         toast.show({
           type: "info",
-          title: "Biometrics Disabled",
-          message: "Biometric requirement removed.",
+          title: t("settings.hub.mobile.biometricsDisabledToast"),
+          message: t("settings.hub.mobile.biometricsDisabledToastDesc"),
         })
       } catch (err: any) {
         toast.show({
           type: "error",
-          title: "Action Failed",
-          message: err?.message || "Could not disable biometrics.",
+          title: t("menu.updateFailed"),
+          message:
+            err?.message ||
+            t("settings.hub.mobile.biometricDisableFailedDefault"),
         })
       }
       return
@@ -243,14 +265,16 @@ export default function SettingsScreen() {
         haptics.success()
         toast.show({
           type: "success",
-          title: "Biometrics Enabled",
-          message: "Face ID / Fingerprint will be required to unlock Saturn.",
+          title: t("settings.hub.mobile.biometricsEnabledToast"),
+          message: t("settings.hub.mobile.biometricsEnabledToastDesc"),
         })
       } catch (err: any) {
         toast.show({
           type: "error",
-          title: "Biometrics Failed",
-          message: err?.message || "Could not enable biometrics.",
+          title: t("settings.hub.mobile.biometricsFailedToast"),
+          message:
+            err?.message ||
+            t("settings.hub.mobile.biometricEnableFailedDefault"),
         })
       }
       return
@@ -271,8 +295,8 @@ export default function SettingsScreen() {
         haptics.success()
         toast.show({
           type: "success",
-          title: "Biometrics Enabled",
-          message: "Face ID / Fingerprint will be required to unlock Saturn.",
+          title: t("settings.hub.mobile.biometricsEnabledToast"),
+          message: t("settings.hub.mobile.biometricsEnabledToastDesc"),
         })
         await refetchMfa()
       }
@@ -289,8 +313,8 @@ export default function SettingsScreen() {
         haptics.error()
         toast.show({
           type: "error",
-          title: "Biometrics Failed",
-          message: msg || "Could not toggle biometrics.",
+          title: t("settings.hub.mobile.biometricsFailedToast"),
+          message: msg || t("settings.hub.mobile.biometricToggleFailedDefault"),
         })
       }
     }
@@ -306,8 +330,8 @@ export default function SettingsScreen() {
         setMfaModalVisible(false)
         toast.show({
           type: "success",
-          title: "Biometrics Enabled",
-          message: "Face ID / Fingerprint will be required to unlock Saturn.",
+          title: t("settings.hub.mobile.biometricsEnabledToast"),
+          message: t("settings.hub.mobile.biometricsEnabledToastDesc"),
         })
         await refetchMfa()
       }
@@ -318,13 +342,13 @@ export default function SettingsScreen() {
         msg.toLowerCase().includes("totp") ||
         msg.toLowerCase().includes("verification")
       ) {
-        setMfaError("Invalid verification code. Please try again.")
+        setMfaError(t("settings.devices.mobile.invalidCode"))
       } else {
         haptics.error()
         toast.show({
           type: "error",
-          title: "Enrollment Failed",
-          message: msg || "Could not enable biometrics.",
+          title: t("settings.devices.mobile.enrollFailedToast"),
+          message: msg || t("settings.hub.mobile.biometricEnableFailedDefault"),
         })
       }
     } finally {
@@ -335,12 +359,12 @@ export default function SettingsScreen() {
   const handleClearCache = () => {
     haptics.warning()
     Alert.alert(
-      "Clear Offline Cache?",
-      "This will purge stored offline data and refetch the latest transactions and balances from the Saturn server.",
+      t("settings.hub.mobile.clearCacheTitle"),
+      t("settings.hub.mobile.clearCacheDesc"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Clear Cache",
+          text: t("settings.hub.mobile.clearCacheBtn"),
           style: "destructive",
           onPress: async () => {
             setClearingCache(true)
@@ -351,15 +375,17 @@ export default function SettingsScreen() {
               haptics.success()
               toast.show({
                 type: "success",
-                title: "Cache Cleared",
-                message: "Local storage flushed and queries revalidated.",
+                title: t("settings.hub.mobile.cacheClearedToast"),
+                message: t("settings.hub.mobile.cacheClearedToastDesc"),
               })
             } catch (err: any) {
               haptics.error()
               toast.show({
                 type: "error",
-                title: "Clear Failed",
-                message: err?.message || "Could not clear cache.",
+                title: t("settings.hub.mobile.clearFailedToast"),
+                message:
+                  err?.message ||
+                  t("settings.hub.mobile.clearFailedToastDefault"),
               })
             } finally {
               setClearingCache(false)
@@ -388,7 +414,7 @@ export default function SettingsScreen() {
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>
-              {user?.name || "Saturn User"}
+              {user?.name || t("menu.saturnUser")}
             </Text>
             {user?.username && (
               <Text style={styles.profileUsername}>@{user.username}</Text>
@@ -406,7 +432,9 @@ export default function SettingsScreen() {
                 variant={user?.role === "admin" ? "primary" : "default"}
                 size="sm"
                 label={
-                  user?.role === "admin" ? "System Admin" : "Active Member"
+                  user?.role === "admin"
+                    ? t("settings.hub.mobile.roleSystemAdmin")
+                    : t("settings.hub.mobile.roleActiveMember")
                 }
               />
             </View>
@@ -415,7 +443,9 @@ export default function SettingsScreen() {
 
         {/* Section 1: Workspace & Finance */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>WORKSPACE & FINANCE</Text>
+          <Text style={styles.sectionHeader}>
+            {t("settings.hub.mobile.sectionWorkspaceFinance").toUpperCase()}
+          </Text>
           <Card style={styles.menuGroup}>
             <TouchableOpacity
               style={[styles.menuItem, styles.menuItemBorder]}
@@ -424,11 +454,14 @@ export default function SettingsScreen() {
             >
               <View style={styles.menuLeft}>
                 <Layers size={18} color={colors.primary} />
-                <Text style={styles.menuLabel}>Active Workspace</Text>
+                <Text style={styles.menuLabel}>
+                  {t("settings.hub.mobile.activeWorkspace")}
+                </Text>
               </View>
               <View style={styles.menuRight}>
                 <Text style={styles.menuValue}>
-                  {activeSpace?.name || "Personal"}
+                  {activeSpace?.name ||
+                    t("settings.hub.mobile.personalWorkspace")}
                 </Text>
                 <ChevronRight size={16} color={colors.textMuted} />
               </View>
@@ -442,14 +475,22 @@ export default function SettingsScreen() {
               <View style={styles.menuLeft}>
                 <Users size={18} color={colors.accent} />
                 <Text style={styles.menuLabel}>
-                  Workspace Details & Members
+                  {t("menu.workspaceDetails")}
                 </Text>
               </View>
               <View style={styles.menuRight}>
                 <Badge
                   variant={activeSpaceRole === "owner" ? "primary" : "default"}
                   size="sm"
-                  label={activeSpaceRole.toUpperCase()}
+                  label={t(
+                    activeSpaceRole === "owner"
+                      ? "settings.spaces.roleOwner"
+                      : activeSpaceRole === "admin"
+                        ? "settings.spaces.roleAdmin"
+                        : activeSpaceRole === "viewer"
+                          ? "settings.spaces.roleViewer"
+                          : "settings.spaces.roleMember"
+                  ).toUpperCase()}
                 />
                 <ChevronRight size={16} color={colors.textMuted} />
               </View>
@@ -465,7 +506,9 @@ export default function SettingsScreen() {
             >
               <View style={styles.menuLeft}>
                 <Link2 size={18} color={colors.primary} />
-                <Text style={styles.menuLabel}>Connected Accounts</Text>
+                <Text style={styles.menuLabel}>
+                  {t("settings.connectors.connectedAccountsTitle")}
+                </Text>
               </View>
               <View style={styles.menuRight}>
                 <ChevronRight size={16} color={colors.textMuted} />
@@ -482,7 +525,9 @@ export default function SettingsScreen() {
             >
               <View style={styles.menuLeft}>
                 <Workflow size={18} color={colors.accent} />
-                <Text style={styles.menuLabel}>Workflows</Text>
+                <Text style={styles.menuLabel}>
+                  {t("settings.hub.mobile.workflows")}
+                </Text>
               </View>
               <View style={styles.menuRight}>
                 <ChevronRight size={16} color={colors.textMuted} />
@@ -492,7 +537,9 @@ export default function SettingsScreen() {
             <View style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuLeft}>
                 <Coins size={18} color={colors.success} />
-                <Text style={styles.menuLabel}>Base Currency</Text>
+                <Text style={styles.menuLabel}>
+                  {t("settings.hub.mobile.baseCurrency")}
+                </Text>
               </View>
               <View style={styles.menuRight}>
                 <Badge variant="outline" size="sm" label={baseCurrency} />
@@ -509,10 +556,14 @@ export default function SettingsScreen() {
             >
               <View style={styles.menuLeft}>
                 <Calendar size={18} color={colors.info} />
-                <Text style={styles.menuLabel}>Fiscal Year Start</Text>
+                <Text style={styles.menuLabel}>
+                  {t("settings.hub.mobile.fiscalYearStart")}
+                </Text>
               </View>
               <View style={styles.menuRight}>
-                <Text style={styles.menuValue}>{fiscalMonthOption.name}</Text>
+                <Text style={styles.menuValue}>
+                  {formatMonthName(currentFiscalMonth, language)}
+                </Text>
                 <ChevronRight size={16} color={colors.textMuted} />
               </View>
             </TouchableOpacity>
@@ -521,13 +572,17 @@ export default function SettingsScreen() {
 
         {/* Section 2: Security & Privacy */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>SECURITY & PRIVACY</Text>
+          <Text style={styles.sectionHeader}>
+            {t("settings.hub.mobile.securitySection").toUpperCase()}
+          </Text>
           <Card style={styles.menuGroup}>
             {isBiometricSupported && (
               <View style={[styles.menuItem, styles.menuItemBorder]}>
                 <View style={styles.menuLeft}>
                   <Fingerprint size={18} color={colors.primary} />
-                  <Text style={styles.menuLabel}>Biometric Unlock</Text>
+                  <Text style={styles.menuLabel}>
+                    {t("settings.hub.mobile.biometricUnlock")}
+                  </Text>
                 </View>
                 <Switch
                   value={isBiometricActive}
@@ -550,13 +605,20 @@ export default function SettingsScreen() {
             >
               <View style={styles.menuLeft}>
                 <ShieldCheck size={18} color={colors.success} />
-                <Text style={styles.menuLabel}>Active Sessions & Devices</Text>
+                <Text style={styles.menuLabel}>
+                  {t("settings.hub.mobile.activeSessionsDevices")}
+                </Text>
               </View>
               <View style={styles.menuRight}>
                 <Badge
                   variant="primary"
                   size="sm"
-                  label={`${sessionCount} ${sessionCount === 1 ? "device" : "devices"}`}
+                  label={t(
+                    sessionCount === 1
+                      ? "settings.hub.mobile.deviceCountOne"
+                      : "settings.hub.mobile.deviceCountOther",
+                    { count: sessionCount }
+                  )}
                 />
                 <ChevronRight size={16} color={colors.textMuted} />
               </View>
@@ -572,7 +634,9 @@ export default function SettingsScreen() {
             >
               <View style={styles.menuLeft}>
                 <KeyRound size={18} color={colors.primary} />
-                <Text style={styles.menuLabel}>Personal API Keys</Text>
+                <Text style={styles.menuLabel}>
+                  {t("settings.apiKeys.title")}
+                </Text>
               </View>
               <View style={styles.menuRight}>
                 <ChevronRight size={16} color={colors.textMuted} />
@@ -583,21 +647,26 @@ export default function SettingsScreen() {
 
         {/* Section 3: Appearance */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>APPEARANCE</Text>
+          <Text style={styles.sectionHeader}>
+            {t("settings.hub.mobile.appearanceSection").toUpperCase()}
+          </Text>
           <Card style={styles.appearanceCard}>
             <View style={styles.appearanceHeader}>
-              <Text style={styles.menuLabel}>Theme Mode</Text>
+              <Text style={styles.menuLabel}>
+                {t("settings.hub.mobile.themeMode")}
+              </Text>
               <Text style={styles.menuValue}>
                 {mode === "system"
-                  ? "Matches device"
+                  ? t("settings.hub.mobile.themeMatchesDevice")
                   : mode === "light"
-                    ? "Light"
-                    : "Dark"}
+                    ? t("menu.light")
+                    : t("menu.dark")}
               </Text>
             </View>
             <View style={styles.segmentedTrack}>
-              {APPEARANCE_OPTIONS.map(({ value, label, Icon }) => {
+              {APPEARANCE_OPTIONS.map(({ value, labelKey, Icon }) => {
                 const isActive = mode === value
+                const label = t(labelKey)
                 return (
                   <TouchableOpacity
                     key={value}
@@ -608,7 +677,7 @@ export default function SettingsScreen() {
                     activeOpacity={0.75}
                     accessibilityRole="button"
                     accessibilityState={{ selected: isActive }}
-                    accessibilityLabel={`${label} theme`}
+                    accessibilityLabel={t("menu.appearanceAria", { label })}
                     onPress={() => {
                       haptics.selection()
                       setMode(value)
@@ -767,14 +836,18 @@ export default function SettingsScreen() {
 
         {/* Section 4: Preferences & Integrations */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>PREFERENCES & AGENTS</Text>
+          <Text style={styles.sectionHeader}>
+            {t("settings.hub.mobile.prefsSection").toUpperCase()}
+          </Text>
           <Card style={styles.menuGroup}>
             <View style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuLeft}>
                 <Bell size={18} color={colors.warning} />
-                <Text style={styles.menuLabel}>Notifications & Alerts</Text>
+                <Text style={styles.menuLabel}>
+                  {t("settings.hub.mobile.notifications")}
+                </Text>
               </View>
-              <Badge size="sm" label="Soon" />
+              <Badge size="sm" label={t("settings.hub.mobile.soon")} />
             </View>
 
             <TouchableOpacity
@@ -787,7 +860,9 @@ export default function SettingsScreen() {
             >
               <View style={styles.menuLeft}>
                 <Sparkles size={18} color={colors.accent} />
-                <Text style={styles.menuLabel}>AI Agents & Providers</Text>
+                <Text style={styles.menuLabel}>
+                  {t("settings.hub.mobile.aiAgents")}
+                </Text>
               </View>
               <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -796,7 +871,9 @@ export default function SettingsScreen() {
 
         {/* Section 5: Storage & System Controls */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>STORAGE & SYSTEM</Text>
+          <Text style={styles.sectionHeader}>
+            {t("settings.hub.mobile.storageSection").toUpperCase()}
+          </Text>
           <Card style={styles.menuGroup}>
             <TouchableOpacity
               style={[styles.menuItem, styles.menuItemBorder]}
@@ -805,7 +882,9 @@ export default function SettingsScreen() {
             >
               <View style={styles.menuLeft}>
                 <Globe size={18} color={colors.primary} />
-                <Text style={styles.menuLabel}>Server Host</Text>
+                <Text style={styles.menuLabel}>
+                  {t("settings.hub.mobile.serverHost")}
+                </Text>
               </View>
               <View style={styles.menuRight}>
                 <Text style={styles.menuValue} numberOfLines={1}>
@@ -823,7 +902,9 @@ export default function SettingsScreen() {
             >
               <View style={styles.menuLeft}>
                 <HardDrive size={18} color={colors.info} />
-                <Text style={styles.menuLabel}>Clear Offline Cache</Text>
+                <Text style={styles.menuLabel}>
+                  {t("settings.hub.mobile.clearCache")}
+                </Text>
               </View>
               <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -831,7 +912,9 @@ export default function SettingsScreen() {
             <View style={styles.menuItem}>
               <View style={styles.menuLeft}>
                 <Info size={18} color={colors.textMuted} />
-                <Text style={styles.menuLabel}>App Version</Text>
+                <Text style={styles.menuLabel}>
+                  {t("settings.hub.mobile.appVersion")}
+                </Text>
               </View>
               <View style={styles.menuRight}>
                 <Text style={styles.menuValue}>v{appVersion}</Text>
@@ -854,7 +937,7 @@ export default function SettingsScreen() {
         <ConfirmDialog
           visible={signOutModalVisible}
           title={t("auth.signOut")}
-          message="Are you sure you want to sign out from Saturn on this device?"
+          message={t("settings.hub.mobile.signOutDesc")}
           confirmText={t("auth.signOut")}
           cancelText={t("common.cancel")}
           isDestructive
@@ -892,11 +975,11 @@ export default function SettingsScreen() {
           >
             <View style={styles.modalHeader}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.modalTitle}>Fiscal Year Start</Text>
+                <Text style={styles.modalTitle}>
+                  {t("settings.hub.mobile.fiscalYearStart")}
+                </Text>
                 <Text style={styles.modalSubtitle}>
-                  {
-                    "Select the starting month of your workspace's annual financial cycle."
-                  }
+                  {t("settings.hub.mobile.fiscalModalDesc")}
                 </Text>
               </View>
               <TouchableOpacity
@@ -928,10 +1011,13 @@ export default function SettingsScreen() {
                           isSelected && styles.modalItemTextActive,
                         ]}
                       >
-                        {item.name}
+                        {formatMonthName(item.month, language)}
                       </Text>
                       <Text style={styles.modalItemDescription}>
-                        {item.description}
+                        {t(
+                          FISCAL_MONTH_DESCRIPTION_KEYS[item.description] ??
+                            "settings.finance.monthDescCustom"
+                        )}
                       </Text>
                     </View>
                     {isSelected && <Check size={18} color={colors.primary} />}

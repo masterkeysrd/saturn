@@ -22,7 +22,7 @@ import {
   useDeleteAPIKeyMutation,
   type APIKey,
 } from "@saturn/api/saturn/identity/v1/identity"
-import { useTimezone } from "@saturn/hooks"
+import { useTimezone, useI18n } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
@@ -37,6 +37,7 @@ export default function APIKeysScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const toast = useToast()
+  const { t } = useI18n()
   const tz = useTimezone()
   const queryClient = useQueryClient()
   const { spaces } = useSpace()
@@ -97,16 +98,18 @@ export default function APIKeysScreen() {
       haptics.success()
       toast.show({
         type: "success",
-        title: "API Key Revoked",
-        message: `"${keyToDelete.name}" was permanently deleted.`,
+        title: t("settings.apiKeys.revokeOk"),
+        message: t("settings.apiKeys.revokeOkDesc"),
       })
     } catch (err: unknown) {
       haptics.error()
       toast.show({
         type: "error",
-        title: "Revocation Failed",
+        title: t("settings.apiKeys.revokeFailed"),
         message:
-          err instanceof Error ? err.message : "Could not revoke API key.",
+          err instanceof Error
+            ? err.message
+            : t("settings.apiKeys.revokeFailedDesc"),
       })
     } finally {
       setKeyToDelete(null)
@@ -136,10 +139,11 @@ export default function APIKeysScreen() {
               <Key size={20} color={colors.primary} />
             </View>
             <View style={styles.headerText}>
-              <Text style={styles.headerTitle}>Personal API Keys</Text>
+              <Text style={styles.headerTitle}>
+                {t("settings.apiKeys.title")}
+              </Text>
               <Text style={styles.headerSubtitle}>
-                Programmatic credentials bound to explicit workspaces and
-                scopes.
+                {t("settings.apiKeys.mobile.headerDesc")}
               </Text>
             </View>
           </View>
@@ -149,7 +153,7 @@ export default function APIKeysScreen() {
             leftIcon={<Plus size={16} color={colors.primaryForeground} />}
             onPress={handleOpenCreate}
           >
-            Create API Key
+            {t("settings.apiKeys.btnCreate")}
           </Button>
         </Card>
 
@@ -158,9 +162,11 @@ export default function APIKeysScreen() {
         ) : apiKeys.length === 0 ? (
           <Card style={styles.emptyCard}>
             <Key size={28} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>No API Keys</Text>
+            <Text style={styles.emptyTitle}>
+              {t("settings.apiKeys.emptyTitle")}
+            </Text>
             <Text style={styles.emptySubtitle}>
-              Create a fine-grained key for Shortcuts, webhooks, or scripts.
+              {t("settings.apiKeys.mobile.emptyDesc")}
             </Text>
           </Card>
         ) : (
@@ -180,7 +186,9 @@ export default function APIKeysScreen() {
                       <TouchableOpacity
                         style={styles.iconBtn}
                         onPress={() => handleOpenEdit(apiKey)}
-                        accessibilityLabel={`Edit ${apiKey.name}`}
+                        accessibilityLabel={t("settings.apiKeys.ariaEditKey", {
+                          name: apiKey.name ?? "",
+                        })}
                       >
                         <Pencil size={16} color={colors.textSecondary} />
                       </TouchableOpacity>
@@ -190,7 +198,10 @@ export default function APIKeysScreen() {
                           haptics.warning()
                           setKeyToDelete(apiKey)
                         }}
-                        accessibilityLabel={`Revoke ${apiKey.name}`}
+                        accessibilityLabel={t(
+                          "settings.apiKeys.ariaRevokeKey",
+                          { name: apiKey.name ?? "" }
+                        )}
                       >
                         <Trash2 size={16} color={colors.destructive} />
                       </TouchableOpacity>
@@ -208,7 +219,7 @@ export default function APIKeysScreen() {
                       <Badge
                         variant="warning"
                         size="sm"
-                        label="No Active Spaces"
+                        label={t("settings.apiKeys.noActiveSpaces")}
                         icon={
                           <AlertTriangle size={11} color={colors.warning} />
                         }
@@ -237,17 +248,17 @@ export default function APIKeysScreen() {
                     <View style={styles.metaItem}>
                       <Clock size={12} color={colors.textMuted} />
                       <Text style={styles.metaText}>
-                        Last used:{" "}
+                        {t("settings.apiKeys.lastUsed")}{" "}
                         {apiKey.lastUsedAt
                           ? tz.formatDateTime(apiKey.lastUsedAt)
-                          : "Never used"}
+                          : t("settings.apiKeys.neverUsed")}
                       </Text>
                     </View>
                     <Text style={styles.metaText}>
-                      Expires:{" "}
+                      {t("settings.apiKeys.expiresLabel")}{" "}
                       {apiKey.expiresAt
                         ? tz.formatDate(apiKey.expiresAt)
-                        : "Never"}
+                        : t("settings.apiKeys.expiresNever")}
                     </Text>
                   </View>
                 </Card>
@@ -259,10 +270,12 @@ export default function APIKeysScreen() {
 
       <ConfirmDialog
         visible={!!keyToDelete}
-        title="Revoke API Key?"
-        message={`Permanently delete "${keyToDelete?.name || ""}"? Scripts and webhooks using this token will immediately stop working.`}
-        confirmText="Revoke Key"
-        cancelText="Cancel"
+        title={t("settings.apiKeys.revokeDialogTitle")}
+        message={`${t("settings.apiKeys.revokeDialogQ1")} "${
+          keyToDelete?.name || ""
+        }"${t("settings.apiKeys.revokeDialogQ2")}`}
+        confirmText={t("settings.apiKeys.btnRevokeKey")}
+        cancelText={t("common.cancel")}
         isDestructive
         loading={deleteMutation.isPending}
         onConfirm={handleConfirmDelete}

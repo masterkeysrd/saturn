@@ -83,7 +83,7 @@ export function SpaceAvatarButton({
   const swipedRef = useRef(false)
   const swipeResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const spaceName = activeSpace?.name || "Personal"
+  const spaceName = activeSpace?.name || t("menu.personalWorkspace")
 
   const handlePress = () => {
     if (swipedRef.current) {
@@ -156,8 +156,8 @@ export function SpaceAvatarButton({
         onPress={handlePress}
         hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
         accessibilityRole="button"
-        accessibilityLabel={`Workspace and account switcher, current workspace ${spaceName}`}
-        accessibilityHint="Tap to switch workspace or open account settings. Swipe up or down to cycle workspaces."
+        accessibilityLabel={t("space.avatarAria", { name: spaceName })}
+        accessibilityHint={t("space.avatarHint")}
         testID={testID}
       >
         <Avatar name={spaceName} size={size} />
@@ -178,6 +178,7 @@ export function AIHeaderButton({
 }: AIHeaderButtonProps) {
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
   const router = useRouter()
   const { activeSpaceId } = useSpace()
 
@@ -207,7 +208,7 @@ export function AIHeaderButton({
       onPress={handleOpenAI}
       hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
       accessibilityRole="button"
-      accessibilityLabel="Open AI Assistant"
+      accessibilityLabel={t("menu.aiAssistant")}
       testID={testID}
     >
       <Sparkles size={16} color={colors.primary} />

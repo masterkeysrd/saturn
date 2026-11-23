@@ -181,7 +181,7 @@ export function SenderAvatar({
     if (!email) return
     navigator.clipboard.writeText(email)
     setCopied(true)
-    toast.add({ title: "Email copied to clipboard", type: "success" })
+    toast.add({ title: t("mail.emailCopied"), type: "success" })
     setTimeout(() => setCopied(false), 2000)
   }
 

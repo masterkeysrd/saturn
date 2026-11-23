@@ -36,14 +36,14 @@ import {
   useDeleteConnectedAccount,
   useSyncConnectedAccount,
   useTimezone,
+  useI18n,
   type ConnectedAccount,
 } from "@saturn/hooks"
 import {
   CONNECTOR_CAPABILITIES,
-  CONNECTOR_CAPABILITY_LABELS,
-  CONNECTOR_CAPABILITY_DESCRIPTIONS,
   type ConnectorCapability,
 } from "@saturn/schemas"
+import type { TranslationKey } from "@saturn/i18n"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -56,15 +56,15 @@ import { SkeletonCard } from "@/components/ui/skeleton-loader"
 
 WebBrowser.maybeCompleteAuthSession()
 
-const ACCENT_COLORS = [
-  { name: "Blue", value: "#3b82f6" },
-  { name: "Purple", value: "#8b5cf6" },
-  { name: "Emerald", value: "#10b981" },
-  { name: "Amber", value: "#f59e0b" },
-  { name: "Rose", value: "#f43f5e" },
-  { name: "Indigo", value: "#6366f1" },
-  { name: "Cyan", value: "#06b6d4" },
-  { name: "Slate", value: "#64748b" },
+const ACCENT_COLORS: { key: TranslationKey; value: string }[] = [
+  { key: "settings.connectors.colorBlue", value: "#3b82f6" },
+  { key: "settings.connectors.colorPurple", value: "#8b5cf6" },
+  { key: "settings.connectors.colorEmerald", value: "#10b981" },
+  { key: "settings.connectors.colorAmber", value: "#f59e0b" },
+  { key: "settings.connectors.colorRose", value: "#f43f5e" },
+  { key: "settings.connectors.colorIndigo", value: "#6366f1" },
+  { key: "settings.connectors.colorCyan", value: "#06b6d4" },
+  { key: "settings.connectors.colorSlate", value: "#64748b" },
 ]
 
 function GoogleIcon({ size = 20 }: { size?: number }) {
@@ -121,9 +121,22 @@ const CAPABILITY_ICONS: Record<ConnectorCapability, typeof Calendar> = {
   contacts: Contact,
 }
 
+const CAPABILITY_LABEL_KEYS: Record<ConnectorCapability, TranslationKey> = {
+  calendar: "settings.connectors.capCalendar",
+  mail: "settings.connectors.capMail",
+  contacts: "settings.connectors.capContacts",
+}
+
+const CAPABILITY_DESC_KEYS: Record<ConnectorCapability, TranslationKey> = {
+  calendar: "settings.connectors.capDescCalendar",
+  mail: "settings.connectors.capDescMail",
+  contacts: "settings.connectors.capDescContacts",
+}
+
 export default function ConnectedAccountsScreen() {
   const insets = useSafeAreaInsets()
   const toast = useToast()
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const { activeSpaceId, activeSpaceRole } = useSpace()
   const tz = useTimezone()
@@ -204,8 +217,8 @@ export default function ConnectedAccountsScreen() {
           await haptics.success()
           toast.show({
             type: "success",
-            title: "Account Connected",
-            message: "External account connected and authorized successfully.",
+            title: t("settings.connectors.connectedToast"),
+            message: t("settings.connectors.connectedToastDesc"),
           })
         } else {
           await haptics.light()
@@ -215,11 +228,13 @@ export default function ConnectedAccountsScreen() {
       await haptics.warning()
       toast.show({
         type: "error",
-        title: "Connection Failed",
+        title: t("settings.connectors.connectionFailedToast"),
         message:
           err instanceof Error
-            ? err.message
-            : "Failed to initiate OAuth authorization session",
+            ? t("settings.connectors.connectionFailedToastDesc", {
+                error: err.message,
+              })
+            : t("settings.connectors.connectInitFailedToastDefault"),
       })
     } finally {
       setConnectingProvider(null)
@@ -260,8 +275,13 @@ export default function ConnectedAccountsScreen() {
       await haptics.success()
       toast.show({
         type: "success",
-        title: "Capabilities Updated",
-        message: `${CONNECTOR_CAPABILITY_LABELS[cap]} ${isEnabling ? "enabled" : "disabled"}.`,
+        title: t("settings.connectors.capabilitiesUpdatedToast"),
+        message: t(
+          isEnabling
+            ? "settings.connectors.capabilitiesEnabledToast"
+            : "settings.connectors.capabilitiesDisabledToast",
+          { capability: t(CAPABILITY_LABEL_KEYS[cap]) }
+        ),
       })
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : ""
@@ -274,16 +294,17 @@ export default function ConnectedAccountsScreen() {
         await haptics.warning()
         toast.show({
           type: "info",
-          title: "Authorization Required",
-          message: "Additional permission required. Opening browser...",
+          title: t("settings.connectors.authRequiredToast"),
+          message: t("settings.connectors.authRequiredToastDesc"),
         })
         await handleConnect(account.provider || "google", account.id, newCaps)
       } else {
         await haptics.warning()
         toast.show({
           type: "error",
-          title: "Update Failed",
-          message: errMsg || "Could not update capability switch",
+          title: t("settings.connectors.capabilitiesFailedToast"),
+          message:
+            errMsg || t("settings.connectors.capabilitiesFailedToastDefault"),
         })
       }
     } finally {
@@ -316,16 +337,19 @@ export default function ConnectedAccountsScreen() {
       await haptics.success()
       toast.show({
         type: "success",
-        title: "Color Updated",
-        message: "Accent color tag updated successfully.",
+        title: t("settings.connectors.colorUpdatedToast"),
+        message: t("settings.connectors.colorUpdatedToastDesc"),
       })
       setColorPickerAccount(null)
     } catch (err) {
       await haptics.warning()
       toast.show({
         type: "error",
-        title: "Update Failed",
-        message: err instanceof Error ? err.message : "Failed to update color",
+        title: t("settings.connectors.colorFailedToastDefault"),
+        message:
+          err instanceof Error
+            ? err.message
+            : t("settings.connectors.colorFailedToast"),
       })
     }
   }
@@ -343,15 +367,18 @@ export default function ConnectedAccountsScreen() {
       await haptics.success()
       toast.show({
         type: "success",
-        title: "Sync Triggered",
-        message: "Account synchronization in progress.",
+        title: t("settings.connectors.syncOkToast"),
+        message: t("settings.connectors.syncOkToastDesc"),
       })
     } catch (err) {
       await haptics.warning()
       toast.show({
         type: "error",
-        title: "Sync Failed",
-        message: err instanceof Error ? err.message : "Sync request failed",
+        title: t("settings.connectors.syncFailedToast"),
+        message:
+          err instanceof Error
+            ? err.message
+            : t("settings.connectors.syncFailedToastDefault"),
       })
     } finally {
       setSyncingAccountId(null)
@@ -370,18 +397,19 @@ export default function ConnectedAccountsScreen() {
       await haptics.success()
       toast.show({
         type: "success",
-        title: "Account Disconnected",
-        message:
-          "The connected account and its mirrors have been removed from this Space.",
+        title: t("settings.connectors.disconnectedToast"),
+        message: t("settings.connectors.disconnectedToastDesc"),
       })
       setAccountToDisconnect(null)
     } catch (err) {
       await haptics.warning()
       toast.show({
         type: "error",
-        title: "Disconnect Failed",
+        title: t("settings.connectors.disconnectFailedToast"),
         message:
-          err instanceof Error ? err.message : "Failed to disconnect account",
+          err instanceof Error
+            ? err.message
+            : t("settings.connectors.disconnectFailedToastDefault"),
       })
     }
   }
@@ -401,8 +429,7 @@ export default function ConnectedAccountsScreen() {
           <View style={styles.readOnlyBanner}>
             <Lock size={16} color={colors.warning} />
             <Text style={styles.readOnlyText}>
-              Viewing in read-only mode. Workspace Admin or Owner privileges are
-              required to manage connected accounts.
+              {t("settings.connectors.readOnlyBanner")}
             </Text>
           </View>
         )}
@@ -410,10 +437,11 @@ export default function ConnectedAccountsScreen() {
         {/* Section 1: Provider Catalog */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderBlock}>
-            <Text style={styles.sectionTitle}>Connect New Account</Text>
+            <Text style={styles.sectionTitle}>
+              {t("settings.connectors.connectNewTitle")}
+            </Text>
             <Text style={styles.sectionDescription}>
-              Synchronize external calendars, emails, and address books into
-              this workspace.
+              {t("settings.connectors.connectNewDesc")}
             </Text>
           </View>
 
@@ -424,9 +452,11 @@ export default function ConnectedAccountsScreen() {
                 <GoogleIcon size={24} />
               </View>
               <View style={styles.catalogInfo}>
-                <Text style={styles.catalogTitle}>Google</Text>
+                <Text style={styles.catalogTitle}>
+                  {t("settings.connectors.google")}
+                </Text>
                 <Text style={styles.catalogSubtitle}>
-                  Google Workspace & Personal Gmail
+                  {t("settings.connectors.descGoogle")}
                 </Text>
               </View>
             </View>
@@ -436,19 +466,19 @@ export default function ConnectedAccountsScreen() {
                 variant="outline"
                 size="sm"
                 icon={<Calendar size={11} color={colors.textMuted} />}
-                label="Calendars"
+                label={t("settings.connectors.capCalendar")}
               />
               <Badge
                 variant="outline"
                 size="sm"
                 icon={<Mail size={11} color={colors.textMuted} />}
-                label="Mail"
+                label={t("settings.connectors.capMail")}
               />
               <Badge
                 variant="outline"
                 size="sm"
                 icon={<Contact size={11} color={colors.textMuted} />}
-                label="Contacts"
+                label={t("settings.connectors.capContacts")}
               />
             </View>
 
@@ -471,8 +501,8 @@ export default function ConnectedAccountsScreen() {
                 onPress={() => handleConnect("google")}
               >
                 {connectingProvider === "google"
-                  ? "Connecting..."
-                  : "Connect Google"}
+                  ? t("settings.connectors.connectingBtn")
+                  : t("settings.connectors.connectGoogle")}
               </Button>
             ) : (
               <Button
@@ -482,7 +512,7 @@ export default function ConnectedAccountsScreen() {
                 leftIcon={<Lock size={14} color={colors.textMuted} />}
                 disabled
               >
-                Admin Only
+                {t("settings.connectors.adminOnly")}
               </Button>
             )}
           </Card>
@@ -495,11 +525,17 @@ export default function ConnectedAccountsScreen() {
               </View>
               <View style={styles.catalogInfo}>
                 <View style={styles.titleWithBadge}>
-                  <Text style={styles.catalogTitle}>Microsoft</Text>
-                  <Badge variant="default" size="sm" label="Coming Soon" />
+                  <Text style={styles.catalogTitle}>
+                    {t("settings.connectors.microsoft")}
+                  </Text>
+                  <Badge
+                    variant="default"
+                    size="sm"
+                    label={t("settings.connectors.comingSoon")}
+                  />
                 </View>
                 <Text style={styles.catalogSubtitle}>
-                  Microsoft 365 & Outlook.com
+                  {t("settings.connectors.descMicrosoft")}
                 </Text>
               </View>
             </View>
@@ -509,24 +545,24 @@ export default function ConnectedAccountsScreen() {
                 variant="outline"
                 size="sm"
                 icon={<Calendar size={11} color={colors.textMuted} />}
-                label="Calendars"
+                label={t("settings.connectors.capCalendar")}
               />
               <Badge
                 variant="outline"
                 size="sm"
                 icon={<Mail size={11} color={colors.textMuted} />}
-                label="Mail"
+                label={t("settings.connectors.capMail")}
               />
               <Badge
                 variant="outline"
                 size="sm"
                 icon={<Contact size={11} color={colors.textMuted} />}
-                label="Contacts"
+                label={t("settings.connectors.capContacts")}
               />
             </View>
 
             <Button variant="outline" size="sm" fullWidth disabled>
-              Coming Soon
+              {t("settings.connectors.comingSoon")}
             </Button>
           </Card>
         </View>
@@ -534,10 +570,11 @@ export default function ConnectedAccountsScreen() {
         {/* Section 2: Connected Accounts List */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderBlock}>
-            <Text style={styles.sectionTitle}>Connected Accounts</Text>
+            <Text style={styles.sectionTitle}>
+              {t("settings.connectors.connectedAccountsTitle")}
+            </Text>
             <Text style={styles.sectionDescription}>
-              Manage your synchronized provider accounts, active capabilities,
-              and accent tags.
+              {t("settings.connectors.connectedAccountsDesc")}
             </Text>
           </View>
 
@@ -551,10 +588,11 @@ export default function ConnectedAccountsScreen() {
               <View style={styles.emptyIconCircle}>
                 <Link2 size={24} color={colors.textMuted} />
               </View>
-              <Text style={styles.emptyTitle}>No Connected Accounts</Text>
+              <Text style={styles.emptyTitle}>
+                {t("settings.connectors.emptyTitle")}
+              </Text>
               <Text style={styles.emptySubtitle}>
-                Connect Google above to start synchronizing calendars, email,
-                and contacts into this Space.
+                {t("settings.connectors.emptyDesc")}
               </Text>
             </Card>
           ) : (
@@ -661,7 +699,7 @@ export default function ConnectedAccountsScreen() {
                             icon={
                               <CheckCircle2 size={12} color={colors.success} />
                             }
-                            label="Active"
+                            label={t("settings.connectors.statusActive")}
                           />
                         )}
                         {isReauthRequired && (
@@ -671,7 +709,7 @@ export default function ConnectedAccountsScreen() {
                             icon={
                               <AlertTriangle size={12} color={colors.warning} />
                             }
-                            label="Reconnect Required"
+                            label={t("settings.connectors.reconnectRequired")}
                           />
                         )}
                         {isRateLimited && (
@@ -679,7 +717,7 @@ export default function ConnectedAccountsScreen() {
                             variant="warning"
                             size="sm"
                             icon={<Clock size={12} color={colors.warning} />}
-                            label="Rate Limited"
+                            label={t("settings.connectors.rateLimited")}
                           />
                         )}
                         {isError && (
@@ -692,13 +730,17 @@ export default function ConnectedAccountsScreen() {
                                 color={colors.destructive}
                               />
                             }
-                            label="Error"
+                            label={t("settings.connectors.error")}
                           />
                         )}
                         <Text style={styles.lastSyncedText}>
                           {account.lastSyncTime
-                            ? `Synced ${tz.formatRelative(account.lastSyncTime)}`
-                            : "Never synced"}
+                            ? t("settings.connectors.syncedLabel", {
+                                relative: tz.formatRelative(
+                                  account.lastSyncTime
+                                ),
+                              })
+                            : t("settings.connectors.neverSynced")}
                         </Text>
                       </View>
                     </View>
@@ -709,8 +751,7 @@ export default function ConnectedAccountsScreen() {
                         <View style={styles.reconnectLeft}>
                           <AlertTriangle size={16} color={colors.warning} />
                           <Text style={styles.reconnectText}>
-                            Tokens have expired or authorization was revoked.
-                            Please reconnect to resume synchronization.
+                            {t("settings.connectors.reconnectBanner")}
                           </Text>
                         </View>
                         {isWritable && (
@@ -726,7 +767,7 @@ export default function ConnectedAccountsScreen() {
                             }
                           >
                             <Text style={styles.reconnectButtonText}>
-                              Reconnect
+                              {t("settings.connectors.reconnect")}
                             </Text>
                           </TouchableOpacity>
                         )}
@@ -736,7 +777,9 @@ export default function ConnectedAccountsScreen() {
                     {/* Capability Switches */}
                     <View style={styles.capabilityGroup}>
                       <Text style={styles.capabilityHeader}>
-                        ACTIVE PLATFORM CAPABILITIES
+                        {t(
+                          "settings.connectors.capabilitiesSection"
+                        ).toUpperCase()}
                       </Text>
                       <View style={styles.capabilityList}>
                         {CONNECTOR_CAPABILITIES.map((cap) => {
@@ -754,10 +797,10 @@ export default function ConnectedAccountsScreen() {
                                 </View>
                                 <View style={styles.capTextContainer}>
                                   <Text style={styles.capTitle}>
-                                    {CONNECTOR_CAPABILITY_LABELS[cap]}
+                                    {t(CAPABILITY_LABEL_KEYS[cap])}
                                   </Text>
                                   <Text style={styles.capDesc}>
-                                    {CONNECTOR_CAPABILITY_DESCRIPTIONS[cap]}
+                                    {t(CAPABILITY_DESC_KEYS[cap])}
                                   </Text>
                                 </View>
                               </View>
@@ -803,7 +846,9 @@ export default function ConnectedAccountsScreen() {
                           }
                         />
                         <Text style={styles.actionButtonText}>
-                          {isSyncingThis ? "Syncing..." : "Sync Now"}
+                          {isSyncingThis
+                            ? t("settings.connectors.syncingBtn")
+                            : t("settings.connectors.syncBtn")}
                         </Text>
                       </TouchableOpacity>
 
@@ -821,7 +866,7 @@ export default function ConnectedAccountsScreen() {
                         >
                           <Trash2 size={14} color={colors.destructive} />
                           <Text style={styles.destructiveActionText}>
-                            Disconnect
+                            {t("settings.connectors.disconnectBtn")}
                           </Text>
                         </TouchableOpacity>
                       )}
@@ -838,12 +883,12 @@ export default function ConnectedAccountsScreen() {
       <ConfirmDialog
         visible={Boolean(accountToDisconnect)}
         isDestructive
-        title="Disconnect Account"
-        message={`Are you sure you want to disconnect ${
+        title={t("settings.connectors.disconnectConfirmTitle")}
+        message={`${t("settings.connectors.disconnectConfirmQ1")} ${
           accountToDisconnect?.displayName || accountToDisconnect?.email || ""
-        }? Synced external mirrors (calendars, mail, and contacts) in this Space will be permanently deleted.`}
-        confirmText="Disconnect"
-        cancelText="Cancel"
+        }${t("settings.connectors.disconnectConfirmQ2")}`}
+        confirmText={t("settings.connectors.disconnect")}
+        cancelText={t("common.cancel")}
         onConfirm={handleConfirmDisconnect}
         onCancel={() => {
           haptics.light()
@@ -864,10 +909,16 @@ export default function ConnectedAccountsScreen() {
           onPress={() => setColorPickerAccount(null)}
         >
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Accent Color Tag</Text>
+            <Text style={styles.modalTitle}>
+              {t("settings.connectors.accentColorTitle")}
+            </Text>
             <Text style={styles.modalSubtitle}>
-              Select a color tag for{" "}
-              {colorPickerAccount?.displayName || colorPickerAccount?.email}
+              {t("settings.connectors.accentColorSelect", {
+                name:
+                  colorPickerAccount?.displayName ||
+                  colorPickerAccount?.email ||
+                  "",
+              })}
             </Text>
 
             <View style={styles.colorsGrid}>
@@ -899,7 +950,7 @@ export default function ConnectedAccountsScreen() {
               fullWidth
               onPress={() => setColorPickerAccount(null)}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
           </View>
         </TouchableOpacity>

@@ -117,23 +117,21 @@ export function CreateExpenseForm({
 
   const createExpenseMutation = useCreateExpenseMutation({
     onError: (err: unknown) => {
-      toast.add({
-        title: "Failed to record expense",
-        description:
-          err instanceof Error ? err.message : "Failed to record expense.",
-        type: "error",
-      })
+      const msg =
+        err instanceof Error
+          ? err.message
+          : t("finance.transactions.expenseForm.recordFailedDesc")
+      toast.add({ title: t("finance.transactions.expenseForm.recordFailed"), description: msg, type: "error" })
     },
   })
 
   const updateExpenseMutation = useUpdateExpenseMutation({
     onError: (err: unknown) => {
-      toast.add({
-        title: "Failed to update expense",
-        description:
-          err instanceof Error ? err.message : "Failed to update expense.",
-        type: "error",
-      })
+      const msg =
+        err instanceof Error
+          ? err.message
+          : t("finance.transactions.expenseForm.updateFailedDesc")
+      toast.add({ title: t("finance.transactions.expenseForm.updateFailed"), description: msg, type: "error" })
     },
   })
 

@@ -1,11 +1,13 @@
 import { Redirect, Stack } from "expo-router"
 import { Platform } from "react-native"
+import { useI18n } from "@saturn/hooks"
 import { useAuth } from "@/lib/auth-context"
 import { useTheme } from "@/lib/theme"
 
 export default function AuthLayout() {
   const { isAuthenticated, isLoading } = useAuth()
   const { colors, resolvedMode } = useTheme()
+  const { t } = useI18n()
 
   if (!isLoading && isAuthenticated) {
     return <Redirect href="/(app)/(tabs)" />
@@ -32,11 +34,11 @@ export default function AuthLayout() {
     >
       <Stack.Screen
         name="login"
-        options={{ title: "Sign In", headerShown: false }}
+        options={{ title: t("auth.signIn"), headerShown: false }}
       />
       <Stack.Screen
         name="register"
-        options={{ title: "Create Account", headerShown: false }}
+        options={{ title: t("auth.createAccount"), headerShown: false }}
       />
     </Stack>
   )

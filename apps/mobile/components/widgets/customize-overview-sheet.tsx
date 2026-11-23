@@ -161,8 +161,7 @@ export function CustomizeOverviewSheet({
               </Text>
             </View>
             <Text style={styles.sectionSubtitle}>
-              At least one widget must remain enabled. Changes sync across Web
-              and Mobile.
+              {t("dashboard.customizeSyncDesc")}
             </Text>
 
             <View style={styles.widgetsList}>

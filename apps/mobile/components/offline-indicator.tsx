@@ -3,6 +3,7 @@ import { Text, View, Platform } from "react-native"
 import { WifiOff } from "lucide-react-native"
 import { onlineManager } from "@tanstack/react-query"
 import NetInfo from "@react-native-community/netinfo"
+import { useI18n } from "@saturn/hooks"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
 interface OfflineIndicatorProps {
@@ -12,6 +13,7 @@ interface OfflineIndicatorProps {
 export function OfflineIndicator({ bottomOffset = 0 }: OfflineIndicatorProps) {
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
   const [isOffline, setIsOffline] = useState(false)
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export function OfflineIndicator({ bottomOffset = 0 }: OfflineIndicatorProps) {
       pointerEvents="none"
     >
       <WifiOff size={13} color={colors.warning} />
-      <Text style={styles.text}>Offline Mode — Showing cached data</Text>
+      <Text style={styles.text}>{t("common.offlineBanner")}</Text>
     </View>
   )
 }

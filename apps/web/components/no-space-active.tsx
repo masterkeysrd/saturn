@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { ArrowRight, Layers, Loader2 } from "lucide-react"
 import { useCreateSpaceMutation } from "@saturn/api/gen/saturn/space/v1/space"
+import { useI18n } from "@saturn/hooks"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
@@ -10,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/toast"
 
 export function NoSpaceActiveScreen() {
+  const { t } = useI18n()
   const [name, setName] = useState("")
   const [desc, setDesc] = useState("")
   const [isCreating, setIsCreating] = useState(false)
@@ -35,17 +37,19 @@ export function NoSpaceActiveScreen() {
       })
       toast.add({
         type: "success",
-        title: "Workspace Created",
-        description: `Workspace "${space.name}" created successfully.`,
+        title: t("settings.spaces.createOk"),
+        description: t("settings.spaces.createOkDesc", {
+          name: space.name ?? "",
+        }),
       })
       navigate(`/space/${space.id}/finance`)
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Failed to create workspace"
+        err instanceof Error ? err.message : t("settings.spaces.createFailedDefault")
       console.error(err)
       toast.add({
         type: "error",
-        title: "Creation Failed",
+        title: t("settings.spaces.createFailedToast"),
         description: message,
       })
     } finally {
@@ -61,11 +65,10 @@ export function NoSpaceActiveScreen() {
         </div>
         <div className="space-y-2">
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Create a Workspace
+            {t("space.createTitle")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Saturn organizes your budgets, transactions, and documents into
-            isolated spaces. Create your first workspace to get started.
+            {t("space.createDesc")}
           </p>
         </div>
 
@@ -75,11 +78,11 @@ export function NoSpaceActiveScreen() {
               htmlFor="spaceName"
               className="text-xs font-semibold text-muted-foreground uppercase"
             >
-              Workspace Name
+              {t("settings.spaces.mobile.workspaceName")}
             </Label>
             <Input
               id="spaceName"
-              placeholder="e.g. Personal, Business"
+              placeholder={t("settings.spaces.mobile.nameExample")}
               className="h-10 w-full rounded-xl border-border/60 bg-background/40"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -92,11 +95,11 @@ export function NoSpaceActiveScreen() {
               htmlFor="spaceDesc"
               className="text-xs font-semibold text-muted-foreground uppercase"
             >
-              Description (Optional)
+              {t("settings.spaces.mobile.descriptionOptional")}
             </Label>
             <Input
               id="spaceDesc"
-              placeholder="e.g. My daily expenses and savings"
+              placeholder={t("settings.spaces.mobile.descExample")}
               className="h-10 w-full rounded-xl border-border/60 bg-background/40"
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
@@ -112,7 +115,7 @@ export function NoSpaceActiveScreen() {
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <>
-                Create Workspace
+                {t("space.createCta")}
                 <ArrowRight className="h-4 w-4" />
               </>
             )}

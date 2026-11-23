@@ -10,6 +10,7 @@ import {
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import type { MenuAction, MenuComponentProps } from "@expo/ui/community/menu"
+import { useI18n } from "@saturn/hooks"
 import { useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
@@ -73,6 +74,7 @@ export function ActionMenu({
   ...rest
 }: MenuComponentProps) {
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
   const [sheetVisible, setSheetVisible] = useState(false)
   const insets = useSafeAreaInsets()
 
@@ -176,7 +178,7 @@ export function ActionMenu({
               style={styles.cancelButton}
               testID="action-menu-cancel"
             >
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>{t("common.cancel")}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>

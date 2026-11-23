@@ -109,23 +109,21 @@ export function CreateIncomeForm({
 
   const createIncomeMutation = useCreateIncomeMutation({
     onError: (err: unknown) => {
-      toast.add({
-        title: "Failed to record income",
-        description:
-          err instanceof Error ? err.message : "Failed to record income.",
-        type: "error",
-      })
+      const msg =
+        err instanceof Error
+          ? err.message
+          : t("finance.transactions.incomeForm.recordFailedDesc")
+      toast.add({ title: t("finance.transactions.incomeForm.recordFailed"), description: msg, type: "error" })
     },
   })
 
   const updateIncomeMutation = useUpdateIncomeMutation({
     onError: (err: unknown) => {
-      toast.add({
-        title: "Failed to update income",
-        description:
-          err instanceof Error ? err.message : "Failed to update income.",
-        type: "error",
-      })
+      const msg =
+        err instanceof Error
+          ? err.message
+          : t("finance.transactions.incomeForm.updateFailedDesc")
+      toast.add({ title: t("finance.transactions.incomeForm.updateFailed"), description: msg, type: "error" })
     },
   })
 

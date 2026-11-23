@@ -60,7 +60,7 @@ export default function AppLayout() {
         name="settings/space"
         options={{
           headerShown: true,
-          headerTitle: "Workspace Settings",
+          headerTitle: t("settings.spaces.mobile.title"),
           headerBackTitle: t("nav.settings"),
         }}
       />
@@ -68,7 +68,7 @@ export default function AppLayout() {
         name="settings/security"
         options={{
           headerShown: true,
-          headerTitle: "Active Sessions & Security",
+          headerTitle: t("settings.sessions.mobile.headerTitle"),
           headerBackTitle: t("nav.settings"),
         }}
       />
@@ -76,15 +76,15 @@ export default function AppLayout() {
         name="settings/api-keys"
         options={{
           headerShown: true,
-          headerTitle: "API Keys",
-          headerBackTitle: "Security",
+          headerTitle: t("settings.apiKeys.mobile.headerTitle"),
+          headerBackTitle: t("settings.sessions.mobile.headerTitle"),
         }}
       />
       <Stack.Screen
         name="settings/connected-accounts"
         options={{
           headerShown: true,
-          headerTitle: "Connected Accounts",
+          headerTitle: t("settings.connectors.connectedAccountsTitle"),
           headerBackTitle: t("nav.settings"),
         }}
       />

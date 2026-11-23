@@ -9,31 +9,31 @@ import { Badge, type BadgeVariant } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton-loader"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
+import type { TranslationKey } from "@saturn/i18n"
 
-function getRunStatusBadge(status?: string): {
-  variant: BadgeVariant
-  label: string
-} {
-  switch (status) {
-    case "completed":
-      return { variant: "success", label: "Completed" }
-    case "failed":
-      return { variant: "destructive", label: "Failed" }
-    case "running":
-      return { variant: "primary", label: "Running" }
-    case "waiting":
-      return { variant: "warning", label: "Waiting" }
-    case "pending":
-      return { variant: "warning", label: "Pending" }
-    case "filtered":
-      return { variant: "default", label: "Filtered" }
-    case "stopped":
-      return { variant: "default", label: "Stopped" }
-    case "cancelled":
-      return { variant: "default", label: "Cancelled" }
-    default:
-      return { variant: "default", label: status || "Unknown" }
-  }
+const RUN_STATUS_BADGE_KEYS: Record<
+  string,
+  { variant: BadgeVariant; labelKey: TranslationKey }
+> = {
+  completed: { variant: "success", labelKey: "workflows.runStatus.completed" },
+  failed: { variant: "destructive", labelKey: "workflows.runStatus.failed" },
+  running: { variant: "primary", labelKey: "workflows.runStatus.running" },
+  waiting: { variant: "warning", labelKey: "workflows.runStatus.waiting" },
+  pending: { variant: "warning", labelKey: "workflows.runStatus.pending" },
+  filtered: { variant: "default", labelKey: "workflows.runStatus.filtered" },
+  stopped: { variant: "default", labelKey: "workflows.runStatus.stopped" },
+  cancelled: { variant: "default", labelKey: "workflows.runStatus.cancelled" },
+}
+
+type Translate = (key: TranslationKey, params?: Record<string, string | number>) => string
+
+function getRunStatusBadge(
+  t: Translate,
+  status?: string
+): { variant: BadgeVariant; label: string } {
+  const badge = status ? RUN_STATUS_BADGE_KEYS[status] : undefined
+  if (badge) return { variant: badge.variant, label: t(badge.labelKey) }
+  return { variant: "default", label: status || t("common.unknown") }
 }
 
 export function WorkflowRunsWidget() {
@@ -98,7 +98,7 @@ export function WorkflowRunsWidget() {
             <Badge
               variant="destructive"
               size="sm"
-              label={`${failedCount} failed`}
+              label={`${failedCount} ${t("workflows.runsFailed")}`}
             />
           )}
           <ChevronRight size={16} color={colors.textMuted} />
@@ -114,7 +114,7 @@ export function WorkflowRunsWidget() {
       ) : (
         <View style={styles.list}>
           {runs.map((run, idx) => {
-            const statusInfo = getRunStatusBadge(run.status)
+            const statusInfo = getRunStatusBadge(t, run.status)
             const timestamp = run.startTime || run.createTime
             return (
               <TouchableOpacity

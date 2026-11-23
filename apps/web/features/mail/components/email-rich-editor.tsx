@@ -478,7 +478,7 @@ export const EmailRichEditor = forwardRef<
       <iframe
         ref={iframeRef}
         data-testid={testId}
-        title="Email composer editor"
+        title={t("mail.editorAriaTitle")}
         sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
         referrerPolicy="no-referrer"
         style={{

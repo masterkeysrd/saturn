@@ -6,7 +6,8 @@ import {
   ChevronRight,
 } from "lucide-react"
 import { formatShortMonth, parseDate } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
+import type { TranslationKey } from "@saturn/i18n"
 import { DatePicker } from "@/components/ui/date-picker"
 import {
   Popover,
@@ -34,16 +35,16 @@ export type {
 
 const PRESET_OPTIONS: {
   value: Exclude<FinancePeriodPreset, "month">
-  label: string
+  labelKey: TranslationKey
 }[] = [
-  { value: "this_month", label: "This Month" },
-  { value: "last_month", label: "Last Month" },
-  { value: "3m", label: "Last 3 Months" },
-  { value: "6m", label: "Last 6 Months" },
-  { value: "ytd", label: "Year to Date" },
-  { value: "12m", label: "Last 12 Months" },
-  { value: "all", label: "All Time" },
-  { value: "custom", label: "Custom Range…" },
+  { value: "this_month", labelKey: "finance.period.thisMonth" },
+  { value: "last_month", labelKey: "finance.period.lastMonth" },
+  { value: "3m", labelKey: "finance.period.last3" },
+  { value: "6m", labelKey: "finance.period.last6" },
+  { value: "ytd", labelKey: "finance.period.ytd" },
+  { value: "12m", labelKey: "finance.period.last12" },
+  { value: "all", labelKey: "finance.period.allTime" },
+  { value: "custom", labelKey: "finance.period.custom" },
 ]
 
 export interface FinancePeriodPickerProps {
@@ -58,6 +59,7 @@ export function FinancePeriodPicker({
   className,
 }: FinancePeriodPickerProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
   const now = tz.now()
   const nowParts = tz.parts(now)
   const nowYear = nowParts?.year ?? now.getUTCFullYear()
@@ -169,7 +171,7 @@ export function FinancePeriodPicker({
     >
       <button
         type="button"
-        aria-label="Previous month"
+        aria-label={t("datePicker.prevMonth")}
         onClick={() => handleStepMonth(-1)}
         className="flex h-full w-8 cursor-pointer items-center justify-center rounded-l-lg border-r border-border/70 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
       >
@@ -179,7 +181,7 @@ export function FinancePeriodPicker({
       <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger
           type="button"
-          aria-label="Select period"
+          aria-label={t("finance.period.selectPeriod")}
           className="flex h-full cursor-pointer items-center gap-2 px-3 text-xs font-medium whitespace-nowrap text-foreground transition-colors hover:bg-muted/40"
         >
           <CalendarIcon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -194,7 +196,7 @@ export function FinancePeriodPicker({
             <div className="flex items-center justify-between pb-2.5">
               <button
                 type="button"
-                aria-label="Previous year"
+                aria-label={t("finance.period.prevYear")}
                 onClick={() => setViewYear((y) => y - 1)}
                 className="flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
@@ -205,7 +207,7 @@ export function FinancePeriodPicker({
               </span>
               <button
                 type="button"
-                aria-label="Next year"
+                aria-label={t("finance.period.nextYear")}
                 onClick={() => setViewYear((y) => y + 1)}
                 className="flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
@@ -261,7 +263,7 @@ export function FinancePeriodPicker({
                         : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                     )}
                   >
-                    {preset.label}
+                    {t(preset.labelKey)}
                   </button>
                 )
               })}
@@ -271,7 +273,7 @@ export function FinancePeriodPicker({
               <div className="mt-2.5 space-y-2 border-t border-border/60 pt-2.5">
                 <div className="space-y-1">
                   <span className="text-[11px] font-medium text-muted-foreground">
-                    From
+                    {t("common.from")}
                   </span>
                   <DatePicker
                     date={fromDateObj}
@@ -283,13 +285,13 @@ export function FinancePeriodPicker({
                         dateTo: value.dateTo || bounds.ymdTo,
                       })
                     }
-                    placeholder="Start date"
+                    placeholder={t("finance.period.startDate")}
                     className="h-8 text-xs"
                   />
                 </div>
                 <div className="space-y-1">
                   <span className="text-[11px] font-medium text-muted-foreground">
-                    To
+                    {t("common.to")}
                   </span>
                   <DatePicker
                     date={toDateObj}
@@ -301,7 +303,7 @@ export function FinancePeriodPicker({
                         dateTo: d ? toYmdInTimezone(d, tz.timezone) : "",
                       })
                     }
-                    placeholder="End date"
+                    placeholder={t("finance.period.endDate")}
                     className="h-8 text-xs"
                   />
                 </div>
@@ -313,7 +315,7 @@ export function FinancePeriodPicker({
 
       <button
         type="button"
-        aria-label="Next month"
+        aria-label={t("datePicker.nextMonth")}
         onClick={() => handleStepMonth(1)}
         className="flex h-full w-8 cursor-pointer items-center justify-center rounded-r-lg border-l border-border/70 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
       >

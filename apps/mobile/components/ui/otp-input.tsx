@@ -13,6 +13,7 @@ import {
 } from "react-native"
 import * as Clipboard from "expo-clipboard"
 import { ClipboardPaste } from "lucide-react-native"
+import { useI18n } from "@saturn/hooks"
 import {
   Controller,
   type Control,
@@ -87,6 +88,7 @@ const OTPSlots = React.forwardRef<OTPTextInputRef, OTPSlotsProps>(
   ) {
     const { colors, isDark } = useTheme()
     const styles = useThemedStyles(createStyles)
+    const { t } = useI18n()
     const internalRef = useRef<OTPTextInputRef>(null)
     const pasteHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const isFocusedRef = useRef(false)
@@ -185,7 +187,7 @@ const OTPSlots = React.forwardRef<OTPTextInputRef, OTPSlotsProps>(
         const clean = normalizeOtpInput(raw || "", length)
         if (!clean) {
           haptics.warning()
-          setPasteHint("No verification code found in clipboard")
+          setPasteHint(t("auth.mobile.pasteEmpty"))
           if (pasteHintTimerRef.current) {
             clearTimeout(pasteHintTimerRef.current)
           }
@@ -341,10 +343,10 @@ const OTPSlots = React.forwardRef<OTPTextInputRef, OTPSlotsProps>(
           disabled={disabled}
           style={[styles.pasteButton, disabled && styles.pasteButtonDisabled]}
           accessibilityRole="button"
-          accessibilityLabel="Paste verification code"
+          accessibilityLabel={t("auth.mobile.pasteCodeAria")}
         >
           <ClipboardPaste size={14} color={colors.primary} />
-          <Text style={styles.pasteButtonText}>Paste code</Text>
+          <Text style={styles.pasteButtonText}>{t("auth.mobile.pasteCode")}</Text>
         </TouchableOpacity>
 
         {pasteHint && <Text style={styles.pasteHintText}>{pasteHint}</Text>}

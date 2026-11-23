@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CreateSpaceSchema, type CreateSpaceFormValues } from "@saturn/schemas"
 import { useCreateSpaceMutation } from "@saturn/api/saturn/space/v1/space"
+import { useI18n } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
@@ -26,6 +27,7 @@ export default function CreateSpaceModal() {
   const { switchSpace, refetchSpaces } = useSpace()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
 
   const {
     control,
@@ -57,18 +59,22 @@ export default function CreateSpaceModal() {
 
       toast.show({
         type: "success",
-        title: "Workspace Created",
-        message: `Active space switched to "${values.name.trim()}"`,
+        title: t("settings.spaces.mobile.createdToast"),
+        message: t("settings.spaces.mobile.createdSwitched", {
+          name: values.name.trim(),
+        }),
       })
 
       router.back()
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : "Failed to create workspace"
+        err instanceof Error
+          ? err.message
+          : t("settings.spaces.mobile.createFailedDefault")
       setError("name", { message: msg })
       toast.show({
         type: "error",
-        title: "Creation Failed",
+        title: t("settings.spaces.mobile.createFailedToast"),
         message: msg,
       })
     }
@@ -86,17 +92,14 @@ export default function CreateSpaceModal() {
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.subtitle}>
-          Workspaces keep your accounts, budgets, transactions, and automations
-          completely isolated.
-        </Text>
+        <Text style={styles.subtitle}>{t("settings.spaces.mobile.createDesc")}</Text>
 
         <Card style={styles.formCard}>
           <TextInput
             control={control}
             name="name"
-            label="Workspace Name"
-            placeholder="e.g. Personal, Consulting, Family"
+            label={t("settings.spaces.mobile.workspaceName")}
+            placeholder={t("settings.spaces.mobile.workspaceNamePlaceholder")}
             leftIcon={<Layers size={18} color={colors.primary} />}
             autoFocus
           />
@@ -104,8 +107,8 @@ export default function CreateSpaceModal() {
           <TextInput
             control={control}
             name="description"
-            label="Description (Optional)"
-            placeholder="e.g. Primary personal finance & budgeting"
+            label={t("settings.spaces.mobile.descriptionOptional")}
+            placeholder={t("settings.spaces.mobile.descriptionPlaceholder")}
             leftIcon={<FileText size={18} color={colors.textMuted} />}
             multiline
             numberOfLines={2}
@@ -120,7 +123,7 @@ export default function CreateSpaceModal() {
             leftIcon={<X size={18} color={colors.textMuted} />}
             onPress={() => router.back()}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
 
           <Button
@@ -131,7 +134,7 @@ export default function CreateSpaceModal() {
             leftIcon={<Check size={18} color={colors.primaryForeground} />}
             onPress={handleSubmit(onValid)}
           >
-            Create
+            {t("common.create")}
           </Button>
         </View>
       </ScrollView>

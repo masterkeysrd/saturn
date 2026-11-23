@@ -13,8 +13,10 @@ import {
   ArrowLeftIcon,
   LockIcon,
 } from "lucide-react"
+import { useI18n } from "@saturn/hooks"
 
 export function ResetPasswordView() {
+  const { t } = useI18n()
   const [searchParams] = useSearchParams()
   const token = searchParams.get("token") || ""
   const navigate = useNavigate()
@@ -22,9 +24,7 @@ export function ResetPasswordView() {
   const hasToken = Boolean(token.trim())
   const [username, setUsername] = useState<string | null>(null)
   const [isValidating, setIsValidating] = useState(hasToken)
-  const [validationError, setValidationError] = useState<string | null>(
-    hasToken ? null : "No password reset token was provided."
-  )
+  const [validationError, setValidationError] = useState<string | null>(null)
 
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -39,6 +39,7 @@ export function ResetPasswordView() {
     document.title = "Reset Password | Saturn"
 
     if (!hasToken) {
+      setValidationError(t("auth.reset.noToken"))
       return
     }
 
@@ -52,13 +53,12 @@ export function ResetPasswordView() {
         onError: (err) => {
           setIsValidating(false)
           setValidationError(
-            err.message ||
-              "This password reset link is invalid, expired, or has already been used."
+            err.message || t("auth.reset.linkInvalid")
           )
         },
       }
     )
-  }, [token, hasToken, validateMutation])
+  }, [token, hasToken, validateMutation, t])
 
   const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -67,13 +67,13 @@ export function ResetPasswordView() {
 
     const errors: { [key: string]: string } = {}
     if (!newPassword) {
-      errors.newPassword = "New password is required"
+      errors.newPassword = t("auth.reset.required")
     } else if (newPassword.length < 8) {
-      errors.newPassword = "Password must be at least 8 characters"
+      errors.newPassword = t("auth.reset.minLength")
     }
 
     if (newPassword !== confirmPassword) {
-      errors.confirmPassword = "Passwords do not match"
+      errors.confirmPassword = t("auth.reset.mismatch")
     }
 
     if (Object.keys(errors).length > 0) {
@@ -91,7 +91,7 @@ export function ResetPasswordView() {
       const message =
         err instanceof Error
           ? err.message
-          : "Failed to reset password. Please try again or request a new link."
+          : t("auth.reset.failed")
       setSubmitError(message)
     }
   }
@@ -100,13 +100,13 @@ export function ResetPasswordView() {
   if (isValidating) {
     return (
       <AuthCard
-        title="Validating Link"
-        subtitle="Verifying your password reset link..."
+        title={t("auth.reset.validatingTitle")}
+        subtitle={t("auth.reset.validatingSubtitle")}
       >
         <div className="flex flex-col items-center justify-center space-y-4 py-8">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           <p className="text-xs text-muted-foreground">
-            Checking token validity...
+            {t("auth.reset.checkingToken")}
           </p>
         </div>
       </AuthCard>
@@ -116,7 +116,10 @@ export function ResetPasswordView() {
   // 2. Token invalid / expired error state
   if (validationError) {
     return (
-      <AuthCard title="Invalid Link" subtitle="Unable to reset password">
+      <AuthCard
+        title={t("auth.reset.invalidTitle")}
+        subtitle={t("auth.reset.invalidSubtitle")}
+      >
         <div className="flex flex-col items-center space-y-4 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
             <AlertCircleIcon className="h-6 w-6" />
@@ -129,7 +132,7 @@ export function ResetPasswordView() {
                 className="cursor-pointer gap-2 rounded-xl"
               >
                 <ArrowLeftIcon className="h-4 w-4" />
-                Return to Login
+                {t("auth.reset.backToLogin")}
               </Button>
             </Link>
           </div>
@@ -142,23 +145,22 @@ export function ResetPasswordView() {
   if (isSuccess) {
     return (
       <AuthCard
-        title="Password Updated"
-        subtitle="Your password has been successfully reset"
+        title={t("auth.reset.successTitle")}
+        subtitle={t("auth.reset.successSubtitle")}
       >
         <div className="flex flex-col items-center space-y-4 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-500/10 text-green-500">
             <CheckCircle2Icon className="h-6 w-6" />
           </div>
           <p className="text-sm text-muted-foreground">
-            All active sessions have been signed out. You can now log in with
-            your new password.
+            {t("auth.reset.successDesc")}
           </p>
           <div className="w-full pt-4">
             <Button
               onClick={() => navigate("/login")}
               className="w-full cursor-pointer rounded-xl bg-primary font-semibold text-primary-foreground"
             >
-              Sign In
+              {t("auth.signIn")}
             </Button>
           </div>
         </div>
@@ -169,11 +171,11 @@ export function ResetPasswordView() {
   // 4. Reset password form
   return (
     <AuthCard
-      title="Reset Password"
+      title={t("auth.reset.title")}
       subtitle={
         username
-          ? `Enter a new password for @${username}`
-          : "Set a new secure password"
+          ? t("auth.reset.subtitleFor", { username })
+          : t("auth.reset.subtitle")
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -186,7 +188,7 @@ export function ResetPasswordView() {
 
         <FormInput
           id="newPassword"
-          label="New Password"
+          label={t("auth.reset.newPassword")}
           type="password"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
@@ -198,7 +200,7 @@ export function ResetPasswordView() {
 
         <FormInput
           id="confirmPassword"
-          label="Confirm Password"
+          label={t("auth.reset.confirmPassword")}
           type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
@@ -216,12 +218,12 @@ export function ResetPasswordView() {
           {completeMutation.isPending ? (
             <div className="flex items-center justify-center gap-2">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-              <span>Updating password...</span>
+              <span>{t("auth.reset.updating")}</span>
             </div>
           ) : (
             <div className="flex items-center justify-center gap-2">
               <LockIcon className="h-4 w-4" />
-              <span>Update Password</span>
+              <span>{t("auth.reset.submit")}</span>
             </div>
           )}
         </Button>
@@ -232,7 +234,7 @@ export function ResetPasswordView() {
             className="inline-flex items-center text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeftIcon className="mr-1.5 h-3.5 w-3.5" />
-            Back to Login
+            {t("auth.reset.backToLogin")}
           </Link>
         </div>
       </form>

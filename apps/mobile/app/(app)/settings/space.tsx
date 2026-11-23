@@ -43,8 +43,9 @@ import {
   type APIKeyGrant,
   type SpaceMember_Role,
 } from "@saturn/api/saturn/space/v1/space"
-import { useTimezone } from "@saturn/hooks"
-import { COMMON_TIMEZONES, SPACE_ROLE_OPTIONS } from "@saturn/core"
+import { useTimezone, useI18n } from "@saturn/hooks"
+import { COMMON_TIMEZONES } from "@saturn/core"
+import type { TranslationKey } from "@saturn/i18n"
 import { useSpace } from "@/lib/space-context"
 import { useAuth } from "@/lib/auth-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
@@ -60,9 +61,26 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useToast } from "@/components/ui/toast"
 import { haptics } from "@/lib/haptics"
 
+const ROLE_OPTIONS: readonly {
+  value: SpaceMember_Role
+  labelKey: TranslationKey
+}[] = [
+  { value: "ADMIN", labelKey: "settings.spaces.roleAdmin" },
+  { value: "MEMBER", labelKey: "settings.spaces.roleMember" },
+  { value: "VIEWER", labelKey: "settings.spaces.roleViewer" },
+]
+
+const ROLE_BADGE_LABEL_KEYS: Record<string, TranslationKey> = {
+  OWNER: "settings.spaces.roleOwner",
+  ADMIN: "settings.spaces.roleAdmin",
+  MEMBER: "settings.spaces.roleMember",
+  VIEWER: "settings.spaces.roleViewer",
+}
+
 export default function SpaceSettingsScreen() {
   const insets = useSafeAreaInsets()
   const toast = useToast()
+  const { t } = useI18n()
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const { colors, isDark } = useTheme()
@@ -161,15 +179,17 @@ export default function SpaceSettingsScreen() {
       setTimezoneSearch("")
       toast.show({
         type: "success",
-        title: "Timezone Updated",
-        message: `Workspace timezone set to ${tz}`,
+        title: t("settings.spacePrefs.saveOk"),
+        message: t("settings.spacePrefs.saveOkDesc", { timezone: tz }),
       })
     } catch (err: unknown) {
       toast.show({
         type: "error",
-        title: "Update Failed",
+        title: t("settings.spaces.updateFailedToast"),
         message:
-          err instanceof Error ? err.message : "Failed to update timezone",
+          err instanceof Error
+            ? err.message
+            : t("settings.spacePrefs.saveFailedDefault"),
       })
     }
   }
@@ -198,15 +218,17 @@ export default function SpaceSettingsScreen() {
       spaceForm.reset(values)
       toast.show({
         type: "success",
-        title: "Workspace Updated",
-        message: "Workspace details saved successfully",
+        title: t("settings.spaces.updateOk"),
+        message: t("settings.spaces.updateOkDesc"),
       })
     } catch (err: unknown) {
       toast.show({
         type: "error",
-        title: "Update Failed",
+        title: t("settings.spaces.updateFailedToast"),
         message:
-          err instanceof Error ? err.message : "Failed to update workspace",
+          err instanceof Error
+            ? err.message
+            : t("settings.spaces.updateDetailsFailed"),
       })
     }
   }
@@ -228,14 +250,17 @@ export default function SpaceSettingsScreen() {
       memberForm.reset({ userId: "", role: "MEMBER" })
       toast.show({
         type: "success",
-        title: "Member Added",
-        message: `User added to workspace`,
+        title: t("settings.spaces.addMemberOk"),
+        message: t("settings.spaces.addMemberOkDesc"),
       })
     } catch (err: unknown) {
       toast.show({
         type: "error",
-        title: "Failed to Add Member",
-        message: err instanceof Error ? err.message : "Could not add member",
+        title: t("settings.spaces.addMemberFailedToast"),
+        message:
+          err instanceof Error
+            ? err.message
+            : t("settings.spaces.addMemberFailed"),
       })
     }
   }
@@ -254,14 +279,17 @@ export default function SpaceSettingsScreen() {
       refetchMembers()
       toast.show({
         type: "info",
-        title: "Member Removed",
-        message: "Member removed from workspace",
+        title: t("settings.spaces.removeMemberOk"),
+        message: t("settings.spaces.removeMemberOkDesc"),
       })
     } catch (err: unknown) {
       toast.show({
         type: "error",
-        title: "Error",
-        message: err instanceof Error ? err.message : "Failed to remove member",
+        title: t("common.error"),
+        message:
+          err instanceof Error
+            ? err.message
+            : t("settings.spaces.removeMemberFailed"),
       })
     } finally {
       setMemberToRemove(null)
@@ -285,18 +313,20 @@ export default function SpaceSettingsScreen() {
       haptics.success()
       toast.show({
         type: "success",
-        title: "Workspace Access Revoked",
-        message: `Removed "${grantToRevoke.keyName}" access from this workspace.`,
+        title: t("settings.spaceKeys.revokeOk"),
+        message: t("settings.spaceKeys.revokeOkDesc", {
+          name: grantToRevoke.keyName ?? "",
+        }),
       })
     } catch (err: unknown) {
       haptics.error()
       toast.show({
         type: "error",
-        title: "Error",
+        title: t("common.error"),
         message:
           err instanceof Error
             ? err.message
-            : "Failed to revoke API key access",
+            : t("settings.spaceKeys.revokeFailedDesc"),
       })
     } finally {
       setGrantToRevoke(null)
@@ -320,12 +350,14 @@ export default function SpaceSettingsScreen() {
       >
         {/* Workspace Profile & Editing */}
         <View style={styles.section}>
-          <Caption style={styles.sectionHeader}>WORKSPACE DETAILS</Caption>
+          <Caption style={styles.sectionHeader}>
+            {t("settings.spaces.mobile.detailsSection").toUpperCase()}
+          </Caption>
           <Card style={styles.card}>
             <TextInput
               control={spaceForm.control}
               name="name"
-              label="Workspace Name"
+              label={t("settings.spaces.mobile.workspaceName")}
               editable={canManageMembers}
               leftIcon={<Layers size={18} color={colors.primary} />}
             />
@@ -333,7 +365,7 @@ export default function SpaceSettingsScreen() {
             <TextInput
               control={spaceForm.control}
               name="description"
-              label="Description"
+              label={t("settings.spaces.description")}
               editable={canManageMembers}
               multiline
               numberOfLines={2}
@@ -343,16 +375,16 @@ export default function SpaceSettingsScreen() {
               <View style={styles.metadataItem}>
                 <Key size={14} color={colors.textMuted} />
                 <Text style={styles.metadataText} numberOfLines={1}>
-                  ID: {activeSpaceId || "None"}
+                  ID: {activeSpaceId || t("settings.spaces.mobile.none")}
                 </Text>
               </View>
               <Badge
                 variant={isOwner ? "primary" : "default"}
                 size="sm"
-                label={
-                  activeSpaceRole.charAt(0).toUpperCase() +
-                  activeSpaceRole.slice(1)
-                }
+                label={t(
+                  ROLE_BADGE_LABEL_KEYS[activeSpaceRole] ??
+                    "settings.spaces.roleMember"
+                )}
               />
             </View>
 
@@ -368,7 +400,7 @@ export default function SpaceSettingsScreen() {
                 onPress={spaceForm.handleSubmit(handleSaveSpace)}
                 style={{ marginTop: 8 }}
               >
-                Save Changes
+                {t("settings.spaces.mobile.saveChanges")}
               </Button>
             )}
           </Card>
@@ -376,18 +408,21 @@ export default function SpaceSettingsScreen() {
 
         {/* Workspace Regional & Timezone Preferences */}
         <View style={styles.section}>
-          <Caption style={styles.sectionHeader}>WORKSPACE PREFERENCES</Caption>
+          <Caption style={styles.sectionHeader}>
+            {t("settings.spaces.mobile.preferencesSection").toUpperCase()}
+          </Caption>
           <Card style={styles.card}>
             <View style={styles.timezoneRow}>
               <View style={styles.timezoneIconCol}>
                 <Clock size={20} color={colors.primary} />
               </View>
               <View style={styles.timezoneInfoCol}>
-                <Text style={styles.timezoneLabel}>Workspace Timezone</Text>
+                <Text style={styles.timezoneLabel}>
+                  {t("settings.spacePrefs.timezoneLabel")}
+                </Text>
                 <Text style={styles.timezoneValue}>{timezone}</Text>
                 <Text style={styles.timezoneHelp}>
-                  Used for financial reporting, recurrence rules, and date
-                  calculations.
+                  {t("settings.spacePrefs.timezoneDesc")}
                 </Text>
               </View>
             </View>
@@ -403,7 +438,7 @@ export default function SpaceSettingsScreen() {
                 }}
                 style={{ marginTop: 8 }}
               >
-                Change Timezone
+                {t("settings.spaces.mobile.changeTimezone")}
               </Button>
             )}
           </Card>
@@ -413,7 +448,9 @@ export default function SpaceSettingsScreen() {
         <View style={styles.section}>
           <View style={styles.membersHeaderRow}>
             <Caption style={styles.sectionHeader}>
-              WORKSPACE MEMBERS ({members.length})
+              {t("settings.spaces.mobile.workspaceMembersCount", {
+                count: members.length,
+              }).toUpperCase()}
             </Caption>
             {canManageMembers && (
               <Button
@@ -426,7 +463,7 @@ export default function SpaceSettingsScreen() {
                   setInviteModalVisible(true)
                 }}
               >
-                Add Member
+                {t("settings.spaces.mobile.addMember")}
               </Button>
             )}
           </View>
@@ -437,14 +474,9 @@ export default function SpaceSettingsScreen() {
             <Card style={styles.membersList}>
               {members.map((m) => {
                 const isCurrent = m.userId === user?.id
-                const roleLabel =
-                  m.role === "OWNER"
-                    ? "Owner"
-                    : m.role === "ADMIN"
-                      ? "Admin"
-                      : m.role === "VIEWER"
-                        ? "Viewer"
-                        : "Member"
+                const roleLabel = t(
+                  ROLE_BADGE_LABEL_KEYS[m.role] ?? "settings.spaces.roleMember"
+                )
 
                 return (
                   <View key={m.userId} style={styles.memberRow}>
@@ -459,7 +491,9 @@ export default function SpaceSettingsScreen() {
                         <View style={styles.nameBadgeRow}>
                           <Text style={styles.memberName}>
                             {m.profile?.name || m.profile?.username || m.userId}
-                            {isCurrent ? " (You)" : ""}
+                            {isCurrent
+                              ? ` ${t("settings.spaces.mobile.you")}`
+                              : ""}
                           </Text>
                           <Badge
                             variant={m.role === "OWNER" ? "primary" : "default"}
@@ -492,7 +526,9 @@ export default function SpaceSettingsScreen() {
               {members.length === 0 && (
                 <View style={styles.emptyMembers}>
                   <Users size={24} color={colors.textMuted} />
-                  <Text style={styles.emptyText}>No additional members</Text>
+                  <Text style={styles.emptyText}>
+                    {t("settings.spaces.noMembers")}
+                  </Text>
                 </View>
               )}
             </Card>
@@ -503,7 +539,9 @@ export default function SpaceSettingsScreen() {
         {canManageMembers && (
           <View style={styles.section}>
             <Caption style={styles.sectionHeader}>
-              ACTIVE API KEY GRANTS ({apiKeyGrants.length})
+              {t("settings.spaces.mobile.activeApiKeyGrants", {
+                count: apiKeyGrants.length,
+              }).toUpperCase()}
             </Caption>
             {isGrantsLoading ? (
               <SkeletonCard />
@@ -539,8 +577,10 @@ export default function SpaceSettingsScreen() {
                         <Text style={styles.memberSub} numberOfLines={1}>
                           {(grant.scopes || []).join(", ")} ·{" "}
                           {grant.lastUsedAt
-                            ? `Used ${tz.formatDate(grant.lastUsedAt)}`
-                            : "Never used"}
+                            ? t("settings.spaces.mobile.usedLabel", {
+                                date: tz.formatDate(grant.lastUsedAt),
+                              })
+                            : t("settings.apiKeys.neverUsed")}
                         </Text>
                       </View>
                     </View>
@@ -552,7 +592,12 @@ export default function SpaceSettingsScreen() {
                         setGrantToRevoke(grant)
                       }}
                       style={styles.removeBtn}
-                      accessibilityLabel={`Revoke ${grant.keyName}`}
+                      accessibilityLabel={t(
+                        "settings.spaces.mobile.revokeAccessFor",
+                        {
+                          name: grant.keyName ?? "",
+                        }
+                      )}
                     >
                       <Trash2 size={16} color={colors.destructive} />
                     </TouchableOpacity>
@@ -563,7 +608,7 @@ export default function SpaceSettingsScreen() {
                   <View style={styles.emptyMembers}>
                     <Key size={24} color={colors.textMuted} />
                     <Text style={styles.emptyText}>
-                      No active API key grants on this workspace
+                      {t("settings.spaceKeys.emptyTitle")}
                     </Text>
                   </View>
                 )}
@@ -584,26 +629,32 @@ export default function SpaceSettingsScreen() {
             style={styles.inviteOverlay}
           >
             <Card style={styles.inviteCard}>
-              <Title style={{ marginBottom: 4 }}>Add Space Member</Title>
+              <Title style={{ marginBottom: 4 }}>
+                {t("settings.spaces.mobile.addMemberTitle")}
+              </Title>
               <Text style={styles.inviteSubtitle}>
-                Add a user by their unique User ID to collaborate in this
-                workspace.
+                {t("settings.spaces.mobile.addMemberSubtitle")}
               </Text>
 
               <TextInput
                 control={memberForm.control}
                 name="userId"
-                label="User ID"
+                label={t("settings.spaces.mobile.userIdLabel")}
                 placeholder="usr_..."
                 autoCapitalize="none"
               />
 
               <View style={styles.rolePickerSection}>
-                <Caption>ASSIGN ROLE</Caption>
+                <Caption>
+                  {t("settings.spaces.mobile.assignRole").toUpperCase()}
+                </Caption>
                 <FormPillGroup
                   control={memberForm.control}
                   name="role"
-                  options={SPACE_ROLE_OPTIONS}
+                  options={ROLE_OPTIONS.map((opt) => ({
+                    value: opt.value,
+                    label: t(opt.labelKey),
+                  }))}
                   pillStyle={{ flex: 1 }}
                 />
               </View>
@@ -615,7 +666,7 @@ export default function SpaceSettingsScreen() {
                   style={{ flex: 1 }}
                   onPress={() => setInviteModalVisible(false)}
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   variant="primary"
@@ -627,7 +678,7 @@ export default function SpaceSettingsScreen() {
                   }
                   onPress={memberForm.handleSubmit(handleAddMember)}
                 >
-                  Add
+                  {t("settings.spaces.mobile.add")}
                 </Button>
               </View>
             </Card>
@@ -651,10 +702,9 @@ export default function SpaceSettingsScreen() {
           >
             <View style={styles.tzModalHeader}>
               <View style={{ flex: 1 }}>
-                <Title>Workspace Timezone</Title>
+                <Title>{t("settings.spacePrefs.timezoneLabel")}</Title>
                 <Text style={styles.tzModalSubtitle}>
-                  Select the primary timezone for date calculations and
-                  reporting.
+                  {t("settings.spaces.mobile.tzModalSubtitle")}
                 </Text>
               </View>
               <TouchableOpacity
@@ -668,7 +718,7 @@ export default function SpaceSettingsScreen() {
             <View style={styles.tzSearchWrapper}>
               <Search size={18} color={colors.textMuted} />
               <RNTextInput
-                placeholder="Search timezones (e.g. New_York, Santo_Domingo)..."
+                placeholder={t("settings.spacePrefs.searchTzPlaceholder")}
                 placeholderTextColor={colors.textMuted}
                 keyboardAppearance={isDark ? "dark" : "light"}
                 value={timezoneSearch}
@@ -702,6 +752,13 @@ export default function SpaceSettingsScreen() {
                   </TouchableOpacity>
                 )
               }}
+              ListEmptyComponent={
+                <View style={styles.emptyMembers}>
+                  <Text style={styles.emptyText}>
+                    {t("settings.spacePrefs.noTzMatch")}
+                  </Text>
+                </View>
+              }
               contentContainerStyle={{ paddingBottom: 40 }}
             />
           </View>
@@ -710,10 +767,10 @@ export default function SpaceSettingsScreen() {
         {/* Confirm Member Removal Dialog */}
         <ConfirmDialog
           visible={!!memberToRemove}
-          title="Remove Member"
-          message="Are you sure you want to remove this member from the workspace? They will lose access immediately."
-          confirmText="Remove"
-          cancelText="Cancel"
+          title={t("settings.spaces.mobile.removeMemberTitle")}
+          message={t("settings.spaces.mobile.removeMemberDesc")}
+          confirmText={t("settings.spaces.mobile.remove")}
+          cancelText={t("common.cancel")}
           isDestructive
           loading={deleteMemberMutation.isPending}
           onConfirm={handleConfirmRemoveMember}
@@ -723,10 +780,12 @@ export default function SpaceSettingsScreen() {
         {/* Confirm API Key Grant Revocation Dialog */}
         <ConfirmDialog
           visible={!!grantToRevoke}
-          title="Revoke Workspace Access"
-          message={`Remove access for "${grantToRevoke?.keyName || ""}" from this workspace? The owner's other workspaces will remain unaffected.`}
-          confirmText="Revoke Access"
-          cancelText="Cancel"
+          title={t("settings.spaceKeys.revokeTitle")}
+          message={`${t("settings.spaceKeys.revokeDescQ1")} "${
+            grantToRevoke?.keyName || ""
+          }" ${t("settings.spaceKeys.revokeDescQ2")}`}
+          confirmText={t("settings.spaceKeys.btnRevokeAccess")}
+          cancelText={t("common.cancel")}
           isDestructive
           loading={revokeGrantMutation.isPending}
           onConfirm={handleConfirmRevokeGrant}

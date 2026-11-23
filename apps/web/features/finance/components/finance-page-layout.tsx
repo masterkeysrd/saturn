@@ -2,7 +2,7 @@ import { useState } from "react"
 import type { ElementType } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useActiveSpaceContext } from "@/features/space/use-space"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
 import {
   useGetSettingsQuery,
   useSetupMutation,
@@ -38,6 +38,7 @@ export function FinancePageLayout({
   actions,
   icon = PiggyBank,
 }: FinancePageLayoutProps) {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const { spaceId, spaceRole } = useActiveSpaceContext()
   const isWritable =
@@ -98,16 +99,15 @@ export function FinancePageLayout({
               <Coins className="size-6" />
             </div>
             <span className="rounded-md border border-border bg-muted/50 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-              Step 1 of 2
+              {t("finance.onboarding.stepOf", { current: 1, total: 2 })}
             </span>
           </div>
 
           <h2 className="mt-5 text-xl font-semibold tracking-tight text-foreground md:text-2xl">
-            Configure Finance settings
+            {t("finance.onboarding.configureTitle")}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Select the base currency for this workspace. This serves as your
-            default reporting currency across budgets, accounts, and insights.
+            {t("finance.onboarding.configureDesc")}
           </p>
 
           {!isWritable ? (
@@ -115,12 +115,10 @@ export function FinancePageLayout({
               <ShieldAlert className="mt-0.5 size-4 shrink-0 text-warning" />
               <div>
                 <p className="font-medium text-foreground">
-                  Read-only workspace access
+                  {t("finance.onboarding.readOnlyTitle")}
                 </p>
                 <p className="mt-0.5 text-xs leading-relaxed">
-                  Only workspace owners, administrators, or editors can
-                  initialize the Finance module. Ask an administrator to select
-                  the workspace base currency.
+                  {t("finance.onboarding.readOnlyDesc")}
                 </p>
               </div>
             </div>
@@ -131,14 +129,14 @@ export function FinancePageLayout({
                   htmlFor="baseCurrency"
                   className="text-[13px] font-medium text-foreground/90"
                 >
-                  Base currency
+                  {t("finance.onboarding.baseCurrency")}
                 </Label>
                 <CurrencyCombobox
                   id="baseCurrency"
                   value={setupCurrency}
                   onValueChange={setSetupCurrency}
                   disabled={!isWritable || setupMutation.isPending}
-                  aria-label="Base currency"
+                  aria-label={t("finance.onboarding.baseCurrency")}
                 />
               </div>
 
@@ -150,7 +148,7 @@ export function FinancePageLayout({
                 {setupMutation.isPending && (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 )}
-                Initialize Finance module
+                {t("finance.onboarding.initialize")}
               </Button>
             </form>
           )}
@@ -169,20 +167,19 @@ export function FinancePageLayout({
               <CheckCircle2 className="size-6" />
             </div>
             <span className="rounded-md border border-border bg-muted/50 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-              Step 2 of 2
+              {t("finance.onboarding.stepOf", { current: 2, total: 2 })}
             </span>
           </div>
 
           <h2 className="mt-5 text-xl font-semibold tracking-tight text-foreground md:text-2xl">
-            Finance workspace ready
+            {t("finance.onboarding.readyTitle")}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Base currency is set to{" "}
+            {t("finance.onboarding.readyDesc")}{" "}
             <span className="font-mono font-medium text-foreground">
               {resolvedCurrency}
             </span>
-            . Start by adding an account or creating your first budget, or jump
-            straight in.
+            . {t("finance.onboarding.readyTail")}
           </p>
 
           <div className="mt-6 divide-y divide-border/70 border-t border-b border-border/70">
@@ -197,14 +194,16 @@ export function FinancePageLayout({
                 </div>
                 <div>
                   <div className="text-sm font-medium text-foreground">
-                    Create your first account
+                    {t("finance.onboarding.firstAccountTitle")}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Track checking, credit card, cash, or digital balances
+                    {t("finance.onboarding.firstAccountDesc")}
                   </div>
                 </div>
               </div>
-              <span className="text-xs font-medium text-primary">Add</span>
+              <span className="text-xs font-medium text-primary">
+                {t("common.add")}
+              </span>
             </button>
 
             <button
@@ -218,14 +217,16 @@ export function FinancePageLayout({
                 </div>
                 <div>
                   <div className="text-sm font-medium text-foreground">
-                    Create your first budget
+                    {t("finance.onboarding.firstBudgetTitle")}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Set spending limits and monitor period pacing
+                    {t("finance.onboarding.firstBudgetDesc")}
                   </div>
                 </div>
               </div>
-              <span className="text-xs font-medium text-primary">Add</span>
+              <span className="text-xs font-medium text-primary">
+                {t("common.add")}
+              </span>
             </button>
           </div>
 
@@ -235,7 +236,7 @@ export function FinancePageLayout({
               onClick={() => setOnboardingStep("done")}
               className="h-10 cursor-pointer rounded-lg px-4 font-medium"
             >
-              Skip to Finance
+              {t("finance.onboarding.skip")}
             </Button>
           </div>
         </div>

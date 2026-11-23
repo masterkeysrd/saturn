@@ -34,7 +34,7 @@ import {
   type Device,
 } from "@saturn/api/saturn/identity/v1/identity"
 import { parseUserAgent } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { useTimezone, useI18n } from "@saturn/hooks"
 import { useAuth } from "@/lib/auth-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
@@ -49,6 +49,7 @@ import { haptics } from "@/lib/haptics"
 export default function SecuritySessionsScreen() {
   const router = useRouter()
   const toast = useToast()
+  const { t } = useI18n()
   const tz = useTimezone()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
@@ -116,12 +117,12 @@ export default function SecuritySessionsScreen() {
     haptics.warning()
 
     Alert.alert(
-      "Revoke Session?",
-      `Are you sure you want to disconnect "${parsed.device}"?`,
+      t("settings.sessions.mobile.revokeDevice", { device: parsed.device }),
+      t("settings.sessions.mobile.revokeDeviceDesc", { device: parsed.device }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Revoke",
+          text: t("settings.sessions.revoke"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -132,16 +133,19 @@ export default function SecuritySessionsScreen() {
               haptics.success()
               toast.show({
                 type: "success",
-                title: "Session Revoked",
-                message: `${parsed.device} was disconnected.`,
+                title: t("settings.sessions.mobile.sessionRevokedTitle"),
+                message: t("settings.sessions.mobile.sessionRevokedDesc", {
+                  device: parsed.device,
+                }),
               })
               await refetch()
             } catch (err: any) {
               haptics.error()
               toast.show({
                 type: "error",
-                title: "Revocation Failed",
-                message: err?.message || "Could not revoke session.",
+                title: t("settings.sessions.revokeFailedToast"),
+                message:
+                  err?.message || t("settings.sessions.revokeFailedDefault"),
               })
             }
           },
@@ -153,12 +157,12 @@ export default function SecuritySessionsScreen() {
   const promptRevokeAllSessions = () => {
     haptics.warning()
     Alert.alert(
-      "Sign Out of All Devices?",
-      "This will immediately invalidate all active sessions across every device, including this mobile phone. You will be redirected to the login screen.",
+      t("settings.sessions.mobile.revokeAllTitle"),
+      t("settings.sessions.mobile.revokeAllDesc"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Sign Out Everywhere",
+          text: t("settings.sessions.mobile.revokeAllConfirm"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -170,8 +174,9 @@ export default function SecuritySessionsScreen() {
               haptics.error()
               toast.show({
                 type: "error",
-                title: "Action Failed",
-                message: err?.message || "Could not revoke all sessions.",
+                title: t("settings.sessions.revokeAllFailedToast"),
+                message:
+                  err?.message || t("settings.sessions.revokeAllFailedDefault"),
               })
             }
           },
@@ -197,15 +202,16 @@ export default function SecuritySessionsScreen() {
       haptics.success()
       toast.show({
         type: "success",
-        title: "Device Enrolled",
-        message: "Biometrics is now enabled on this device.",
+        title: t("settings.devices.mobile.enrolledToastTitle"),
+        message: t("settings.devices.mobile.enrolledToastDesc"),
       })
       setMfaModalVisible(false)
       const storedId = await getStoredDeviceId()
       setCurrentDeviceId(storedId)
       await Promise.all([refetchDevices(), refetchMfa()])
     } catch (err: any) {
-      const msg = err?.message || "Failed to enroll device"
+      const msg =
+        err?.message || t("settings.devices.mobile.enrollFailedDefault")
       if (
         msg.toLowerCase().includes("mfa") ||
         msg.toLowerCase().includes("totp") ||
@@ -213,13 +219,13 @@ export default function SecuritySessionsScreen() {
       ) {
         setMfaModalVisible(true)
         if (code) {
-          setMfaError("Invalid verification code. Please try again.")
+          setMfaError(t("settings.devices.mobile.invalidCode"))
         }
       } else {
         haptics.error()
         toast.show({
           type: "error",
-          title: "Enrollment Failed",
+          title: t("settings.devices.mobile.enrollFailedToast"),
           message: msg,
         })
       }
@@ -234,14 +240,18 @@ export default function SecuritySessionsScreen() {
     haptics.warning()
 
     Alert.alert(
-      isThisDevice ? "Remove This Device?" : "Revoke Device?",
       isThisDevice
-        ? `Are you sure you want to remove biometric authentication for this device ("${device.deviceName}")? You will need to re-enroll with your password.`
-        : `Are you sure you want to revoke "${device.deviceName}"? This device will no longer be able to use biometric sign-in.`,
+        ? t("settings.devices.mobile.removeThisDevice")
+        : t("settings.devices.revokeDevice"),
+      isThisDevice
+        ? t("settings.devices.mobile.removeThisDeviceDesc", {
+            name: device.deviceName,
+          })
+        : t("settings.devices.revokeConfirmDesc", { name: device.deviceName }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Revoke",
+          text: t("settings.devices.revoke"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -256,16 +266,19 @@ export default function SecuritySessionsScreen() {
               haptics.success()
               toast.show({
                 type: "success",
-                title: "Device Revoked",
-                message: `${device.deviceName} has been revoked.`,
+                title: t("settings.devices.mobile.revokedTitle"),
+                message: t("settings.devices.mobile.revokedDesc", {
+                  name: device.deviceName,
+                }),
               })
               await refetchDevices()
             } catch (err: any) {
               haptics.error()
               toast.show({
                 type: "error",
-                title: "Revocation Failed",
-                message: err?.message || "Could not revoke device.",
+                title: t("settings.sessions.revokeFailedToast"),
+                message:
+                  err?.message || t("settings.devices.revokeFailedDefault"),
               })
             }
           },
@@ -275,14 +288,14 @@ export default function SecuritySessionsScreen() {
   }
 
   const formatTimestamp = (ts?: string) => {
-    if (!ts) return "Unknown"
+    if (!ts) return t("settings.sessions.mobile.unknown")
     return (
       tz.format(ts, {
         month: "short",
         day: "numeric",
         hour: "2-digit",
         minute: "2-digit",
-      }) || "Unknown"
+      }) || t("settings.sessions.mobile.unknown")
     )
   }
 
@@ -319,11 +332,10 @@ export default function SecuritySessionsScreen() {
             </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoTitle}>
-                Authorized Logins & Hardware Devices
+                {t("settings.sessions.mobile.infoTitle")}
               </Text>
               <Text style={styles.infoSubtitle}>
-                Manage hardware-backed biometric authenticators and active
-                sign-in sessions for your Saturn account.
+                {t("settings.sessions.mobile.infoDesc")}
               </Text>
             </View>
           </View>
@@ -331,7 +343,9 @@ export default function SecuritySessionsScreen() {
 
         {/* Section: Password & Credentials */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionHeader}>PASSWORD & CREDENTIALS</Text>
+          <Text style={styles.sectionHeader}>
+            {t("settings.sessions.mobile.passwordSection").toUpperCase()}
+          </Text>
         </View>
 
         <Card style={styles.actionCard}>
@@ -340,9 +354,11 @@ export default function SecuritySessionsScreen() {
               <KeyRound size={20} color={colors.primary} />
             </View>
             <View style={styles.actionTextContainer}>
-              <Text style={styles.actionTitle}>Password</Text>
+              <Text style={styles.actionTitle}>
+                {t("settings.password.title")}
+              </Text>
               <Text style={styles.actionSubtitle}>
-                Update your account password across all devices.
+                {t("settings.password.desc")}
               </Text>
             </View>
           </View>
@@ -352,7 +368,7 @@ export default function SecuritySessionsScreen() {
             onPress={() => setChangePasswordVisible(true)}
             style={styles.changePasswordBtn}
           >
-            Change Password
+            {t("settings.password.btnChange")}
           </Button>
         </Card>
 
@@ -362,9 +378,11 @@ export default function SecuritySessionsScreen() {
               <KeyRound size={20} color={colors.primary} />
             </View>
             <View style={styles.actionTextContainer}>
-              <Text style={styles.actionTitle}>Personal API Keys</Text>
+              <Text style={styles.actionTitle}>
+                {t("settings.apiKeys.title")}
+              </Text>
               <Text style={styles.actionSubtitle}>
-                Create fine-grained tokens for scripts, Shortcuts, and webhooks.
+                {t("settings.sessions.mobile.apiKeyCardDesc")}
               </Text>
             </View>
           </View>
@@ -377,7 +395,7 @@ export default function SecuritySessionsScreen() {
             }}
             style={styles.changePasswordBtn}
           >
-            Manage API Keys
+            {t("settings.sessions.mobile.manageApiKeys")}
           </Button>
         </Card>
 
@@ -385,8 +403,12 @@ export default function SecuritySessionsScreen() {
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionHeader}>
             {devices.length > 0
-              ? `TRUSTED HARDWARE DEVICES (${devices.length})`
-              : "TRUSTED HARDWARE DEVICES"}
+              ? t("settings.devices.mobile.trustedDevicesCount", {
+                  count: devices.length,
+                }).toUpperCase()
+              : t(
+                  "settings.devices.mobile.trustedDevicesSection"
+                ).toUpperCase()}
           </Text>
         </View>
 
@@ -398,10 +420,11 @@ export default function SecuritySessionsScreen() {
                 <Fingerprint size={22} color={colors.primary} />
               </View>
               <View style={styles.enrollTextContainer}>
-                <Text style={styles.enrollTitle}>Enable Biometrics</Text>
+                <Text style={styles.enrollTitle}>
+                  {t("settings.devices.mobile.enableBiometrics")}
+                </Text>
                 <Text style={styles.enrollSubtitle}>
-                  Sign in securely with hardware-backed biometric verification
-                  without entering your password.
+                  {t("settings.devices.mobile.enrollDesc")}
                 </Text>
               </View>
             </View>
@@ -415,7 +438,7 @@ export default function SecuritySessionsScreen() {
               }
               style={styles.enrollBtn}
             >
-              Enroll This Device
+              {t("settings.devices.mobile.enrollThisDevice")}
             </Button>
           </Card>
         )}
@@ -424,22 +447,28 @@ export default function SecuritySessionsScreen() {
         {isDevicesLoading && devices.length === 0 ? (
           <Card style={styles.emptyCard}>
             <RefreshCw size={24} color={colors.textMuted} />
-            <Text style={styles.emptyText}>Loading trusted devices...</Text>
+            <Text style={styles.emptyText}>
+              {t("settings.devices.loading")}
+            </Text>
           </Card>
         ) : devices.length === 0 && !isBiometricSupported ? (
           <Card style={styles.emptyCard}>
             <Shield size={28} color={colors.textMuted} />
-            <Text style={styles.emptyText}>No trusted devices registered.</Text>
+            <Text style={styles.emptyText}>
+              {t("settings.devices.emptyTitle")}
+            </Text>
             <Text style={styles.emptySubtext}>
-              Biometric hardware authentication is not available on this device.
+              {t("settings.devices.mobile.noHardware")}
             </Text>
           </Card>
         ) : devices.length === 0 && isDeviceEnrolled ? (
           <Card style={styles.emptyCard}>
             <Shield size={28} color={colors.textMuted} />
-            <Text style={styles.emptyText}>No registered devices found.</Text>
+            <Text style={styles.emptyText}>
+              {t("settings.devices.mobile.noDevicesFound")}
+            </Text>
             <Text style={styles.emptySubtext}>
-              Enrolled credentials may have expired or been revoked.
+              {t("settings.devices.mobile.noDevicesFoundDesc")}
             </Text>
           </Card>
         ) : devices.length > 0 ? (
@@ -462,12 +491,14 @@ export default function SecuritySessionsScreen() {
                             <Badge
                               variant="success"
                               size="sm"
-                              label="This Device"
+                              label={t("settings.devices.mobile.enrolledBadge")}
                             />
                           )}
                         </View>
                         <Text style={styles.sessionUa} numberOfLines={1}>
-                          Algorithm: {device.algorithm || "ES256"}
+                          {t("settings.devices.mobile.algorithmLabel", {
+                            algorithm: device.algorithm || "ES256",
+                          })}
                         </Text>
                       </View>
                     </View>
@@ -477,7 +508,9 @@ export default function SecuritySessionsScreen() {
                       activeOpacity={0.7}
                       onPress={() => promptRevokeDevice(device)}
                       disabled={revokeDeviceMutation.isPending}
-                      accessibilityLabel={`Revoke ${device.deviceName}`}
+                      accessibilityLabel={t("settings.devices.revokeDevice", {
+                        name: device.deviceName,
+                      })}
                     >
                       <Trash2 size={16} color={colors.destructive} />
                     </TouchableOpacity>
@@ -489,13 +522,17 @@ export default function SecuritySessionsScreen() {
                     <View style={styles.metaItem}>
                       <Clock size={13} color={colors.textMuted} />
                       <Text style={styles.metaText}>
-                        Enrolled: {formatTimestamp(device.createTime)}
+                        {t("settings.devices.enrolledOn", {
+                          date: formatTimestamp(device.createTime),
+                        })}
                       </Text>
                     </View>
                     <View style={styles.metaItem}>
                       <Clock size={13} color={colors.textMuted} />
                       <Text style={styles.metaText}>
-                        Expires: {formatTimestamp(device.expireTime)}
+                        {t("settings.devices.expiresOn", {
+                          date: formatTimestamp(device.expireTime),
+                        })}
                       </Text>
                     </View>
                   </View>
@@ -508,7 +545,9 @@ export default function SecuritySessionsScreen() {
         {/* Sessions List Header */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionHeader}>
-            ACTIVE SESSIONS ({sessions.length})
+            {t("settings.sessions.mobile.activeSessionsCount", {
+              count: sessions.length,
+            }).toUpperCase()}
           </Text>
           {sessions.length > 1 && (
             <TouchableOpacity
@@ -516,7 +555,9 @@ export default function SecuritySessionsScreen() {
               activeOpacity={0.7}
               disabled={revokeAllSessionsMutation.isPending}
             >
-              <Text style={styles.revokeAllText}>Sign Out Everywhere</Text>
+              <Text style={styles.revokeAllText}>
+                {t("settings.sessions.mobile.revokeAllAction")}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -525,12 +566,16 @@ export default function SecuritySessionsScreen() {
         {isLoading && sessions.length === 0 ? (
           <Card style={styles.emptyCard}>
             <RefreshCw size={24} color={colors.textMuted} />
-            <Text style={styles.emptyText}>Loading active sessions...</Text>
+            <Text style={styles.emptyText}>
+              {t("settings.sessions.mobile.loadingSessions")}
+            </Text>
           </Card>
         ) : sessions.length === 0 ? (
           <Card style={styles.emptyCard}>
             <Globe size={28} color={colors.textMuted} />
-            <Text style={styles.emptyText}>No active sessions found.</Text>
+            <Text style={styles.emptyText}>
+              {t("settings.sessions.mobile.noSessions")}
+            </Text>
           </Card>
         ) : (
           <View style={styles.sessionsList}>
@@ -554,12 +599,13 @@ export default function SecuritySessionsScreen() {
                             <Badge
                               variant="success"
                               size="sm"
-                              label="Current Device"
+                              label={t("settings.sessions.currentDevice")}
                             />
                           )}
                         </View>
                         <Text style={styles.sessionUa} numberOfLines={1}>
-                          {session.userAgent || "Generic client"}
+                          {session.userAgent ||
+                            t("settings.sessions.mobile.genericClient")}
                         </Text>
                       </View>
                     </View>
@@ -584,14 +630,16 @@ export default function SecuritySessionsScreen() {
                     <View style={styles.metaItem}>
                       <MapPin size={13} color={colors.textMuted} />
                       <Text style={styles.metaText}>
-                        {session.ipAddress || "Unknown IP"}
+                        {session.ipAddress || t("settings.sessions.unknownIp")}
                       </Text>
                     </View>
 
                     <View style={styles.metaItem}>
                       <Clock size={13} color={colors.textMuted} />
                       <Text style={styles.metaText}>
-                        Active: {formatTimestamp(session.lastUsedAt)}
+                        {t("settings.sessions.mobile.activeLabel", {
+                          date: formatTimestamp(session.lastUsedAt),
+                        })}
                       </Text>
                     </View>
                   </View>
@@ -611,7 +659,7 @@ export default function SecuritySessionsScreen() {
             disabled={revokeAllSessionsMutation.isPending}
             style={styles.signOutAllBtn}
           >
-            Sign Out of All Devices
+            {t("settings.sessions.mobile.signOutOfAllDevices")}
           </Button>
         )}
       </ScrollView>

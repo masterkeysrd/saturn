@@ -278,7 +278,7 @@ export function StageToFinanceDialog({
               <CurrencyCombobox
                 value={currency}
                 onValueChange={setCurrency}
-                aria-label="Currency"
+                aria-label={t("mail.currencyLabel")}
               />
               <AmountInput
                 id="stage-finance-amount"

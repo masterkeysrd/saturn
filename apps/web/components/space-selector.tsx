@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useI18n } from "@saturn/hooks"
 import { useMySpaces, useActiveSpaceContext } from "@/features/space/use-space"
 import { useLocation, useNavigate } from "react-router-dom"
 import { Check, ChevronsUpDown, Loader2, SettingsIcon } from "lucide-react"
@@ -16,6 +17,7 @@ import { useAuth } from "@/features/auth/use-auth"
 import { resolveNextSpaceRoute } from "@/lib/space-route"
 
 export function SpaceSelector({ className }: { className?: string }) {
+  const { t } = useI18n()
   const { user } = useAuth()
   const { spaces, isLoading } = useMySpaces()
   const { spaceId, activeSpace, switchSpace } = useActiveSpaceContext()
@@ -28,7 +30,7 @@ export function SpaceSelector({ className }: { className?: string }) {
     return (
       <div className="flex h-7 items-center gap-1.5 px-2 text-xs text-muted-foreground">
         <Loader2 className="size-3.5 animate-spin" />
-        <span className="hidden sm:inline">Loading...</span>
+        <span className="hidden sm:inline">{t("common.loading")}</span>
       </div>
     )
   }
@@ -40,7 +42,7 @@ export function SpaceSelector({ className }: { className?: string }) {
           <Button
             variant="ghost"
             size="sm"
-            aria-label="Switch Workspace"
+            aria-label={t("space.switchTitle")}
             className={cn(
               "h-7 max-w-[180px] cursor-pointer gap-1.5 rounded-lg px-2 text-sm font-medium text-foreground hover:bg-muted/70 sm:max-w-[220px]",
               className
@@ -52,13 +54,15 @@ export function SpaceSelector({ className }: { className?: string }) {
           {activeSpace?.name ? activeSpace.name[0].toUpperCase() : "S"}
         </span>
         <span className="truncate">
-          {activeSpace ? activeSpace.name : "Select Space"}
+          {activeSpace ? activeSpace.name : t("space.selectPlaceholder")}
         </span>
         <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" sideOffset={6} className="w-64">
         <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-          {spaces.length} Workspace{spaces.length !== 1 ? "s" : ""}
+          {spaces.length === 1
+            ? t("space.countOne")
+            : t("space.countOther", { count: spaces.length })}
         </div>
         <DropdownMenuSeparator />
         {spaces.map((space) => (
@@ -110,7 +114,7 @@ export function SpaceSelector({ className }: { className?: string }) {
           className="cursor-pointer"
         >
           <SettingsIcon className="size-4 text-muted-foreground" />
-          <span>Manage Spaces</span>
+          <span>{t("space.manageTitle")}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

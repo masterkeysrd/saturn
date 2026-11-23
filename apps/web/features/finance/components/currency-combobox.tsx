@@ -5,6 +5,7 @@ import {
   useListCurrenciesQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { getCurrencySymbol } from "@saturn/core"
+import { useI18n } from "@saturn/hooks"
 import {
   Popover,
   PopoverContent,
@@ -49,10 +50,11 @@ export function CurrencyCombobox({
   value,
   onValueChange,
   disabled = false,
-  placeholder = "Select currency...",
+  placeholder,
   className,
   "aria-label": ariaLabel,
 }: CurrencyComboboxProps) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
 
   const { data: currenciesData } = useListCurrenciesQuery(
@@ -111,7 +113,9 @@ export function CurrencyCombobox({
             </span>
           </span>
         ) : (
-          <span className="truncate text-muted-foreground">{placeholder}</span>
+          <span className="truncate text-muted-foreground">
+            {placeholder ?? t("finance.pickers.currency.defaultTitle")}
+          </span>
         )}
         <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
       </PopoverTrigger>
@@ -120,9 +124,11 @@ export function CurrencyCombobox({
         className="w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-popover p-0 shadow-xl"
       >
         <Command>
-          <CommandInput placeholder="Search code, name, or symbol..." />
+          <CommandInput placeholder={t("finance.pickers.currency.searchPlaceholder")} />
           <CommandList>
-            <CommandEmpty>No matching currency found.</CommandEmpty>
+            <CommandEmpty>
+              {t("finance.pickers.currency.noCurrenciesFound")}
+            </CommandEmpty>
             <CommandGroup>
               {items.map((currency) => {
                 const isSelected = currency.code === value

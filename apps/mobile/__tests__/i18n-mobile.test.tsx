@@ -570,6 +570,57 @@ function FinanceI18nProbe() {
       <span data-testid="wf-generate-draft">
         {t("workflows.mobile.generateDraft")}
       </span>
+      <span data-testid="conn-title">
+        {t("settings.connectors.connectedAccountsTitle")}
+      </span>
+      <span data-testid="conn-connect-google">
+        {t("settings.connectors.connectGoogle")}
+      </span>
+      <span data-testid="conn-coming-soon">
+        {t("settings.connectors.comingSoon")}
+      </span>
+      <span data-testid="conn-admin-only">
+        {t("settings.connectors.adminOnly")}
+      </span>
+      <span data-testid="conn-never-synced">
+        {t("settings.connectors.neverSynced")}
+      </span>
+      <span data-testid="conn-cap-cals">
+        {t("settings.connectors.capCalendar")}
+      </span>
+      <span data-testid="conn-status-active">
+        {t("settings.connectors.statusActive")}
+      </span>
+      <span data-testid="conn-cancel">{t("common.cancel")}</span>
+      <span data-testid="ws-title">{t("settings.spaces.mobile.title")}</span>
+      <span data-testid="ws-add-member">
+        {t("settings.spaces.mobile.addMember")}
+      </span>
+      <span data-testid="ws-you">{t("settings.spaces.mobile.you")}</span>
+      <span data-testid="sec-title">
+        {t("settings.sessions.mobile.headerTitle")}
+      </span>
+      <span data-testid="sec-signout-all">
+        {t("settings.sessions.mobile.revokeAllAction")}
+      </span>
+      <span data-testid="sec-enrolled-on">
+        {t("settings.devices.enrolledOn", { date: "12 feb" })}
+      </span>
+      <span data-testid="ak-title">
+        {t("settings.apiKeys.mobile.headerTitle")}
+      </span>
+      <span data-testid="ak-never-used">{t("settings.apiKeys.neverUsed")}</span>
+      <span data-testid="hub-title">{t("settings.hub.title")}</span>
+      <span data-testid="hub-clear-cache">
+        {t("settings.hub.mobile.clearCache")}
+      </span>
+      <span data-testid="hub-soon">{t("settings.hub.mobile.soon")}</span>
+      <span data-testid="hub-device-count">
+        {t("settings.hub.mobile.deviceCountOther", { count: 3 })}
+      </span>
+      <span data-testid="srv-section">
+        {t("settings.server.sectionHeader").toUpperCase()}
+      </span>
     </div>
   )
 }
@@ -902,6 +953,41 @@ describe("Mobile i18n & User-Scoped Regional Preferences", () => {
     expect(getByTestId("wf-generate-draft").textContent).toBe(
       "Generar borrador"
     )
+    expect(getByTestId("conn-title").textContent).toBe("Cuentas conectadas")
+    expect(getByTestId("conn-connect-google").textContent).toBe(
+      "Conectar Google"
+    )
+    expect(getByTestId("conn-coming-soon").textContent).toBe("Próximamente")
+    expect(getByTestId("conn-admin-only").textContent).toBe(
+      "Solo administrador"
+    )
+    expect(getByTestId("conn-never-synced").textContent).toBe(
+      "Nunca sincronizada"
+    )
+    expect(getByTestId("conn-cap-cals").textContent).toBe("Calendarios")
+    expect(getByTestId("conn-status-active").textContent).toBe("Activa")
+    expect(getByTestId("conn-cancel").textContent).toBe("Cancelar")
+    expect(getByTestId("ws-title").textContent).toBe(
+      "Configuración del espacio de trabajo"
+    )
+    expect(getByTestId("ws-add-member").textContent).toBe("Añadir miembro")
+    expect(getByTestId("ws-you").textContent).toBe("(Tú)")
+    expect(getByTestId("sec-title").textContent).toBe(
+      "Sesiones activas y seguridad"
+    )
+    expect(getByTestId("sec-signout-all").textContent).toBe(
+      "Cerrar sesión en todos los dispositivos"
+    )
+    expect(getByTestId("sec-enrolled-on").textContent).toBe("Registrado 12 feb")
+    expect(getByTestId("ak-title").textContent).toBe("Claves de API")
+    expect(getByTestId("ak-never-used").textContent).toBe("Nunca usada")
+    expect(getByTestId("hub-title").textContent).toBe("Configuración")
+    expect(getByTestId("hub-clear-cache").textContent).toBe(
+      "Borrar caché sin conexión"
+    )
+    expect(getByTestId("hub-soon").textContent).toBe("Pronto")
+    expect(getByTestId("hub-device-count").textContent).toBe("3 dispositivos")
+    expect(getByTestId("srv-section").textContent).toBe("ENTORNO AUTOALOJADO")
   })
 
   it("renders Spanish date section headers via useDateSections", () => {

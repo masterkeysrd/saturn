@@ -89,15 +89,14 @@ export function LoginView() {
     const code = codeToVerify ?? (useBackupCode ? backupCode : totpCode)
     if (useBackupCode) {
       if (!code.trim()) {
-        setMfaError("Backup recovery code is required")
+        setMfaError(t("auth.mfa.backupRequired"))
         return
       }
     } else {
       const validation = MfaStepUpSchema.safeParse({ code: code.trim() })
       if (!validation.success) {
         setMfaError(
-          validation.error.issues[0]?.message ||
-            "Please enter a valid 6-digit verification code"
+          validation.error.issues[0]?.message || t("settings.mfa.invalidTotp")
         )
         return
       }
@@ -139,11 +138,11 @@ export function LoginView() {
   if (mfaStep) {
     return (
       <AuthCard
-        title="Two-Factor Authentication"
+        title={t("auth.mfa.cardTitle")}
         subtitle={
           useBackupCode
-            ? "Enter an 8-character single-use recovery code"
-            : "Enter the 6-digit code from your authenticator app"
+            ? t("auth.mfa.recoveryCodeDesc")
+            : t("auth.mfa.totpCodeDesc")
         }
       >
         <form
@@ -167,10 +166,10 @@ export function LoginView() {
                   htmlFor="totpCode"
                   className="text-xs font-medium text-foreground"
                 >
-                  6-Digit Verification Code
+                  {t("auth.mobile.digitCode")}
                 </label>
                 <p className="text-xs text-muted-foreground">
-                  Enter the code displayed in your authenticator app.
+                  {t("auth.mfa.totpEnterDesc")}
                 </p>
               </div>
 
@@ -194,7 +193,7 @@ export function LoginView() {
               {availableFactors.length > 1 && (
                 <div className="mt-3 flex flex-col items-center gap-1.5">
                   <span className="text-[11px] text-muted-foreground">
-                    Enrolled device:
+                    {t("auth.mfa.enrolledDevice")}
                   </span>
                   <div className="flex flex-wrap justify-center gap-1.5">
                     {availableFactors.map((f) => (
@@ -209,7 +208,7 @@ export function LoginView() {
                         }`}
                       >
                         <SmartphoneIcon className="h-3 w-3" />
-                        {f.name || "Authenticator"}
+                        {f.name || t("auth.mfa.authenticatorFallback")}
                       </button>
                     ))}
                   </div>
@@ -220,7 +219,7 @@ export function LoginView() {
             <FormInput
               id="backupCode"
               type="text"
-              label="Backup Recovery Code"
+              label={t("auth.mfa.backupCode")}
               placeholder="ABCD-EFGH"
               value={backupCode}
               onChange={(e) => {
@@ -239,7 +238,9 @@ export function LoginView() {
             className="w-full cursor-pointer rounded-2xl py-6 font-semibold shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99]"
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Verifying..." : "Verify & Sign In"}
+            {isSubmitting
+              ? t("settings.mfa.verifying")
+              : t("auth.mfa.verifySignIn")}
           </Button>
 
           <div className="flex flex-col items-center gap-3 pt-2">
@@ -254,8 +255,8 @@ export function LoginView() {
             >
               <KeyRoundIcon className="h-3.5 w-3.5" />
               {useBackupCode
-                ? "Use an authenticator app code instead"
-                : "Can't access your phone? Use a recovery code"}
+                ? t("auth.mfa.useAppCode")
+                : t("auth.mfa.useRecoveryCode")}
             </button>
 
             <button
@@ -264,7 +265,7 @@ export function LoginView() {
               className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
             >
               <ArrowLeftIcon className="h-3.5 w-3.5" />
-              Back to username & password
+              {t("auth.mfa.backToCredentials")}
             </button>
           </div>
         </form>

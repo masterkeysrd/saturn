@@ -17,6 +17,7 @@ import {
   ServerSettingsSchema,
   type ServerSettingsFormValues,
 } from "@saturn/schemas"
+import { useI18n } from "@saturn/hooks"
 import { useAuth } from "@/lib/auth-context"
 import { DEFAULT_SERVER_URL } from "@/lib/config"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
@@ -29,6 +30,7 @@ export default function ServerSettingsScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const toast = useToast()
+  const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
   const { serverUrl, updateServerUrl } = useAuth()
@@ -62,8 +64,8 @@ export default function ServerSettingsScreen() {
       haptics.success()
       toast.show({
         type: "success",
-        title: "Server Updated",
-        message: `Connected to ${appliedUrl}`,
+        title: t("settings.server.updatedToast"),
+        message: t("settings.server.connectedToast", { url: appliedUrl }),
       })
       if (appliedUrl !== previousUrl) {
         router.replace("/(auth)/login")
@@ -73,11 +75,13 @@ export default function ServerSettingsScreen() {
     } catch (err: unknown) {
       haptics.error()
       const msg =
-        err instanceof Error ? err.message : "Failed to update server URL"
+        err instanceof Error
+          ? err.message
+          : t("settings.server.updatedFailedDefault")
       setError("serverUrl", { message: msg })
       toast.show({
         type: "error",
-        title: "Update Failed",
+        title: t("menu.updateFailed"),
         message: msg,
       })
     } finally {
@@ -91,7 +95,7 @@ export default function ServerSettingsScreen() {
     <>
       <Stack.Screen
         options={{
-          headerTitle: "Settings",
+          headerTitle: t("settings.hub.title"),
           headerTitleAlign: "center",
           headerBackVisible: false,
           ...(Platform.OS === "ios"
@@ -99,7 +103,7 @@ export default function ServerSettingsScreen() {
                 unstable_headerLeftItems: () => [
                   {
                     type: "button",
-                    label: "Close",
+                    label: t("common.close"),
                     icon: { type: "sfSymbol", name: "xmark" },
                     onPress: () => {
                       haptics.light()
@@ -121,7 +125,7 @@ export default function ServerSettingsScreen() {
                       }
                     : {
                         type: "button",
-                        label: "Save",
+                        label: t("common.save"),
                         variant: "done",
                         onPress: () => handleSubmit(onValid)(),
                       },
@@ -136,7 +140,7 @@ export default function ServerSettingsScreen() {
                     }}
                     style={styles.headerBtn}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    accessibilityLabel="Close"
+                    accessibilityLabel={t("common.close")}
                   >
                     <X size={20} color={colors.textMuted} />
                   </TouchableOpacity>
@@ -150,12 +154,14 @@ export default function ServerSettingsScreen() {
                       isPending && { opacity: 0.6 },
                     ]}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    accessibilityLabel="Save Server Settings"
+                    accessibilityLabel={t("settings.server.saveAria")}
                   >
                     {isPending ? (
                       <ActivityIndicator size="small" color={colors.primary} />
                     ) : (
-                      <Text style={styles.headerSaveBtnText}>Save</Text>
+                      <Text style={styles.headerSaveBtnText}>
+                        {t("common.save")}
+                      </Text>
                     )}
                   </TouchableOpacity>
                 ),
@@ -176,12 +182,14 @@ export default function ServerSettingsScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.section}>
-            <Text style={styles.sectionHeader}>SELF-HOSTED ENVIRONMENT</Text>
+            <Text style={styles.sectionHeader}>
+              {t("settings.server.sectionHeader").toUpperCase()}
+            </Text>
             <Card style={styles.card}>
               <TextInput
                 control={control}
                 name="serverUrl"
-                label="Server URL"
+                label={t("settings.server.serverUrlLabel")}
                 placeholder={DEFAULT_SERVER_URL}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -189,8 +197,7 @@ export default function ServerSettingsScreen() {
                 leftIcon={<Globe size={18} color={colors.primary} />}
               />
               <Text style={styles.fieldHint}>
-                Specify the base URL of your Saturn instance (e.g.
-                https://saturn.example.com or http://192.168.1.50:8080).
+                {t("settings.server.fieldHint")}
               </Text>
             </Card>
           </View>

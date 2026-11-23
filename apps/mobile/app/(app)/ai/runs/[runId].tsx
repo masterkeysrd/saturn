@@ -1,7 +1,7 @@
 import { ScrollView, Text, View } from "react-native"
 import { useLocalSearchParams } from "expo-router"
 import { useGetRunQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
@@ -9,6 +9,7 @@ import { useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 export default function MobileAIRunTraceScreen() {
   const { runId } = useLocalSearchParams<{ runId: string }>()
   const tz = useTimezone()
+  const { t } = useI18n()
   const styles = useThemedStyles(createStyles)
   const { data: run, isLoading } = useGetRunQuery(
     { id: runId ?? "" },
@@ -18,7 +19,7 @@ export default function MobileAIRunTraceScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {isLoading || !run ? (
-        <Text style={styles.muted}>Loading run trace...</Text>
+        <Text style={styles.muted}>{t("ai.trace.loading")}</Text>
       ) : (
         <>
           <Card style={styles.card}>
@@ -37,7 +38,7 @@ export default function MobileAIRunTraceScreen() {
             </Text>
             {run.startTime ? (
               <Text style={styles.muted}>
-                Started:{" "}
+                {t("ai.trace.started")}{" "}
                 {tz.format(run.startTime, {
                   dateStyle: "short",
                   timeStyle: "medium",

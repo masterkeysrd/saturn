@@ -1,18 +1,20 @@
 import { Text, View, TouchableOpacity } from "react-native"
 import { Link, Stack } from "expo-router"
+import { useI18n } from "@saturn/hooks"
 import { useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
 export default function NotFoundScreen() {
+  const { t } = useI18n()
   const styles = useThemedStyles(createStyles)
 
   return (
     <>
-      <Stack.Screen options={{ title: "Page Not Found" }} />
+      <Stack.Screen options={{ title: t("common.notFound.title") }} />
       <View style={styles.container}>
-        <Text style={styles.title}>This screen does not exist.</Text>
+        <Text style={styles.title}>{t("common.notFound.description")}</Text>
         <Link href="/" asChild>
           <TouchableOpacity style={styles.link}>
-            <Text style={styles.linkText}>Return to Dashboard</Text>
+            <Text style={styles.linkText}>{t("common.notFound.returnCta")}</Text>
           </TouchableOpacity>
         </Link>
       </View>

@@ -126,7 +126,9 @@ export function UpcomingBillsWidget() {
             <Badge
               variant="default"
               size="sm"
-              label={`Next 14d · ${upcomingItems.length}`}
+              label={t("dashboard.widget.upcoming_bills.next14d", {
+                count: upcomingItems.length,
+              })}
             />
           )}
           <ChevronRight size={16} color={colors.textMuted} />
@@ -135,7 +137,7 @@ export function UpcomingBillsWidget() {
 
       {!isFinanceConfigured ? (
         <Text style={styles.emptyText}>
-          Configure your base currency in Finance to track scheduled bills.
+          {t("dashboard.widget.upcoming_bills.notConfigured")}
         </Text>
       ) : visibleItems.length === 0 ? (
         <Text style={styles.emptyText}>

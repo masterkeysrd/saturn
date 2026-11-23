@@ -17,6 +17,7 @@ import {
   type ChangePasswordFormValues,
 } from "@saturn/schemas"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
+import { useI18n } from "@saturn/hooks"
 import { Button } from "./button"
 import { TextInput } from "./text-input"
 import { OTPInput } from "./otp-input"
@@ -38,6 +39,7 @@ export function ChangePasswordModal({
   hasActiveMfa,
 }: ChangePasswordModalProps) {
   const { colors } = useTheme()
+  const { t } = useI18n()
   const styles = useThemedStyles(createStyles)
   const toast = useToast()
   const { updateSessionTokens } = useAuth()
@@ -81,7 +83,7 @@ export function ChangePasswordModal({
       hasActiveMfa &&
       (!values.totpCode || values.totpCode.trim().length !== 6)
     ) {
-      setError("Please enter the 6-digit authenticator code.")
+      setError(t("settings.password.mobile.mfaCodeRequired"))
       haptics.error()
       return
     }
@@ -105,10 +107,10 @@ export function ChangePasswordModal({
       haptics.success()
       toast.show({
         type: "success",
-        title: "Password Changed",
+        title: t("settings.password.toastOk"),
         message: values.revokeOtherSessions
-          ? "Your password was updated and other devices logged out."
-          : "Your password was updated successfully.",
+          ? t("settings.password.mobile.toastOkDescAll")
+          : t("settings.password.mobile.toastOkDescSimple"),
       })
       reset({
         currentPassword: "",
@@ -122,7 +124,9 @@ export function ChangePasswordModal({
     } catch (err: unknown) {
       haptics.error()
       const msg =
-        err instanceof Error ? err.message : "Failed to change password"
+        err instanceof Error
+          ? err.message
+          : t("settings.password.failedDefault")
       setError(msg)
     }
   }
@@ -153,9 +157,11 @@ export function ChangePasswordModal({
               <KeyRound size={22} color={colors.primary} />
             </View>
             <View style={styles.headerText}>
-              <Text style={styles.title}>Change Password</Text>
+              <Text style={styles.title}>
+                {t("settings.password.btnChange")}
+              </Text>
               <Text style={styles.subtitle}>
-                Enter your current and new password.
+                {t("settings.password.mobile.subtitle")}
               </Text>
             </View>
             <TouchableOpacity
@@ -182,8 +188,8 @@ export function ChangePasswordModal({
             <TextInput
               control={control}
               name="currentPassword"
-              label="Current Password"
-              placeholder="Enter current password"
+              label={t("settings.password.currentPassword")}
+              placeholder={t("settings.password.currentPasswordPlaceholder")}
               isPassword
               containerStyle={styles.inputSpacing}
             />
@@ -191,8 +197,8 @@ export function ChangePasswordModal({
             <TextInput
               control={control}
               name="newPassword"
-              label="New Password"
-              placeholder="Enter new password (min. 8 chars)"
+              label={t("settings.password.newPassword")}
+              placeholder={t("settings.password.newPasswordPlaceholder")}
               isPassword
               containerStyle={styles.inputSpacing}
             />
@@ -200,8 +206,8 @@ export function ChangePasswordModal({
             <TextInput
               control={control}
               name="confirmPassword"
-              label="Confirm New Password"
-              placeholder="Confirm new password"
+              label={t("settings.password.confirmPassword")}
+              placeholder={t("settings.password.confirmPasswordPlaceholder")}
               isPassword
               containerStyle={styles.inputSpacing}
             />
@@ -209,10 +215,10 @@ export function ChangePasswordModal({
             {hasActiveMfa && (
               <View style={styles.mfaContainer}>
                 <Text style={styles.mfaLabel}>
-                  Two-Factor Verification Code
+                  {t("settings.password.mobile.mfaSectionLabel")}
                 </Text>
                 <Text style={styles.mfaHelper}>
-                  Enter the 6-digit code from your authenticator app.
+                  {t("settings.password.mobile.mfaHelper")}
                 </Text>
                 <OTPInput
                   control={control}
@@ -226,8 +232,8 @@ export function ChangePasswordModal({
             <FormSwitchRow
               control={control}
               name="revokeOtherSessions"
-              label="Sign out other devices"
-              subtitle="Revokes all active sessions on other phones and computers."
+              label={t("settings.password.revokeLabel")}
+              subtitle={t("settings.password.revokeDesc")}
               containerStyle={{ paddingHorizontal: 0, paddingVertical: 8 }}
             />
           </ScrollView>
@@ -241,7 +247,7 @@ export function ChangePasswordModal({
               disabled={isPending}
               style={styles.actionBtn}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               variant="primary"
@@ -250,7 +256,7 @@ export function ChangePasswordModal({
               loading={isPending}
               style={styles.actionBtn}
             >
-              Update Password
+              {t("settings.password.btnUpdate")}
             </Button>
           </View>
         </View>

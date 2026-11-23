@@ -69,16 +69,16 @@ export default function RegisterScreen() {
       })
       toast.show({
         type: "success",
-        title: "Account created!",
-        message: "Welcome to Saturn",
+        title: t("auth.mobile.accountCreated"),
+        message: t("auth.mobile.welcomeToSaturn"),
       })
       router.replace("/(app)/(tabs)")
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to register"
+      const msg = err instanceof Error ? err.message : t("auth.mobile.registerFailed")
       setErrorState(msg)
       toast.show({
         type: "error",
-        title: "Registration failed",
+        title: t("auth.mobile.registrationFailed"),
         message: msg,
       })
     } finally {
@@ -99,7 +99,7 @@ export default function RegisterScreen() {
             router.push("/server-settings")
           }}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          accessibilityLabel="Server Settings"
+          accessibilityLabel={t("settings.server.title")}
         >
           <Settings size={18} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -124,14 +124,16 @@ export default function RegisterScreen() {
             <Header1 style={styles.brandTitle}>
               {t("auth.createAccount")}
             </Header1>
-            <Subtitle style={styles.subtitle}>Join Saturn Life OS</Subtitle>
+            <Subtitle style={styles.subtitle}>
+              {t("auth.mobile.joinTagline")}
+            </Subtitle>
           </View>
 
           <Card style={styles.formCard}>
             <TextInput
               control={control}
               name="name"
-              label="Full Name"
+              label={t("auth.mobile.fullName")}
               placeholder="Ada Lovelace"
               autoComplete="name"
               textContentType="name"
@@ -141,7 +143,7 @@ export default function RegisterScreen() {
             <TextInput
               control={control}
               name="username"
-              label="Username (optional)"
+              label={t("auth.mobile.usernameOptional")}
               placeholder="adalovelace"
               autoCapitalize="none"
               autoCorrect={false}
@@ -194,7 +196,7 @@ export default function RegisterScreen() {
           </Card>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
+            <Text style={styles.footerText}>{t("auth.mobile.hasAccount")}</Text>
             <Link href="/(auth)/login" asChild>
               <TouchableOpacity>
                 <Text style={styles.linkText}>{t("auth.signIn")}</Text>

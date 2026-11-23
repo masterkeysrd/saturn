@@ -197,17 +197,17 @@ export function CustomizeDashboardPopover({
       })
       toast.add({
         type: "success",
-        title: "Dashboard updated",
-        description: "Your widget layout has been saved for this workspace.",
+        title: t("dashboard.updatedToast"),
+        description: t("dashboard.updatedToastDesc"),
       })
       onPreviewChange?.(null)
       onOpenChange(false)
     } catch (err) {
       toast.add({
         type: "error",
-        title: "Could not save dashboard layout",
+        title: t("dashboard.saveFailedToast"),
         description:
-          err instanceof Error ? err.message : "Please try again in a moment.",
+          err instanceof Error ? err.message : t("common.pleaseTryAgain"),
       })
     }
   }

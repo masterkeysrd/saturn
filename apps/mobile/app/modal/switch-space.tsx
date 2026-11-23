@@ -27,7 +27,7 @@ export default function SwitchSpaceModal() {
   const displayName =
     user?.name && user.name !== "User"
       ? user.name
-      : user?.username || user?.email || "Saturn User"
+      : user?.username || user?.email || t("menu.saturnUser")
 
   const handleOpenSettings = () => {
     haptics.light()
@@ -76,7 +76,7 @@ export default function SwitchSpaceModal() {
           activeOpacity={0.7}
           onPress={handleOpenSettings}
           accessibilityRole="button"
-          accessibilityLabel="Open account settings"
+          accessibilityLabel={t("menu.profileAria")}
           testID="switch-space-account-settings"
         >
           <Avatar name={displayName} imageUri={user?.avatarUrl} size={40} />
@@ -125,15 +125,20 @@ export default function SwitchSpaceModal() {
                   onPress={() =>
                     void handleSelectSpace(
                       space.id || "",
-                      space.name || "Workspace"
+                      space.name || t("space.defaultName")
                     )
                   }
                   accessibilityRole="button"
                   accessibilityState={{ selected: isSelected }}
-                  accessibilityLabel={`Switch to ${space.name || "Workspace"}`}
+                  accessibilityLabel={t("space.switchTo", {
+                    name: space.name || t("space.defaultName"),
+                  })}
                 >
                   <View style={styles.spaceLeft}>
-                    <Avatar name={space.name || "Workspace"} size={38} />
+                    <Avatar
+                      name={space.name || t("space.defaultName")}
+                      size={38}
+                    />
                     <View style={styles.spaceInfo}>
                       <View style={styles.nameRow}>
                         <Text style={styles.spaceName} numberOfLines={1}>
@@ -142,11 +147,15 @@ export default function SwitchSpaceModal() {
                         <Badge
                           variant={isOwner ? "primary" : "default"}
                           size="sm"
-                          label={isOwner ? "Owner" : "Member"}
+                          label={
+                            isOwner
+                              ? t("settings.spaces.roleOwner")
+                              : t("settings.spaces.roleMember")
+                          }
                         />
                       </View>
                       <Text style={styles.spaceDescription} numberOfLines={1}>
-                        {space.description || "Workspace"}
+                        {space.description || t("space.defaultName")}
                       </Text>
                     </View>
                   </View>
@@ -157,9 +166,11 @@ export default function SwitchSpaceModal() {
 
             {spaces.length === 0 && (
               <View style={styles.emptyState}>
-                <Text style={styles.spaceName}>No workspaces yet</Text>
+                <Text style={styles.spaceName}>
+                  {t("settings.spaces.mobile.emptyTitle")}
+                </Text>
                 <Text style={styles.spaceDescription}>
-                  Create a workspace below to get started.
+                  {t("settings.spaces.mobile.emptyDesc")}
                 </Text>
               </View>
             )}

@@ -17,7 +17,8 @@ import {
   useGetAPIKeyQuery,
   useUpdateAPIKeyMutation,
 } from "@saturn/api/saturn/identity/v1/identity"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
+import type { TranslationKey } from "@saturn/i18n"
 import {
   API_KEY_EXPIRATION_PRESETS,
   API_KEY_SCOPES,
@@ -47,6 +48,39 @@ function computeExpirationISO(
   ).toISOString()
 }
 
+const EXPIRATION_PRESET_LABEL_KEYS: Record<APIKeyExpirationPreset, TranslationKey> = {
+  "30d": "settings.apiKeys.preset30d",
+  "90d": "settings.apiKeys.preset90d",
+  "1y": "settings.apiKeys.preset1y",
+  custom: "settings.apiKeys.presetCustom",
+  none: "settings.apiKeys.presetNone",
+}
+
+const SCOPE_GROUP_LABEL_KEYS: Record<string, TranslationKey> = {
+  spaces: "settings.apiKeys.groupSpaces",
+  finance: "settings.apiKeys.groupFinance",
+  calendar: "settings.apiKeys.groupCalendar",
+  mail: "settings.apiKeys.groupMail",
+  ai: "settings.apiKeys.groupAi",
+  workflows: "settings.apiKeys.groupWorkflows",
+}
+
+const SCOPE_LABEL_KEYS: Record<APIKeyScope, TranslationKey> = {
+  "spaces:read": "settings.apiKeys.scopeSpacesRead",
+  "finance:read": "settings.apiKeys.scopeFinanceRead",
+  "finance:write": "settings.apiKeys.scopeFinanceWrite",
+  "calendar:read": "settings.apiKeys.scopeCalendarRead",
+  "calendar:write": "settings.apiKeys.scopeCalendarWrite",
+  "mail:read": "settings.apiKeys.scopeMailRead",
+  "mail:write": "settings.apiKeys.scopeMailWrite",
+  "ai:read": "settings.apiKeys.scopeAiRead",
+  "ai:execute": "settings.apiKeys.scopeAiExecute",
+  "ai:write": "settings.apiKeys.scopeAiWrite",
+  "workflows:read": "settings.apiKeys.scopeWorkflowsRead",
+  "workflows:execute": "settings.apiKeys.scopeWorkflowsExecute",
+  "workflows:write": "settings.apiKeys.scopeWorkflowsWrite",
+}
+
 export default function ManageAPIKeyModal() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
@@ -57,6 +91,7 @@ export default function ManageAPIKeyModal() {
   const isEditing = Boolean(id)
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
 
   const { spaces } = useSpace()
   const { data: existingKey } = useGetAPIKeyQuery(
@@ -129,7 +164,7 @@ export default function ManageAPIKeyModal() {
       })
       if (!parsed.success) {
         setErrorMessage(
-          parsed.error.issues[0]?.message || "Please check your inputs."
+          parsed.error.issues[0]?.message || t("settings.apiKeys.checkFormInputs")
         )
         return
       }
@@ -155,14 +190,18 @@ export default function ManageAPIKeyModal() {
         haptics.success()
         toast.show({
           type: "success",
-          title: "API Key Updated",
-          message: `"${parsed.data.name}" saved.`,
+          title: t("settings.apiKeys.editOk"),
+          message: t("settings.apiKeys.editOkDesc", {
+            name: parsed.data.name,
+          }),
         })
         router.back()
       } catch (err: unknown) {
         haptics.error()
         setErrorMessage(
-          err instanceof Error ? err.message : "Failed to update API key."
+          err instanceof Error
+            ? err.message
+            : t("settings.apiKeys.editOkFailed")
         )
       }
       return
@@ -178,7 +217,7 @@ export default function ManageAPIKeyModal() {
     })
     if (!parsed.success) {
       setErrorMessage(
-        parsed.error.issues[0]?.message || "Please check your inputs."
+        parsed.error.issues[0]?.message || t("settings.apiKeys.checkFormInputs")
       )
       return
     }
@@ -203,7 +242,9 @@ export default function ManageAPIKeyModal() {
     } catch (err: unknown) {
       haptics.error()
       setErrorMessage(
-        err instanceof Error ? err.message : "Failed to create API key."
+        err instanceof Error
+          ? err.message
+          : t("settings.apiKeys.createFailed")
       )
     }
   }
@@ -215,8 +256,8 @@ export default function ManageAPIKeyModal() {
     setCopied(true)
     toast.show({
       type: "success",
-      title: "Copied to Clipboard",
-      message: "API key copied securely.",
+      title: t("settings.apiKeys.mobile.copiedToast"),
+      message: t("settings.apiKeys.mobile.copiedDesc"),
     })
   }
 
@@ -233,8 +274,7 @@ export default function ManageAPIKeyModal() {
           <View style={styles.warningBanner}>
             <AlertTriangle size={18} color={colors.warning} />
             <Text style={styles.warningText}>
-              Copy your API key now. For your security, it will never be shown
-              again.
+              {t("settings.apiKeys.revealDesc")}
             </Text>
           </View>
 
@@ -256,7 +296,9 @@ export default function ManageAPIKeyModal() {
             }
             onPress={handleCopySecret}
           >
-            {copied ? "Copied!" : "Copy API Key"}
+            {copied
+              ? t("settings.apiKeys.btnCopied")
+              : t("settings.apiKeys.mobile.copyKey")}
           </Button>
 
           <Button
@@ -267,7 +309,7 @@ export default function ManageAPIKeyModal() {
               router.back()
             }}
           >
-            Done
+            {t("common.done")}
           </Button>
         </Card>
       </ScrollView>
@@ -296,16 +338,16 @@ export default function ManageAPIKeyModal() {
 
         <Card style={styles.formCard}>
           <BaseTextInput
-            label="Key Name"
-            placeholder="e.g. iOS Shortcut"
+            label={t("settings.apiKeys.name")}
+            placeholder={t("settings.apiKeys.namePlaceholder")}
             value={name}
             onChangeText={setName}
             leftIcon={<Key size={18} color={colors.primary} />}
           />
 
           <BaseTextInput
-            label="Description (Optional)"
-            placeholder="What will this key access?"
+            label={t("settings.apiKeys.descriptionOptional")}
+            placeholder={t("settings.apiKeys.descPlaceholder")}
             value={description}
             onChangeText={setDescription}
             multiline
@@ -315,7 +357,9 @@ export default function ManageAPIKeyModal() {
 
         {!isEditing && (
           <View style={styles.section}>
-            <Caption style={styles.sectionLabel}>EXPIRATION</Caption>
+            <Caption style={styles.sectionLabel}>
+              {t("settings.apiKeys.expiration").toUpperCase()}
+            </Caption>
             <View style={styles.chipRow}>
               {API_KEY_EXPIRATION_PRESETS.filter((p) => p.id !== "custom").map(
                 (preset) => {
@@ -335,7 +379,7 @@ export default function ManageAPIKeyModal() {
                           active && styles.chipTextActive,
                         ]}
                       >
-                        {preset.label}
+                        {t(EXPIRATION_PRESET_LABEL_KEYS[preset.id])}
                       </Text>
                     </TouchableOpacity>
                   )
@@ -347,7 +391,9 @@ export default function ManageAPIKeyModal() {
 
         <View style={styles.section}>
           <Caption style={styles.sectionLabel}>
-            WORKSPACES ({selectedSpaceIds.length})
+            {t("settings.apiKeys.workspaceGrants", {
+              count: selectedSpaceIds.length,
+            }).toUpperCase()}
           </Caption>
           <View style={styles.chipRow}>
             {spaces.map((sp) => {
@@ -373,11 +419,15 @@ export default function ManageAPIKeyModal() {
         <View style={styles.section}>
           <View style={styles.scopeHeaderRow}>
             <Caption style={styles.sectionLabel}>
-              PERMISSION SCOPES ({selectedScopes.length})
+              {t("settings.apiKeys.permissionScopes", {
+                count: selectedScopes.length,
+              }).toUpperCase()}
             </Caption>
             <TouchableOpacity onPress={toggleAllScopes}>
               <Text style={styles.selectAllText}>
-                {allScopesSelected ? "Deselect All" : "Select All"}
+                {allScopesSelected
+                  ? t("settings.apiKeys.deselectAll")
+                  : t("settings.apiKeys.selectAll")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -385,7 +435,9 @@ export default function ManageAPIKeyModal() {
           <Card style={styles.scopesCard}>
             {API_KEY_SCOPE_GROUPS.map((group) => (
               <View key={group.id} style={styles.scopeGroup}>
-                <Text style={styles.scopeGroupTitle}>{group.label}</Text>
+                <Text style={styles.scopeGroupTitle}>
+                  {t(SCOPE_GROUP_LABEL_KEYS[group.id] ?? "common.unknown")}
+                </Text>
                 {group.scopes.map((meta) => {
                   const active = selectedScopes.includes(meta.scope)
                   return (
@@ -395,7 +447,9 @@ export default function ManageAPIKeyModal() {
                       onPress={() => toggleScope(meta.scope)}
                     >
                       <View style={styles.scopeInfo}>
-                        <Text style={styles.scopeLabel}>{meta.label}</Text>
+                        <Text style={styles.scopeLabel}>
+                          {t(SCOPE_LABEL_KEYS[meta.scope])}
+                        </Text>
                         <Text style={styles.scopeCode}>{meta.scope}</Text>
                       </View>
                       <View
@@ -427,7 +481,7 @@ export default function ManageAPIKeyModal() {
               router.back()
             }}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             variant="primary"
@@ -437,7 +491,9 @@ export default function ManageAPIKeyModal() {
             leftIcon={<Check size={18} color={colors.primaryForeground} />}
             onPress={handleSave}
           >
-            {isEditing ? "Save Changes" : "Create Key"}
+            {isEditing
+              ? t("settings.apiKeys.btnSaveChanges")
+              : t("settings.apiKeys.mobile.createKey")}
           </Button>
         </View>
       </ScrollView>
