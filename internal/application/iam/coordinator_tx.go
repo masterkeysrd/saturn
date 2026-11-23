@@ -507,3 +507,216 @@ func (t *TransactionalCoordinator) DeleteAPIKey(ctx context.Context, req *Delete
 
 	return nil
 }
+
+// AdminCreateOAuthClient executes next.AdminCreateOAuthClient inside a database transaction.
+func (t *TransactionalCoordinator) AdminCreateOAuthClient(ctx context.Context, req *AdminCreateOAuthClientRequest) (*identity.OAuthClient, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.AdminCreateOAuthClient(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (t *TransactionalCoordinator) AdminGetOAuthClient(ctx context.Context, req *AdminGetOAuthClientRequest) (*identity.OAuthClient, error) {
+	return t.next.AdminGetOAuthClient(ctx, req)
+}
+
+func (t *TransactionalCoordinator) AdminListOAuthClients(ctx context.Context) ([]*identity.OAuthClient, error) {
+	return t.next.AdminListOAuthClients(ctx)
+}
+
+// AdminUpdateOAuthClient executes next.AdminUpdateOAuthClient inside a database transaction.
+func (t *TransactionalCoordinator) AdminUpdateOAuthClient(ctx context.Context, req *AdminUpdateOAuthClientRequest) (*identity.OAuthClient, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.AdminUpdateOAuthClient(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// AdminRotateOAuthClientSecret executes next.AdminRotateOAuthClientSecret inside a database transaction.
+func (t *TransactionalCoordinator) AdminRotateOAuthClientSecret(ctx context.Context, req *AdminRotateOAuthClientSecretRequest) (*identity.OAuthClient, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.AdminRotateOAuthClientSecret(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// AdminDeleteOAuthClient executes next.AdminDeleteOAuthClient inside a database transaction.
+func (t *TransactionalCoordinator) AdminDeleteOAuthClient(ctx context.Context, req *AdminDeleteOAuthClientRequest) error {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := t.next.AdminDeleteOAuthClient(ctx, req); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t *TransactionalCoordinator) ListUserOAuthGrants(ctx context.Context, req *ListUserOAuthGrantsRequest) ([]*UserOAuthGrant, error) {
+	return t.next.ListUserOAuthGrants(ctx, req)
+}
+
+// RevokeUserOAuthGrant executes next.RevokeUserOAuthGrant inside a database transaction.
+func (t *TransactionalCoordinator) RevokeUserOAuthGrant(ctx context.Context, req *RevokeUserOAuthGrantRequest) error {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := t.next.RevokeUserOAuthGrant(ctx, req); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t *TransactionalCoordinator) InspectOAuthConsent(ctx context.Context, req *InspectOAuthConsentRequest) (*InspectOAuthConsentResponse, error) {
+	return t.next.InspectOAuthConsent(ctx, req)
+}
+
+// DecideOAuthConsent executes next.DecideOAuthConsent inside a database transaction.
+func (t *TransactionalCoordinator) DecideOAuthConsent(ctx context.Context, req *DecideOAuthConsentRequest) (*DecideOAuthConsentResponse, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.DecideOAuthConsent(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// RegisterDynamicOAuthClient executes next.RegisterDynamicOAuthClient inside a database transaction.
+func (t *TransactionalCoordinator) RegisterDynamicOAuthClient(ctx context.Context, req *RegisterDynamicOAuthClientRequest) (*identity.OAuthClient, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.RegisterDynamicOAuthClient(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// ConsumeOAuthRedirectHandoff executes next.ConsumeOAuthRedirectHandoff inside a database transaction.
+func (t *TransactionalCoordinator) ConsumeOAuthRedirectHandoff(ctx context.Context, req *ConsumeOAuthRedirectHandoffRequest) (*ConsumeOAuthRedirectHandoffResponse, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.ConsumeOAuthRedirectHandoff(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// ExchangeOAuthToken executes next.ExchangeOAuthToken inside a database transaction.
+func (t *TransactionalCoordinator) ExchangeOAuthToken(ctx context.Context, req *ExchangeOAuthTokenRequest) (*ExchangeOAuthTokenResponse, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.ExchangeOAuthToken(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// RevokeOAuthToken executes next.RevokeOAuthToken inside a database transaction.
+func (t *TransactionalCoordinator) RevokeOAuthToken(ctx context.Context, req *RevokeOAuthTokenRequest) error {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := t.next.RevokeOAuthToken(ctx, req); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}

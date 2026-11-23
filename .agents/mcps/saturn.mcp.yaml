@@ -1,0 +1,10 @@
+apiVersion: warp/v1alpha1
+kind: MCP
+metadata:
+  name: saturn
+  description: Local Saturn Life OS MCP server authenticated via OAuth 2.1
+spec:
+  type: streamable-http
+  endpoint: http://localhost:8080/mcp
+  auth:
+    type: oauth2

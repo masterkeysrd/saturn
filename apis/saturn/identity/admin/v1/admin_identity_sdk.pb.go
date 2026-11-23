@@ -2,6 +2,10 @@
 package adminidentityv1
 
 import (
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
+)
+
+import (
 	"context"
 	"fmt"
 	"strings"
@@ -155,6 +159,106 @@ func (c *Client) UnlockUser(ctx context.Context, req *UnlockUserRequest) (*User,
 		path += "?" + strings.Join(query, "&")
 	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// CreateOAuthClient executes POST /api/v1/admin/identity/oauth-clients.
+func (c *Client) CreateOAuthClient(ctx context.Context, req *CreateOAuthClientRequest) (*OAuthClient, error) {
+	var resp OAuthClient
+	path := "/api/v1/admin/identity/oauth-clients"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetOauthClient()
+	if payload == nil {
+		return nil, fmt.Errorf("oauth_client payload is required")
+	}
+	if err := c.base.Do(ctx, "POST", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// GetOAuthClient executes GET /api/v1/admin/identity/oauth-clients/{id}.
+func (c *Client) GetOAuthClient(ctx context.Context, req *GetOAuthClientRequest) (*OAuthClient, error) {
+	var resp OAuthClient
+	path := fmt.Sprintf("/api/v1/admin/identity/oauth-clients/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ListOAuthClients executes GET /api/v1/admin/identity/oauth-clients.
+func (c *Client) ListOAuthClients(ctx context.Context, req *ListOAuthClientsRequest) (*ListOAuthClientsResponse, error) {
+	var resp ListOAuthClientsResponse
+	path := "/api/v1/admin/identity/oauth-clients"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// UpdateOAuthClient executes PATCH /api/v1/admin/identity/oauth-clients/{id}.
+func (c *Client) UpdateOAuthClient(ctx context.Context, req *UpdateOAuthClientRequest) (*OAuthClient, error) {
+	var resp OAuthClient
+	path := fmt.Sprintf("/api/v1/admin/identity/oauth-clients/%s", req.GetId())
+	var query []string
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetOauthClient()
+	if payload == nil {
+		return nil, fmt.Errorf("oauth_client payload is required")
+	}
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// RotateOAuthClientSecret executes POST /api/v1/admin/identity/oauth-clients/{id}:rotate-secret.
+func (c *Client) RotateOAuthClientSecret(ctx context.Context, req *RotateOAuthClientSecretRequest) (*OAuthClient, error) {
+	var resp OAuthClient
+	path := fmt.Sprintf("/api/v1/admin/identity/oauth-clients/%s:rotate-secret", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// DeleteOAuthClient executes DELETE /api/v1/admin/identity/oauth-clients.
+func (c *Client) DeleteOAuthClient(ctx context.Context, req *DeleteOAuthClientRequest) (*emptypb.Empty, error) {
+	var resp emptypb.Empty
+	path := "/api/v1/admin/identity/oauth-clients"
+	var query []string
+	if req.GetId() != "" {
+		query = append(query, fmt.Sprintf("id=%s", req.GetId()))
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil

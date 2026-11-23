@@ -897,6 +897,142 @@ func toProtoAPIKey(k *identity.APIKey, includeRawKey bool) *identityv1.APIKey {
 	return pb
 }
 
+// ListUserOAuthGrants lists active OAuth 2.1 grants authorized by the caller.
+func (h *Handler) ListUserOAuthGrants(ctx context.Context, _ *identityv1.ListUserOAuthGrantsRequest) (*identityv1.ListUserOAuthGrantsResponse, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	grants, err := h.IAM.Coordinator.ListUserOAuthGrants(ctx, &iam.ListUserOAuthGrantsRequest{
+		UserID: identity.UserID(principal.Subject),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	pbGrants := make([]*identityv1.UserOAuthGrant, len(grants))
+	for i, g := range grants {
+		pb := &identityv1.UserOAuthGrant{
+			Id:                string(g.Grant.ID),
+			ClientId:          string(g.Grant.ClientID),
+			ClientName:        g.ClientName,
+			IsWorkspaceClient: g.IsWorkspace,
+			SpaceId:           g.Grant.SpaceID,
+			SpaceName:         g.SpaceName,
+			Scopes:            g.Grant.Scopes,
+			CreateTime:        timestamppb.New(g.Grant.CreateTime),
+		}
+		if g.Grant.LastUsedAt != nil {
+			pb.LastUsedAt = timestamppb.New(*g.Grant.LastUsedAt)
+		}
+		pbGrants[i] = pb
+	}
+
+	return &identityv1.ListUserOAuthGrantsResponse{
+		Grants: pbGrants,
+	}, nil
+}
+
+// RevokeUserOAuthGrant revokes an active OAuth 2.1 grant owned by the caller.
+func (h *Handler) RevokeUserOAuthGrant(ctx context.Context, req *identityv1.RevokeUserOAuthGrantRequest) (*emptypb.Empty, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+	grantID, err := identity.ParseOAuthGrantID(req.GetGrantId())
+	if err != nil {
+		return nil, err
+	}
+	ua, ip := extractClientInfo(ctx)
+
+	if err := h.IAM.Coordinator.RevokeUserOAuthGrant(ctx, &iam.RevokeUserOAuthGrantRequest{
+		UserID:    identity.UserID(principal.Subject),
+		GrantID:   grantID,
+		IPAddress: ip,
+		UserAgent: ua,
+	}); err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
+}
+
+// InspectOAuthConsent validates an OAuth 2.1 authorization request and returns consent UI metadata.
+func (h *Handler) InspectOAuthConsent(ctx context.Context, req *identityv1.InspectOAuthConsentRequest) (*identityv1.InspectOAuthConsentResponse, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	res, err := h.IAM.Coordinator.InspectOAuthConsent(ctx, &iam.InspectOAuthConsentRequest{
+		UserID:              identity.UserID(principal.Subject),
+		ClientID:            req.GetClientId(),
+		RedirectURI:         req.GetRedirectUri(),
+		ResponseType:        req.GetResponseType(),
+		Scopes:              strings.Fields(req.GetScope()),
+		State:               req.GetState(),
+		CodeChallenge:       req.GetCodeChallenge(),
+		CodeChallengeMethod: req.GetCodeChallengeMethod(),
+		Resource:            req.GetResource(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	spaces := make([]*identityv1.OAuthConsentSpaceOption, len(res.Spaces))
+	for i, sp := range res.Spaces {
+		spaces[i] = &identityv1.OAuthConsentSpaceOption{
+			SpaceId:       sp.SpaceID,
+			SpaceName:     sp.SpaceName,
+			Role:          sp.Role,
+			AllowedScopes: sp.AllowedScopes,
+		}
+	}
+
+	return &identityv1.InspectOAuthConsentResponse{
+		ClientId:          string(res.Client.ID),
+		ClientName:        res.Client.Name,
+		ClientDescription: res.Client.Description,
+		IsWorkspaceClient: res.Client.SpaceID != nil,
+		RedirectUri:       res.RedirectURI,
+		RedirectUriHost:   res.RedirectURIHost,
+		Resource:          res.Resource,
+		LockedSpaceId:     res.LockedSpaceID,
+		EffectiveScopes:   res.EffectiveScopes,
+		Spaces:            spaces,
+	}, nil
+}
+
+// DecideOAuthConsent records the caller's consent decision and returns a short-lived handoff nonce.
+func (h *Handler) DecideOAuthConsent(ctx context.Context, req *identityv1.DecideOAuthConsentRequest) (*identityv1.DecideOAuthConsentResponse, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	res, err := h.IAM.Coordinator.DecideOAuthConsent(ctx, &iam.DecideOAuthConsentRequest{
+		UserID:              identity.UserID(principal.Subject),
+		ClientID:            req.GetClientId(),
+		RedirectURI:         req.GetRedirectUri(),
+		ResponseType:        req.GetResponseType(),
+		RequestedScopes:     strings.Fields(req.GetScope()),
+		ApprovedScopes:      req.GetApprovedScopes(),
+		SpaceID:             req.GetSpaceId(),
+		State:               req.GetState(),
+		CodeChallenge:       req.GetCodeChallenge(),
+		CodeChallengeMethod: req.GetCodeChallengeMethod(),
+		Resource:            req.GetResource(),
+		Approved:            req.GetApproved(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &identityv1.DecideOAuthConsentResponse{
+		HandoffToken: res.HandoffToken,
+	}, nil
+}
+
 func extractClientInfo(ctx context.Context) (userAgent, ipAddress string) {
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if ua := md.Get("grpcgateway-user-agent"); len(ua) > 0 {

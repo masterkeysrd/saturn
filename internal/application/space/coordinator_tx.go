@@ -5,6 +5,7 @@ package space
 import (
 	"context"
 
+	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/settings"
@@ -235,6 +236,104 @@ func (t *TransactionalCoordinator) RevokeSpaceAPIKeyGrant(ctx context.Context, r
 	defer tx.Rollback()
 
 	if err := t.next.RevokeSpaceAPIKeyGrant(ctx, req); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CreateSpaceOAuthClient executes next.CreateSpaceOAuthClient inside a database transaction.
+func (t *TransactionalCoordinator) CreateSpaceOAuthClient(ctx context.Context, req *CreateSpaceOAuthClientRequest) (*identity.OAuthClient, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.CreateSpaceOAuthClient(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// UpdateSpaceOAuthClient executes next.UpdateSpaceOAuthClient inside a database transaction.
+func (t *TransactionalCoordinator) UpdateSpaceOAuthClient(ctx context.Context, req *UpdateSpaceOAuthClientRequest) (*identity.OAuthClient, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.UpdateSpaceOAuthClient(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// RotateSpaceOAuthClientSecret executes next.RotateSpaceOAuthClientSecret inside a database transaction.
+func (t *TransactionalCoordinator) RotateSpaceOAuthClientSecret(ctx context.Context, req *RotateSpaceOAuthClientSecretRequest) (*identity.OAuthClient, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.RotateSpaceOAuthClientSecret(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// DeleteSpaceOAuthClient executes next.DeleteSpaceOAuthClient inside a database transaction.
+func (t *TransactionalCoordinator) DeleteSpaceOAuthClient(ctx context.Context, req *DeleteSpaceOAuthClientRequest) error {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := t.next.DeleteSpaceOAuthClient(ctx, req); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// RevokeSpaceOAuthGrant executes next.RevokeSpaceOAuthGrant inside a database transaction.
+func (t *TransactionalCoordinator) RevokeSpaceOAuthGrant(ctx context.Context, req *RevokeSpaceOAuthGrantRequest) error {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := t.next.RevokeSpaceOAuthGrant(ctx, req); err != nil {
 		return err
 	}
 

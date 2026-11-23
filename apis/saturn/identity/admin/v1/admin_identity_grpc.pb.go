@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -19,14 +20,20 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AdminIdentity_ListUsers_FullMethodName          = "/saturn.identity.admin.v1.AdminIdentity/ListUsers"
-	AdminIdentity_ApproveUser_FullMethodName        = "/saturn.identity.admin.v1.AdminIdentity/ApproveUser"
-	AdminIdentity_RejectUser_FullMethodName         = "/saturn.identity.admin.v1.AdminIdentity/RejectUser"
-	AdminIdentity_UpdateUserRole_FullMethodName     = "/saturn.identity.admin.v1.AdminIdentity/UpdateUserRole"
-	AdminIdentity_RevokeAllSessions_FullMethodName  = "/saturn.identity.admin.v1.AdminIdentity/RevokeAllSessions"
-	AdminIdentity_ListSecurityEvents_FullMethodName = "/saturn.identity.admin.v1.AdminIdentity/ListSecurityEvents"
-	AdminIdentity_ResetPassword_FullMethodName      = "/saturn.identity.admin.v1.AdminIdentity/ResetPassword"
-	AdminIdentity_UnlockUser_FullMethodName         = "/saturn.identity.admin.v1.AdminIdentity/UnlockUser"
+	AdminIdentity_ListUsers_FullMethodName               = "/saturn.identity.admin.v1.AdminIdentity/ListUsers"
+	AdminIdentity_ApproveUser_FullMethodName             = "/saturn.identity.admin.v1.AdminIdentity/ApproveUser"
+	AdminIdentity_RejectUser_FullMethodName              = "/saturn.identity.admin.v1.AdminIdentity/RejectUser"
+	AdminIdentity_UpdateUserRole_FullMethodName          = "/saturn.identity.admin.v1.AdminIdentity/UpdateUserRole"
+	AdminIdentity_RevokeAllSessions_FullMethodName       = "/saturn.identity.admin.v1.AdminIdentity/RevokeAllSessions"
+	AdminIdentity_ListSecurityEvents_FullMethodName      = "/saturn.identity.admin.v1.AdminIdentity/ListSecurityEvents"
+	AdminIdentity_ResetPassword_FullMethodName           = "/saturn.identity.admin.v1.AdminIdentity/ResetPassword"
+	AdminIdentity_UnlockUser_FullMethodName              = "/saturn.identity.admin.v1.AdminIdentity/UnlockUser"
+	AdminIdentity_CreateOAuthClient_FullMethodName       = "/saturn.identity.admin.v1.AdminIdentity/CreateOAuthClient"
+	AdminIdentity_GetOAuthClient_FullMethodName          = "/saturn.identity.admin.v1.AdminIdentity/GetOAuthClient"
+	AdminIdentity_ListOAuthClients_FullMethodName        = "/saturn.identity.admin.v1.AdminIdentity/ListOAuthClients"
+	AdminIdentity_UpdateOAuthClient_FullMethodName       = "/saturn.identity.admin.v1.AdminIdentity/UpdateOAuthClient"
+	AdminIdentity_RotateOAuthClientSecret_FullMethodName = "/saturn.identity.admin.v1.AdminIdentity/RotateOAuthClientSecret"
+	AdminIdentity_DeleteOAuthClient_FullMethodName       = "/saturn.identity.admin.v1.AdminIdentity/DeleteOAuthClient"
 )
 
 // AdminIdentityClient is the client API for AdminIdentity service.
@@ -51,6 +58,18 @@ type AdminIdentityClient interface {
 	ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error)
 	// Unlocks a locked user account by clearing lockout timestamp and resetting failed login attempts.
 	UnlockUser(ctx context.Context, in *UnlockUserRequest, opts ...grpc.CallOption) (*User, error)
+	// Creates a new instance-wide OAuth 2.1 client.
+	CreateOAuthClient(ctx context.Context, in *CreateOAuthClientRequest, opts ...grpc.CallOption) (*OAuthClient, error)
+	// Retrieves an instance-wide, DCR, or CIMD OAuth 2.1 client by ID.
+	GetOAuthClient(ctx context.Context, in *GetOAuthClientRequest, opts ...grpc.CallOption) (*OAuthClient, error)
+	// Lists instance-wide, DCR, and CIMD OAuth 2.1 clients.
+	ListOAuthClients(ctx context.Context, in *ListOAuthClientsRequest, opts ...grpc.CallOption) (*ListOAuthClientsResponse, error)
+	// Updates an instance-wide OAuth 2.1 client.
+	UpdateOAuthClient(ctx context.Context, in *UpdateOAuthClientRequest, opts ...grpc.CallOption) (*OAuthClient, error)
+	// Rotates the client secret for a confidential instance-wide OAuth 2.1 client.
+	RotateOAuthClientSecret(ctx context.Context, in *RotateOAuthClientSecretRequest, opts ...grpc.CallOption) (*OAuthClient, error)
+	// Deletes an instance-wide, DCR, or CIMD OAuth 2.1 client.
+	DeleteOAuthClient(ctx context.Context, in *DeleteOAuthClientRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type adminIdentityClient struct {
@@ -141,6 +160,66 @@ func (c *adminIdentityClient) UnlockUser(ctx context.Context, in *UnlockUserRequ
 	return out, nil
 }
 
+func (c *adminIdentityClient) CreateOAuthClient(ctx context.Context, in *CreateOAuthClientRequest, opts ...grpc.CallOption) (*OAuthClient, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OAuthClient)
+	err := c.cc.Invoke(ctx, AdminIdentity_CreateOAuthClient_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminIdentityClient) GetOAuthClient(ctx context.Context, in *GetOAuthClientRequest, opts ...grpc.CallOption) (*OAuthClient, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OAuthClient)
+	err := c.cc.Invoke(ctx, AdminIdentity_GetOAuthClient_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminIdentityClient) ListOAuthClients(ctx context.Context, in *ListOAuthClientsRequest, opts ...grpc.CallOption) (*ListOAuthClientsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOAuthClientsResponse)
+	err := c.cc.Invoke(ctx, AdminIdentity_ListOAuthClients_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminIdentityClient) UpdateOAuthClient(ctx context.Context, in *UpdateOAuthClientRequest, opts ...grpc.CallOption) (*OAuthClient, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OAuthClient)
+	err := c.cc.Invoke(ctx, AdminIdentity_UpdateOAuthClient_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminIdentityClient) RotateOAuthClientSecret(ctx context.Context, in *RotateOAuthClientSecretRequest, opts ...grpc.CallOption) (*OAuthClient, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OAuthClient)
+	err := c.cc.Invoke(ctx, AdminIdentity_RotateOAuthClientSecret_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminIdentityClient) DeleteOAuthClient(ctx context.Context, in *DeleteOAuthClientRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AdminIdentity_DeleteOAuthClient_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminIdentityServer is the server API for AdminIdentity service.
 // All implementations should embed UnimplementedAdminIdentityServer
 // for forward compatibility.
@@ -163,6 +242,18 @@ type AdminIdentityServer interface {
 	ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error)
 	// Unlocks a locked user account by clearing lockout timestamp and resetting failed login attempts.
 	UnlockUser(context.Context, *UnlockUserRequest) (*User, error)
+	// Creates a new instance-wide OAuth 2.1 client.
+	CreateOAuthClient(context.Context, *CreateOAuthClientRequest) (*OAuthClient, error)
+	// Retrieves an instance-wide, DCR, or CIMD OAuth 2.1 client by ID.
+	GetOAuthClient(context.Context, *GetOAuthClientRequest) (*OAuthClient, error)
+	// Lists instance-wide, DCR, and CIMD OAuth 2.1 clients.
+	ListOAuthClients(context.Context, *ListOAuthClientsRequest) (*ListOAuthClientsResponse, error)
+	// Updates an instance-wide OAuth 2.1 client.
+	UpdateOAuthClient(context.Context, *UpdateOAuthClientRequest) (*OAuthClient, error)
+	// Rotates the client secret for a confidential instance-wide OAuth 2.1 client.
+	RotateOAuthClientSecret(context.Context, *RotateOAuthClientSecretRequest) (*OAuthClient, error)
+	// Deletes an instance-wide, DCR, or CIMD OAuth 2.1 client.
+	DeleteOAuthClient(context.Context, *DeleteOAuthClientRequest) (*emptypb.Empty, error)
 }
 
 // UnimplementedAdminIdentityServer should be embedded to have
@@ -195,6 +286,24 @@ func (UnimplementedAdminIdentityServer) ResetPassword(context.Context, *ResetPas
 }
 func (UnimplementedAdminIdentityServer) UnlockUser(context.Context, *UnlockUserRequest) (*User, error) {
 	return nil, status.Error(codes.Unimplemented, "method UnlockUser not implemented")
+}
+func (UnimplementedAdminIdentityServer) CreateOAuthClient(context.Context, *CreateOAuthClientRequest) (*OAuthClient, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateOAuthClient not implemented")
+}
+func (UnimplementedAdminIdentityServer) GetOAuthClient(context.Context, *GetOAuthClientRequest) (*OAuthClient, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOAuthClient not implemented")
+}
+func (UnimplementedAdminIdentityServer) ListOAuthClients(context.Context, *ListOAuthClientsRequest) (*ListOAuthClientsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListOAuthClients not implemented")
+}
+func (UnimplementedAdminIdentityServer) UpdateOAuthClient(context.Context, *UpdateOAuthClientRequest) (*OAuthClient, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateOAuthClient not implemented")
+}
+func (UnimplementedAdminIdentityServer) RotateOAuthClientSecret(context.Context, *RotateOAuthClientSecretRequest) (*OAuthClient, error) {
+	return nil, status.Error(codes.Unimplemented, "method RotateOAuthClientSecret not implemented")
+}
+func (UnimplementedAdminIdentityServer) DeleteOAuthClient(context.Context, *DeleteOAuthClientRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteOAuthClient not implemented")
 }
 func (UnimplementedAdminIdentityServer) testEmbeddedByValue() {}
 
@@ -360,6 +469,114 @@ func _AdminIdentity_UnlockUser_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminIdentity_CreateOAuthClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateOAuthClientRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminIdentityServer).CreateOAuthClient(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminIdentity_CreateOAuthClient_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminIdentityServer).CreateOAuthClient(ctx, req.(*CreateOAuthClientRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminIdentity_GetOAuthClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOAuthClientRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminIdentityServer).GetOAuthClient(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminIdentity_GetOAuthClient_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminIdentityServer).GetOAuthClient(ctx, req.(*GetOAuthClientRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminIdentity_ListOAuthClients_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOAuthClientsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminIdentityServer).ListOAuthClients(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminIdentity_ListOAuthClients_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminIdentityServer).ListOAuthClients(ctx, req.(*ListOAuthClientsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminIdentity_UpdateOAuthClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateOAuthClientRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminIdentityServer).UpdateOAuthClient(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminIdentity_UpdateOAuthClient_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminIdentityServer).UpdateOAuthClient(ctx, req.(*UpdateOAuthClientRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminIdentity_RotateOAuthClientSecret_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RotateOAuthClientSecretRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminIdentityServer).RotateOAuthClientSecret(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminIdentity_RotateOAuthClientSecret_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminIdentityServer).RotateOAuthClientSecret(ctx, req.(*RotateOAuthClientSecretRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminIdentity_DeleteOAuthClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteOAuthClientRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminIdentityServer).DeleteOAuthClient(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminIdentity_DeleteOAuthClient_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminIdentityServer).DeleteOAuthClient(ctx, req.(*DeleteOAuthClientRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminIdentity_ServiceDesc is the grpc.ServiceDesc for AdminIdentity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -398,6 +615,30 @@ var AdminIdentity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UnlockUser",
 			Handler:    _AdminIdentity_UnlockUser_Handler,
+		},
+		{
+			MethodName: "CreateOAuthClient",
+			Handler:    _AdminIdentity_CreateOAuthClient_Handler,
+		},
+		{
+			MethodName: "GetOAuthClient",
+			Handler:    _AdminIdentity_GetOAuthClient_Handler,
+		},
+		{
+			MethodName: "ListOAuthClients",
+			Handler:    _AdminIdentity_ListOAuthClients_Handler,
+		},
+		{
+			MethodName: "UpdateOAuthClient",
+			Handler:    _AdminIdentity_UpdateOAuthClient_Handler,
+		},
+		{
+			MethodName: "RotateOAuthClientSecret",
+			Handler:    _AdminIdentity_RotateOAuthClientSecret_Handler,
+		},
+		{
+			MethodName: "DeleteOAuthClient",
+			Handler:    _AdminIdentity_DeleteOAuthClient_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

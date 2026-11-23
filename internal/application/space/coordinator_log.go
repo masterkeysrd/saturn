@@ -6,6 +6,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"github.com/masterkeysrd/saturn/internal/platform/settings"
@@ -287,6 +288,126 @@ func (l *LoggingCoordinator) RevokeSpaceAPIKeyGrant(ctx context.Context, req *Re
 	l.logger.Info(ctx, "space.RevokeSpaceAPIKeyGrant completed",
 		log.String("component", "space"),
 		log.String("operation", "RevokeSpaceAPIKeyGrant"),
+		log.Duration("duration", duration),
+	)
+	return nil
+}
+
+// CreateSpaceOAuthClient executes next.CreateSpaceOAuthClient and logs execution duration and errors.
+func (l *LoggingCoordinator) CreateSpaceOAuthClient(ctx context.Context, req *CreateSpaceOAuthClientRequest) (*identity.OAuthClient, error) {
+	start := time.Now()
+	res, err := l.next.CreateSpaceOAuthClient(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "space.CreateSpaceOAuthClient failed",
+			log.String("component", "space"),
+			log.String("operation", "CreateSpaceOAuthClient"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "space.CreateSpaceOAuthClient completed",
+		log.String("component", "space"),
+		log.String("operation", "CreateSpaceOAuthClient"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// UpdateSpaceOAuthClient executes next.UpdateSpaceOAuthClient and logs execution duration and errors.
+func (l *LoggingCoordinator) UpdateSpaceOAuthClient(ctx context.Context, req *UpdateSpaceOAuthClientRequest) (*identity.OAuthClient, error) {
+	start := time.Now()
+	res, err := l.next.UpdateSpaceOAuthClient(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "space.UpdateSpaceOAuthClient failed",
+			log.String("component", "space"),
+			log.String("operation", "UpdateSpaceOAuthClient"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "space.UpdateSpaceOAuthClient completed",
+		log.String("component", "space"),
+		log.String("operation", "UpdateSpaceOAuthClient"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// RotateSpaceOAuthClientSecret executes next.RotateSpaceOAuthClientSecret and logs execution duration and errors.
+func (l *LoggingCoordinator) RotateSpaceOAuthClientSecret(ctx context.Context, req *RotateSpaceOAuthClientSecretRequest) (*identity.OAuthClient, error) {
+	start := time.Now()
+	res, err := l.next.RotateSpaceOAuthClientSecret(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "space.RotateSpaceOAuthClientSecret failed",
+			log.String("component", "space"),
+			log.String("operation", "RotateSpaceOAuthClientSecret"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "space.RotateSpaceOAuthClientSecret completed",
+		log.String("component", "space"),
+		log.String("operation", "RotateSpaceOAuthClientSecret"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// DeleteSpaceOAuthClient executes next.DeleteSpaceOAuthClient and logs execution duration and errors.
+func (l *LoggingCoordinator) DeleteSpaceOAuthClient(ctx context.Context, req *DeleteSpaceOAuthClientRequest) error {
+	start := time.Now()
+	err := l.next.DeleteSpaceOAuthClient(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "space.DeleteSpaceOAuthClient failed",
+			log.String("component", "space"),
+			log.String("operation", "DeleteSpaceOAuthClient"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return err
+	}
+
+	l.logger.Info(ctx, "space.DeleteSpaceOAuthClient completed",
+		log.String("component", "space"),
+		log.String("operation", "DeleteSpaceOAuthClient"),
+		log.Duration("duration", duration),
+	)
+	return nil
+}
+
+// RevokeSpaceOAuthGrant executes next.RevokeSpaceOAuthGrant and logs execution duration and errors.
+func (l *LoggingCoordinator) RevokeSpaceOAuthGrant(ctx context.Context, req *RevokeSpaceOAuthGrantRequest) error {
+	start := time.Now()
+	err := l.next.RevokeSpaceOAuthGrant(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "space.RevokeSpaceOAuthGrant failed",
+			log.String("component", "space"),
+			log.String("operation", "RevokeSpaceOAuthGrant"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return err
+	}
+
+	l.logger.Info(ctx, "space.RevokeSpaceOAuthGrant completed",
+		log.String("component", "space"),
+		log.String("operation", "RevokeSpaceOAuthGrant"),
 		log.Duration("duration", duration),
 	)
 	return nil

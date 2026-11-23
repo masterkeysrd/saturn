@@ -75,9 +75,13 @@ type Dependencies struct {
 	DeviceStore        DeviceStore
 	ChallengeStore     AuthChallengeStore
 	DeviceVerifier     DeviceVerifier
-	PasswordResetStore PasswordResetStore
-	APIKeyStore        APIKeyStore
-	Preferences        UserPreferencesClient
+	PasswordResetStore    PasswordResetStore
+	APIKeyStore           APIKeyStore
+	OAuthClientStore      OAuthClientStore
+	OAuthGrantStore       OAuthGrantStore
+	OAuthAuthCodeStore    OAuthAuthCodeStore
+	OAuthAccessTokenStore OAuthAccessTokenStore
+	Preferences           UserPreferencesClient
 }
 
 // Hasher is the password hashing interface used for authentication.

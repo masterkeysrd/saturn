@@ -252,6 +252,30 @@ service Identity {
     option (google.api.http) = {delete: "/v1/identity/api-keys/{id}"};
     option (google.api.method_signature) = "id";
   }
+
+  // Authenticated RPC: Lists all active OAuth 2.1 grants authorized by the caller.
+  rpc ListUserOAuthGrants(ListUserOAuthGrantsRequest) returns (ListUserOAuthGrantsResponse) {
+    option (google.api.http) = {get: "/v1/identity/oauth/grants"};
+  }
+
+  // Authenticated RPC: Revokes an active OAuth 2.1 grant owned by the caller.
+  rpc RevokeUserOAuthGrant(RevokeUserOAuthGrantRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/identity/oauth/grants/{grant_id}"};
+    option (google.api.method_signature) = "grant_id";
+  }
+
+  // Authenticated RPC: Inspects an OAuth 2.1 authorization request before rendering consent UI.
+  rpc InspectOAuthConsent(InspectOAuthConsentRequest) returns (InspectOAuthConsentResponse) {
+    option (google.api.http) = {get: "/v1/identity/oauth/consent"};
+  }
+
+  // Authenticated RPC: Records an approve or deny OAuth 2.1 consent decision and returns a short-lived handoff nonce.
+  rpc DecideOAuthConsent(DecideOAuthConsentRequest) returns (DecideOAuthConsentResponse) {
+    option (google.api.http) = {
+      post: "/v1/identity/oauth/consent:decide"
+      body: "*"
+    };
+  }
 }
 
 // Request message for Identity.LoginUser.
@@ -865,4 +889,166 @@ message UpdateAPIKeyRequest {
 message DeleteAPIKeyRequest {
   // Required. The unique identifier of the API key (`apk_...`) to delete.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// UserOAuthGrant represents an active OAuth 2.1 authorization granted by the caller.
+message UserOAuthGrant {
+  // Output only. The unique identifier of the grant (`oag_...`).
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The OAuth client identifier (`oac_...` or CIMD URL).
+  string client_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The display name of the OAuth client.
+  string client_name = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Whether the OAuth client is workspace-scoped rather than instance-wide.
+  bool is_workspace_client = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The authorized workspace identifier (`spc_...`).
+  string space_id = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The display name of the authorized workspace.
+  string space_name = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Scopes authorized for this grant.
+  repeated string scopes = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the grant was last used.
+  optional google.protobuf.Timestamp last_used_at = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the grant was created.
+  google.protobuf.Timestamp create_time = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Identity.ListUserOAuthGrants.
+message ListUserOAuthGrantsRequest {}
+
+// Response message for Identity.ListUserOAuthGrants.
+message ListUserOAuthGrantsResponse {
+  // Output only. List of active OAuth 2.1 grants authorized by the user.
+  repeated UserOAuthGrant grants = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Identity.RevokeUserOAuthGrant.
+message RevokeUserOAuthGrantRequest {
+  // Required. The unique identifier of the OAuth grant (`oag_...`) to revoke.
+  string grant_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// OAuthConsentSpaceOption represents a workspace selectable during OAuth 2.1 consent.
+message OAuthConsentSpaceOption {
+  // Output only. The workspace identifier (`spc_...`).
+  string space_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The display name of the workspace.
+  string space_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The caller's role in the workspace (`owner`, `admin`, `member`, `viewer`).
+  string role = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Permitted scopes for this workspace given the caller's role and client ceiling.
+  repeated string allowed_scopes = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Identity.InspectOAuthConsent.
+message InspectOAuthConsentRequest {
+  // Required. The OAuth 2.1 client_id parameter.
+  string client_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The OAuth 2.1 redirect_uri parameter.
+  string redirect_uri = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The OAuth 2.1 response_type parameter (must be `code`).
+  string response_type = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Space-delimited requested scopes from the authorization URL.
+  string scope = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Opaque client state parameter.
+  string state = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. PKCE S256 code_challenge parameter.
+  string code_challenge = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. PKCE code_challenge_method parameter (must be `S256`).
+  string code_challenge_method = 7 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. RFC 8707 target resource indicator URI.
+  string resource = 8 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for Identity.InspectOAuthConsent.
+message InspectOAuthConsentResponse {
+  // Output only. Canonical client ID (`oac_...` or CIMD URL).
+  string client_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Display name of the requesting OAuth application.
+  string client_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Description or homepage URI of the requesting OAuth application.
+  string client_description = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Whether the client is bound to a specific workspace (`true`) or instance-wide (`false`).
+  bool is_workspace_client = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Validated redirect URI.
+  string redirect_uri = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Host and port of the redirect URI for user display.
+  string redirect_uri_host = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. RFC 8707 resource indicator when provided.
+  string resource = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Pre-locked workspace ID when enforced by a workspace client or resource indicator.
+  string locked_space_id = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Default effective scopes permitted for the request.
+  repeated string effective_scopes = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Workspaces eligible for selection on the consent screen.
+  repeated OAuthConsentSpaceOption spaces = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Identity.DecideOAuthConsent.
+message DecideOAuthConsentRequest {
+  // Required. The OAuth 2.1 client_id parameter.
+  string client_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The OAuth 2.1 redirect_uri parameter.
+  string redirect_uri = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The OAuth 2.1 response_type parameter (`code`).
+  string response_type = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Space-delimited originally requested scopes.
+  string scope = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Specific scopes approved by the user.
+  repeated string approved_scopes = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Selected target workspace ID (`spc_...`), required when approved is true.
+  string space_id = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Opaque client state parameter.
+  string state = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. PKCE S256 code_challenge parameter.
+  string code_challenge = 8 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. PKCE code_challenge_method parameter (`S256`).
+  string code_challenge_method = 9 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. RFC 8707 target resource indicator URI.
+  string resource = 10 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. Whether the user approved (`true`) or denied (`false`) the request.
+  bool approved = 11 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Response message for Identity.DecideOAuthConsent.
+message DecideOAuthConsentResponse {
+  // Output only. Short-lived single-use handoff nonce for `/oauth/authorize/callback`.
+  string handoff_token = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

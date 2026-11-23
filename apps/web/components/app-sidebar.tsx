@@ -86,13 +86,21 @@ const URL_TO_NAV_KEY: Record<string, TranslationKey> = {
   "/space/ai/agents": "nav.agents",
   "/space/ai/models": "nav.models",
   "/space/ai/mcp": "nav.mcp",
+  "/space/ai/runs": "ai.runs.title",
+  "/space/workflows": "nav.studio",
+  "/space/workflows/runs": "workflows.runHistory",
+  "/admin/users": "nav.adminUsers",
+  "/admin/scheduler": "nav.adminScheduler",
+  "/admin/messages": "nav.adminMessages",
+  "/admin/backups": "nav.adminBackups",
+  "/admin/security": "nav.adminSecurity",
+  "/admin/oauth-clients": "nav.oauthClients",
 }
 
 function getLocalizedMenuLabel(
   title: string,
   url: string | undefined,
   t: (key: TranslationKey) => string,
-  language: "en" | "es",
   isSubItem = false
 ): string {
   if (url === "/finance") {
@@ -103,28 +111,7 @@ function getLocalizedMenuLabel(
   }
   if (title === "Workflows") return t("nav.workflows")
   if (title === "Admin") return t("nav.group.admin")
-  if (language === "es") {
-    switch (url) {
-      case "/space/workflows":
-        return "Estudio"
-      case "/space/workflows/runs":
-        return "Historial de ejecuciones"
-      case "/space/ai/runs":
-        return "Ejecuciones"
-      case "/admin/users":
-        return "Gestión de usuarios"
-      case "/admin/scheduler":
-        return "Panel de tareas"
-      case "/admin/messages":
-        return "Cola de mensajes"
-      case "/admin/backups":
-        return "Copias de seguridad"
-      case "/admin/security":
-        return "Auditoría de seguridad"
-      default:
-        if (title === "AI Studio") return "Estudio IA"
-    }
-  }
+  if (title === "AI Studio") return t("nav.aiStudio")
   return title
 }
 
@@ -137,8 +124,8 @@ function SidebarNavItem({
 }) {
   const { spaceId } = useActiveSpaceContext()
   const { isMobile, setOpenMobile } = useSidebar()
-  const { t, language } = useI18n()
-  const itemLabel = getLocalizedMenuLabel(item.title, item.url, t, language)
+  const { t } = useI18n()
+  const itemLabel = getLocalizedMenuLabel(item.title, item.url, t)
   const [open, setOpen] = useState(() => {
     if (item.items) {
       return item.items.some((sub) =>
@@ -187,7 +174,6 @@ function SidebarNavItem({
                 subItem.title,
                 subItem.url,
                 t,
-                language,
                 true
               )
               return (

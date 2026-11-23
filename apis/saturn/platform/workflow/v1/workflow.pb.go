@@ -3122,11 +3122,11 @@ const file_saturn_platform_workflow_v1_workflow_proto_rawDesc = "" +
 	"\x05input\x18\x03 \x01(\v2\x17.google.protobuf.StructB\x03\xe0A\x01H\x01R\x05input\x88\x01\x01\x12N\n" +
 	"\tartifacts\x18\x04 \x03(\v2+.saturn.platform.workflow.v1.InlineArtifactB\x03\xe0A\x01R\tartifactsB\x0f\n" +
 	"\r_trigger_dataB\b\n" +
-	"\x06_input\"\x8c\x01\n" +
+	"\x06_input\"\x86\x01\n" +
 	"\x13GenerateFlowRequest\x12\x1b\n" +
 	"\x06prompt\x18\x01 \x01(\tB\x03\xe0A\x02R\x06prompt\x12H\n" +
 	"\x05model\x18\x02 \x01(\v2(.saturn.platform.workflow.v1.ModelConfigB\x03\xe0A\x01H\x00R\x05model\x88\x01\x01B\b\n" +
-	"\x06_modelJ\x04\b\x03\x10\x04\"\xb7\x01\n" +
+	"\x06_model\"\xb7\x01\n" +
 	"\x13ListFlowRunsRequest\x12!\n" +
 	"\aflow_id\x18\x01 \x01(\tB\x03\xe0A\x01H\x00R\x06flowId\x88\x01\x01\x12 \n" +
 	"\x06status\x18\x02 \x01(\tB\x03\xe0A\x01H\x01R\x06status\x88\x01\x01\x12 \n" +
@@ -3140,8 +3140,8 @@ const file_saturn_platform_workflow_v1_workflow_proto_rawDesc = "" +
 	"\x04runs\x18\x01 \x03(\v2$.saturn.platform.workflow.v1.FlowRunB\x03\xe0A\x03R\x04runs\x12+\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x03R\rnextPageToken\"(\n" +
 	"\x11GetFlowRunRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\x19\n" +
-	"\x11GetCatalogRequestJ\x04\b\x01\x10\x02\"\xf8\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\x13\n" +
+	"\x11GetCatalogRequest\"\xf8\n" +
 	"\n" +
 	"\aCatalog\x12]\n" +
 	"\x0etrigger_topics\x18\x01 \x03(\v21.saturn.platform.workflow.v1.Catalog.TriggerTopicB\x03\xe0A\x03R\rtriggerTopics\x12D\n" +

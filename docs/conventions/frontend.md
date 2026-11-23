@@ -33,7 +33,7 @@ apps/
 
 ---
 
-## 2. Date, Timezone & Regional Formatting
+## 2. Date, Timezone & Internationalization (i18n)
 
 1. **Zero Inline Formatting**:
    - **NEVER** call `new Date().toLocaleDateString(undefined, { timeZone: "UTC" })` or native date/currency formatting inline in components.
@@ -46,6 +46,12 @@ apps/
    - `tz.timezone` (Space-scoped), `tz.locale`, `tz.hourCycle`, `tz.weekStartsOn` (User-scoped).
 3. **Timezone Selection**:
    - Use `COMMON_TIMEZONES` imported from `@saturn/core`. Do not define duplicate timezone arrays.
+4. **Mandatory `@saturn/i18n` Localization (Zero Hardcoded UI Copy)**:
+   - **NEVER** hardcode user-facing strings (headings, labels, placeholders, buttons, confirmation dialogs, toast messages, empty states, error fallbacks, `aria-label`s, sidebar items, or breadcrumbs) or write inline `isEs ? ... : ...` / parallel `*_ES` maps.
+   - Always add symmetric nested keys to **both** `packages/i18n/locales/en.json` and `packages/i18n/locales/es.json` (and `schemas/{en,es}.json` for Zod refinements, `enums/{en,es}.json` for enums).
+   - Consume keys via `const { t } = useI18n()` in React components, `translate(locale, key)` in pure TypeScript helpers (e.g., `apps/web/lib/breadcrumbs.ts`), and `URL_TO_NAV_KEY` in `apps/web/components/app-sidebar.tsx`.
+   - Reuse centralized domain label maps and components across features (e.g., `apps/web/lib/scopes.ts` + `<ScopePicker />` for API Key and OAuth scopes).
+   - Always run `npx vitest run packages/i18n` after modifying localization catalogs to enforce zero-dot nested structure and 100% leaf-key parity.
 
 ---
 

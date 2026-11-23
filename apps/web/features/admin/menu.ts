@@ -1,6 +1,7 @@
 import {
   Clock,
   Database,
+  KeyRound,
   MessageSquare,
   ShieldAlert,
   ShieldCheckIcon,
@@ -39,6 +40,11 @@ export const menu: FeatureMenu = {
       title: "Security Audit",
       url: "/admin/security",
       icon: ShieldAlert,
+    },
+    {
+      title: "OAuth Clients",
+      url: "/admin/oauth-clients",
+      icon: KeyRound,
     },
   ],
 }

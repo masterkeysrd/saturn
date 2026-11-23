@@ -6,6 +6,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
+	platformoauth "github.com/masterkeysrd/saturn/internal/platform/oauth"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
 )
@@ -78,6 +79,36 @@ type Coordinator interface {
 	UpdateAPIKey(ctx context.Context, req *UpdateAPIKeyRequest) (*identity.APIKey, error)
 	// @transactional
 	DeleteAPIKey(ctx context.Context, req *DeleteAPIKeyRequest) error
+
+	// Admin OAuth 2.1 Client Management
+	// @transactional
+	AdminCreateOAuthClient(ctx context.Context, req *AdminCreateOAuthClientRequest) (*identity.OAuthClient, error)
+	AdminGetOAuthClient(ctx context.Context, req *AdminGetOAuthClientRequest) (*identity.OAuthClient, error)
+	AdminListOAuthClients(ctx context.Context) ([]*identity.OAuthClient, error)
+	// @transactional
+	AdminUpdateOAuthClient(ctx context.Context, req *AdminUpdateOAuthClientRequest) (*identity.OAuthClient, error)
+	// @transactional
+	AdminRotateOAuthClientSecret(ctx context.Context, req *AdminRotateOAuthClientSecretRequest) (*identity.OAuthClient, error)
+	// @transactional
+	AdminDeleteOAuthClient(ctx context.Context, req *AdminDeleteOAuthClientRequest) error
+
+	// User OAuth 2.1 Grants & Consent
+	ListUserOAuthGrants(ctx context.Context, req *ListUserOAuthGrantsRequest) ([]*UserOAuthGrant, error)
+	// @transactional
+	RevokeUserOAuthGrant(ctx context.Context, req *RevokeUserOAuthGrantRequest) error
+	InspectOAuthConsent(ctx context.Context, req *InspectOAuthConsentRequest) (*InspectOAuthConsentResponse, error)
+	// @transactional
+	DecideOAuthConsent(ctx context.Context, req *DecideOAuthConsentRequest) (*DecideOAuthConsentResponse, error)
+
+	// Public OAuth 2.1 Protocol
+	// @transactional
+	RegisterDynamicOAuthClient(ctx context.Context, req *RegisterDynamicOAuthClientRequest) (*identity.OAuthClient, error)
+	// @transactional
+	ConsumeOAuthRedirectHandoff(ctx context.Context, req *ConsumeOAuthRedirectHandoffRequest) (*ConsumeOAuthRedirectHandoffResponse, error)
+	// @transactional
+	ExchangeOAuthToken(ctx context.Context, req *ExchangeOAuthTokenRequest) (*ExchangeOAuthTokenResponse, error)
+	// @transactional
+	RevokeOAuthToken(ctx context.Context, req *RevokeOAuthTokenRequest) error
 }
 
 // PasswordHasher defines the interface for computing and verifying password hashes.
@@ -98,12 +129,27 @@ type TokenService interface {
 	ValidateMFATicket(raw string, now time.Time) (*token.Claims, error)
 }
 
+// OAuthConfig holds OAuth 2.1 authorization server policy and token lifetimes.
+type OAuthConfig struct {
+	AllowDynamicRegistration bool
+	AccessTokenTTL           time.Duration
+	RefreshTokenTTL          time.Duration
+}
+
+// CIMDResolver fetches and validates HTTPS Client ID Metadata Documents.
+// @Mock
+type CIMDResolver interface {
+	FetchMetadata(ctx context.Context, clientIDURL string, ifNoneMatch string) (*platformoauth.CIMDFetchResult, error)
+}
+
 // Dependencies defines the inputs for creating a new Coordinator.
 type Dependencies struct {
 	IdentityService IdentityService
 	PasswordHasher  PasswordHasher
 	SpaceService    SpaceService
 	TokenService    TokenService
+	CIMDResolver    CIMDResolver
+	OAuthConfig     OAuthConfig
 }
 
 // coordinator orchestrates identity operations across multiple services.
@@ -112,15 +158,26 @@ type coordinator struct {
 	passwordHasher  PasswordHasher
 	spaceService    SpaceService
 	tokenService    TokenService
+	cimdResolver    CIMDResolver
+	oauthConfig     OAuthConfig
 }
 
 // NewCoordinator creates a new Coordinator.
 func NewCoordinator(deps Dependencies) Coordinator {
+	oauthCfg := deps.OAuthConfig
+	if oauthCfg.AccessTokenTTL <= 0 {
+		oauthCfg.AccessTokenTTL = time.Hour
+	}
+	if oauthCfg.RefreshTokenTTL <= 0 {
+		oauthCfg.RefreshTokenTTL = 90 * 24 * time.Hour
+	}
 	return &coordinator{
 		identityService: deps.IdentityService,
 		passwordHasher:  deps.PasswordHasher,
 		spaceService:    deps.SpaceService,
 		tokenService:    deps.TokenService,
+		cimdResolver:    deps.CIMDResolver,
+		oauthConfig:     oauthCfg,
 	}
 }
 
@@ -201,12 +258,33 @@ type IdentityService interface {
 	ListAPIKeys(ctx context.Context, userID identity.UserID) ([]*identity.APIKey, error)
 	UpdateAPIKey(ctx context.Context, params identity.UpdateAPIKeyParams) (*identity.APIKey, error)
 	DeleteAPIKey(ctx context.Context, params identity.DeleteAPIKeyParams) error
+	CreateOAuthClient(ctx context.Context, params identity.CreateOAuthClientParams) (*identity.OAuthClient, error)
+	UpsertCIMDOAuthClient(ctx context.Context, client *identity.OAuthClient) (*identity.OAuthClient, error)
+	GetOAuthClient(ctx context.Context, id identity.OAuthClientID) (*identity.OAuthClient, error)
+	ListOAuthClientsByIDs(ctx context.Context, ids []identity.OAuthClientID) ([]*identity.OAuthClient, error)
+	ListInstanceOAuthClients(ctx context.Context) ([]*identity.OAuthClient, error)
+	UpdateOAuthClient(ctx context.Context, params identity.UpdateOAuthClientParams) (*identity.OAuthClient, error)
+	RotateOAuthClientSecret(ctx context.Context, id identity.OAuthClientID, expectedSpaceID *string, allowGlobal bool) (*identity.OAuthClient, error)
+	DeleteOAuthClient(ctx context.Context, id identity.OAuthClientID, expectedSpaceID *string, allowGlobal bool, actorUserID *identity.UserID, ipAddress, userAgent string) error
+	CreateOAuthAuthCode(ctx context.Context, params identity.CreateOAuthAuthCodeParams) (string, error)
+	ConsumeOAuthRedirectHandoff(ctx context.Context, rawHandoff string) (*identity.OAuthAuthCode, string, error)
+	ConsumeOAuthAuthCode(ctx context.Context, client *identity.OAuthClient, rawCode, redirectURI, codeVerifier, resource string) (*identity.OAuthAuthCode, error)
+	CreateOAuthGrantAndIssueTokens(ctx context.Context, client *identity.OAuthClient, userID identity.UserID, spaceID string, scopes []string, accessTTL, refreshTTL time.Duration, ipAddress, userAgent string) (*identity.IssueOAuthTokenResult, error)
+	RefreshOAuthGrant(ctx context.Context, client *identity.OAuthClient, rawRefreshToken string, accessTTL, refreshTTL time.Duration) (*identity.IssueOAuthTokenResult, error)
+	ListUserOAuthGrants(ctx context.Context, userID identity.UserID) ([]*identity.OAuthGrant, error)
+	RevokeUserOAuthGrant(ctx context.Context, userID identity.UserID, grantID identity.OAuthGrantID, ipAddress, userAgent string) error
+	RevokeSpaceOAuthGrant(ctx context.Context, spaceID string, grantID identity.OAuthGrantID) error
+	RevokeOAuthToken(ctx context.Context, rawToken string, clientID identity.OAuthClientID) error
 }
 
 // SpaceService defines the interface for space operations required by IAM application.
 // @Mock
 type SpaceService interface {
 	CreateSpace(ctx context.Context, sp *space.Space) (*space.Space, error)
+	GetSpace(ctx context.Context, session space.Session) (*space.Space, error)
+	ListSpaces(ctx context.Context, userID space.UserID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error)
+	GetSpaceMember(ctx context.Context, session space.Session) (*space.Member, error)
+	SpaceExists(ctx context.Context, spaceID space.SpaceID) (bool, error)
 	SyncAPIKeyGrants(ctx context.Context, apiKeyID string, userID space.UserID, spaceIDs []space.SpaceID) error
 	ListAPIKeyGrantedSpaces(ctx context.Context, apiKeyID string) ([]space.SpaceID, error)
 	ListAPIKeysGrantedSpaces(ctx context.Context, apiKeyIDs []string) (map[string][]space.SpaceID, error)

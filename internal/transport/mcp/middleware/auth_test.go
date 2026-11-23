@@ -438,3 +438,44 @@ func TestFormatToolError(t *testing.T) {
 		})
 	}
 }
+
+func TestAuthMiddleware_DynamicWWWAuthenticateResourceMetadata(t *testing.T) {
+	mw := AuthMiddleware(AuthConfig{
+		IssuerURL: "https://saturn.example.com",
+	})
+	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	tests := []struct {
+		name     string
+		target   string
+		wantHdr  string
+	}{
+		{
+			name:    "instance /mcp points to /.well-known/oauth-protected-resource/mcp",
+			target:  "/mcp",
+			wantHdr: `Bearer resource_metadata="https://saturn.example.com/.well-known/oauth-protected-resource/mcp"`,
+		},
+		{
+			name:    "workspace /spaces/spc_1/mcp points to /.well-known/oauth-protected-resource/spaces/spc_1/mcp",
+			target:  "/spaces/spc_1/mcp",
+			wantHdr: `Bearer resource_metadata="https://saturn.example.com/.well-known/oauth-protected-resource/spaces/spc_1/mcp"`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, tc.target, nil)
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusUnauthorized {
+				t.Fatalf("status = %d, want 401", rec.Code)
+			}
+			if got := rec.Header().Get("WWW-Authenticate"); got != tc.wantHdr {
+				t.Errorf("WWW-Authenticate = %q, want %q", got, tc.wantHdr)
+			}
+		})
+	}
+}

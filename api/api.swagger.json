@@ -116,6 +116,234 @@
         ]
       }
     },
+    "/v1/admin/identity/oauth-clients": {
+      "get": {
+        "summary": "Lists instance-wide, DCR, and CIMD OAuth 2.1 clients.",
+        "operationId": "AdminIdentity_ListOAuthClients",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListOAuthClientsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AdminIdentity"
+        ]
+      },
+      "delete": {
+        "summary": "Deletes an instance-wide, DCR, or CIMD OAuth 2.1 client.",
+        "operationId": "AdminIdentity_DeleteOAuthClient",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. The unique identifier of the OAuth client to delete.",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AdminIdentity"
+        ]
+      },
+      "post": {
+        "summary": "Creates a new instance-wide OAuth 2.1 client.",
+        "operationId": "AdminIdentity_CreateOAuthClient",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1OAuthClient"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "oauthClient",
+            "description": "Required. The OAuth client resource to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1OAuthClient"
+            }
+          }
+        ],
+        "tags": [
+          "AdminIdentity"
+        ]
+      }
+    },
+    "/v1/admin/identity/oauth-clients/{id}": {
+      "get": {
+        "summary": "Retrieves an instance-wide, DCR, or CIMD OAuth 2.1 client by ID.",
+        "operationId": "AdminIdentity_GetOAuthClient",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1OAuthClient"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. The unique identifier of the OAuth client.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AdminIdentity"
+        ]
+      },
+      "delete": {
+        "summary": "Deletes an instance-wide, DCR, or CIMD OAuth 2.1 client.",
+        "operationId": "AdminIdentity_DeleteOAuthClient2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. The unique identifier of the OAuth client to delete.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AdminIdentity"
+        ]
+      },
+      "patch": {
+        "summary": "Updates an instance-wide OAuth 2.1 client.",
+        "operationId": "AdminIdentity_UpdateOAuthClient",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1OAuthClient"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. The unique identifier of the OAuth client to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "oauthClient",
+            "description": "Required. Updated OAuth client fields.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1OAuthClient"
+            }
+          }
+        ],
+        "tags": [
+          "AdminIdentity"
+        ]
+      }
+    },
+    "/v1/admin/identity/oauth-clients/{id}:rotate-secret": {
+      "post": {
+        "summary": "Rotates the client secret for a confidential instance-wide OAuth 2.1 client.",
+        "operationId": "AdminIdentity_RotateOAuthClientSecret",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1OAuthClient"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. The unique identifier of the OAuth client whose secret to rotate.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AdminIdentityRotateOAuthClientSecretBody"
+            }
+          }
+        ],
+        "tags": [
+          "AdminIdentity"
+        ]
+      }
+    },
     "/v1/admin/identity/security-events": {
       "get": {
         "summary": "Lists security audit log events.",
@@ -4866,6 +5094,177 @@
         ]
       }
     },
+    "/v1/identity/oauth/consent": {
+      "get": {
+        "summary": "Authenticated RPC: Inspects an OAuth 2.1 authorization request before rendering consent UI.",
+        "operationId": "Identity_InspectOAuthConsent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1InspectOAuthConsentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "clientId",
+            "description": "Required. The OAuth 2.1 client_id parameter.",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "redirectUri",
+            "description": "Required. The OAuth 2.1 redirect_uri parameter.",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "responseType",
+            "description": "Required. The OAuth 2.1 response_type parameter (must be `code`).",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scope",
+            "description": "Optional. Space-delimited requested scopes from the authorization URL.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "description": "Optional. Opaque client state parameter.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "codeChallenge",
+            "description": "Required. PKCE S256 code_challenge parameter.",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "codeChallengeMethod",
+            "description": "Required. PKCE code_challenge_method parameter (must be `S256`).",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "resource",
+            "description": "Optional. RFC 8707 target resource indicator URI.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/oauth/consent:decide": {
+      "post": {
+        "summary": "Authenticated RPC: Records an approve or deny OAuth 2.1 consent decision and returns a short-lived handoff nonce.",
+        "operationId": "Identity_DecideOAuthConsent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DecideOAuthConsentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Request message for Identity.DecideOAuthConsent.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DecideOAuthConsentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/oauth/grants": {
+      "get": {
+        "summary": "Authenticated RPC: Lists all active OAuth 2.1 grants authorized by the caller.",
+        "operationId": "Identity_ListUserOAuthGrants",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListUserOAuthGrantsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/oauth/grants/{grantId}": {
+      "delete": {
+        "summary": "Authenticated RPC: Revokes an active OAuth 2.1 grant owned by the caller.",
+        "operationId": "Identity_RevokeUserOAuthGrant",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "grantId",
+            "description": "Required. The unique identifier of the OAuth grant (`oag_...`) to revoke.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
     "/v1/identity/sessions": {
       "get": {
         "summary": "Lists all active, non-expired sessions for the authenticated user.",
@@ -8765,6 +9164,319 @@
         ]
       }
     },
+    "/v1/spaces/{spaceId}/oauth-clients": {
+      "get": {
+        "summary": "Lists workspace-scoped OAuth 2.1 clients (admin/owner only).",
+        "operationId": "Spaces_ListSpaceOAuthClients",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSpaceOAuthClientsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "Required. The unique identifier of the workspace (`spc_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      },
+      "post": {
+        "summary": "Creates a workspace-scoped OAuth 2.1 client (admin/owner only).",
+        "operationId": "Spaces_CreateSpaceOAuthClient",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SpaceOAuthClient"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "Required. The unique identifier of the workspace (`spc_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "oauthClient",
+            "description": "Required. The OAuth client resource to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SpaceOAuthClient"
+            }
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/oauth-clients/{clientId}": {
+      "get": {
+        "summary": "Retrieves a workspace-scoped OAuth 2.1 client (admin/owner only).",
+        "operationId": "Spaces_GetSpaceOAuthClient",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SpaceOAuthClient"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "Required. The unique identifier of the workspace (`spc_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "clientId",
+            "description": "Required. The unique identifier of the OAuth client (`oac_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      },
+      "delete": {
+        "summary": "Deletes a workspace-scoped OAuth 2.1 client (admin/owner only).",
+        "operationId": "Spaces_DeleteSpaceOAuthClient",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "Required. The unique identifier of the workspace (`spc_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "clientId",
+            "description": "Required. The unique identifier of the OAuth client (`oac_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      },
+      "patch": {
+        "summary": "Updates a workspace-scoped OAuth 2.1 client (admin/owner only).",
+        "operationId": "Spaces_UpdateSpaceOAuthClient",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SpaceOAuthClient"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "Required. The unique identifier of the workspace (`spc_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "clientId",
+            "description": "Required. The unique identifier of the OAuth client (`oac_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "oauthClient",
+            "description": "Required. Updated OAuth client fields.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SpaceOAuthClient"
+            }
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/oauth-clients/{clientId}:rotate-secret": {
+      "post": {
+        "summary": "Rotates the secret for a confidential workspace-scoped OAuth 2.1 client (admin/owner only).",
+        "operationId": "Spaces_RotateSpaceOAuthClientSecret",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SpaceOAuthClient"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "Required. The unique identifier of the workspace (`spc_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "clientId",
+            "description": "Required. The unique identifier of the OAuth client (`oac_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SpacesRotateSpaceOAuthClientSecretBody"
+            }
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/oauth-grants": {
+      "get": {
+        "summary": "Lists all active OAuth 2.1 grants targeting a workspace (admin/owner only).",
+        "operationId": "Spaces_ListSpaceOAuthGrants",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSpaceOAuthGrantsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "Required. The unique identifier of the workspace (`spc_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/oauth-grants/{grantId}": {
+      "delete": {
+        "summary": "Revokes a user's OAuth 2.1 grant targeting a workspace (admin/owner only).",
+        "operationId": "Spaces_RevokeSpaceOAuthGrant",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "Required. The unique identifier of the workspace (`spc_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "grantId",
+            "description": "Required. The unique identifier of the OAuth grant (`oag_...`) to revoke.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      }
+    },
     "/v1/spaces/{spaceId}/settings": {
       "get": {
         "summary": "Retrieves the configuration settings for a workspace.",
@@ -8970,6 +9682,10 @@
         }
       },
       "description": "Request message for AdminIdentity.ResetPassword."
+    },
+    "AdminIdentityRotateOAuthClientSecretBody": {
+      "type": "object",
+      "description": "Request message for AdminIdentity.RotateOAuthClientSecret."
     },
     "AdminIdentityUnlockUserBody": {
       "type": "object",
@@ -10102,6 +10818,10 @@
       ],
       "description": "Role defines the member's role and permissions within a workspace.\n\n - OWNER: Workspace owner with full administrative and billing control.\n - ADMIN: Workspace administrator with member management and settings access.\n - MEMBER: Standard workspace member with regular read and write access.\n - VIEWER: Workspace viewer with read-only access."
     },
+    "SpacesRotateSpaceOAuthClientSecretBody": {
+      "type": "object",
+      "description": "Request message for Spaces.RotateSpaceOAuthClientSecret."
+    },
     "SpentInsightsBudgetContribution": {
       "type": "object",
       "properties": {
@@ -10842,7 +11562,7 @@
     },
     "protobufNullValue": {
       "type": "string",
-      "description": "Represents a JSON `null`.\n\n`NullValue` is a sentinel, using an enum with only one value to represent\nthe null value for the `Value` type union.\n\nA field of type `NullValue` with any value other than `0` is considered\ninvalid. Most ProtoJSON serializers will emit a Value with a `null_value` set\nas a JSON `null` regardless of the integer value, and so will round trip to\na `0` value."
+      "description": "Represents a JSON `null`.\n\n`NullValue` is a sentinel, using an enum with only one value to represent\nthe null value for the `Value` type union.\n\nA field of type `NullValue` with any value other than `0` is considered\ninvalid. Most ProtoJSON serializers will emit a `Value` with a `null_value`\nset as a JSON `null` regardless of the integer value, and so will round trip\nto a `0` value."
     },
     "saturnFinanceV1Settings": {
       "type": "object",
@@ -12735,6 +13455,78 @@
       },
       "description": "DashboardPreferences represents a user's customizable dashboard widget layout within a workspace."
     },
+    "v1DecideOAuthConsentRequest": {
+      "type": "object",
+      "properties": {
+        "clientId": {
+          "type": "string",
+          "description": "Required. The OAuth 2.1 client_id parameter."
+        },
+        "redirectUri": {
+          "type": "string",
+          "description": "Required. The OAuth 2.1 redirect_uri parameter."
+        },
+        "responseType": {
+          "type": "string",
+          "description": "Required. The OAuth 2.1 response_type parameter (`code`)."
+        },
+        "scope": {
+          "type": "string",
+          "description": "Optional. Space-delimited originally requested scopes."
+        },
+        "approvedScopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. Specific scopes approved by the user."
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Optional. Selected target workspace ID (`spc_...`), required when approved is true."
+        },
+        "state": {
+          "type": "string",
+          "description": "Optional. Opaque client state parameter."
+        },
+        "codeChallenge": {
+          "type": "string",
+          "description": "Required. PKCE S256 code_challenge parameter."
+        },
+        "codeChallengeMethod": {
+          "type": "string",
+          "description": "Required. PKCE code_challenge_method parameter (`S256`)."
+        },
+        "resource": {
+          "type": "string",
+          "description": "Optional. RFC 8707 target resource indicator URI."
+        },
+        "approved": {
+          "type": "boolean",
+          "description": "Required. Whether the user approved (`true`) or denied (`false`) the request."
+        }
+      },
+      "description": "Request message for Identity.DecideOAuthConsent.",
+      "required": [
+        "clientId",
+        "redirectUri",
+        "responseType",
+        "codeChallenge",
+        "codeChallengeMethod",
+        "approved"
+      ]
+    },
+    "v1DecideOAuthConsentResponse": {
+      "type": "object",
+      "properties": {
+        "handoffToken": {
+          "type": "string",
+          "description": "Output only. Short-lived single-use handoff nonce for `/oauth/authorize/callback`.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for Identity.DecideOAuthConsent."
+    },
     "v1DeliveryInfo": {
       "type": "object",
       "properties": {
@@ -14099,6 +14891,69 @@
       ],
       "description": "InsightGranularity defines the grouping interval of aggregated statistical data.\n\n - DAILY: Group metrics by calendar day.\n - WEEKLY: Group metrics by calendar week.\n - MONTHLY: Group metrics by calendar month.\n - YEARLY: Group metrics by calendar year."
     },
+    "v1InspectOAuthConsentResponse": {
+      "type": "object",
+      "properties": {
+        "clientId": {
+          "type": "string",
+          "description": "Output only. Canonical client ID (`oac_...` or CIMD URL).",
+          "readOnly": true
+        },
+        "clientName": {
+          "type": "string",
+          "description": "Output only. Display name of the requesting OAuth application.",
+          "readOnly": true
+        },
+        "clientDescription": {
+          "type": "string",
+          "description": "Output only. Description or homepage URI of the requesting OAuth application.",
+          "readOnly": true
+        },
+        "isWorkspaceClient": {
+          "type": "boolean",
+          "description": "Output only. Whether the client is bound to a specific workspace (`true`) or instance-wide (`false`).",
+          "readOnly": true
+        },
+        "redirectUri": {
+          "type": "string",
+          "description": "Output only. Validated redirect URI.",
+          "readOnly": true
+        },
+        "redirectUriHost": {
+          "type": "string",
+          "description": "Output only. Host and port of the redirect URI for user display.",
+          "readOnly": true
+        },
+        "resource": {
+          "type": "string",
+          "description": "Output only. RFC 8707 resource indicator when provided.",
+          "readOnly": true
+        },
+        "lockedSpaceId": {
+          "type": "string",
+          "description": "Output only. Pre-locked workspace ID when enforced by a workspace client or resource indicator.",
+          "readOnly": true
+        },
+        "effectiveScopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Output only. Default effective scopes permitted for the request.",
+          "readOnly": true
+        },
+        "spaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OAuthConsentSpaceOption"
+          },
+          "description": "Output only. Workspaces eligible for selection on the consent screen.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for Identity.InspectOAuthConsent."
+    },
     "v1Institution": {
       "type": "object",
       "properties": {
@@ -14668,6 +15523,21 @@
       },
       "description": "Response message for Identity.ListMySecurityEvents."
     },
+    "v1ListOAuthClientsResponse": {
+      "type": "object",
+      "properties": {
+        "oauthClients": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OAuthClient"
+          },
+          "description": "Output only. List of instance-wide, DCR, and CIMD OAuth clients.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for AdminIdentity.ListOAuthClients."
+    },
     "v1ListProviderDescriptorsResponse": {
       "type": "object",
       "properties": {
@@ -14809,6 +15679,36 @@
       },
       "description": "Response message for Spaces.ListSpaceMembers."
     },
+    "v1ListSpaceOAuthClientsResponse": {
+      "type": "object",
+      "properties": {
+        "oauthClients": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SpaceOAuthClient"
+          },
+          "description": "Output only. List of OAuth clients belonging to the workspace.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for Spaces.ListSpaceOAuthClients."
+    },
+    "v1ListSpaceOAuthGrantsResponse": {
+      "type": "object",
+      "properties": {
+        "grants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SpaceOAuthGrant"
+          },
+          "description": "Output only. List of active OAuth 2.1 grants for this workspace.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for Spaces.ListSpaceOAuthGrants."
+    },
     "v1ListSpacesResponse": {
       "type": "object",
       "properties": {
@@ -14930,6 +15830,21 @@
         }
       },
       "description": "The response for\n[ListTransfers][saturn.finance.v1.Finance.ListTransfers]."
+    },
+    "v1ListUserOAuthGrantsResponse": {
+      "type": "object",
+      "properties": {
+        "grants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UserOAuthGrant"
+          },
+          "description": "Output only. List of active OAuth 2.1 grants authorized by the user.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for Identity.ListUserOAuthGrants."
     },
     "v1ListUsersResponse": {
       "type": "object",
@@ -15723,6 +16638,113 @@
         }
       },
       "description": "ModelSnapshot captures the driver and upstream model ID used during a run."
+    },
+    "v1OAuthClient": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. The client's unique identifier (`oac_\u003cksuid\u003e` or HTTPS CIMD URL).",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. Optional workspace identifier (`spc_\u003cksuid\u003e`) when workspace-scoped.",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Required. Human-readable application display name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional. Description of the OAuth application."
+        },
+        "secretPrefix": {
+          "type": "string",
+          "description": "Output only. Display prefix of the client secret when confidential.",
+          "readOnly": true
+        },
+        "rawSecret": {
+          "type": "string",
+          "description": "Output only. Full client secret (`sat_ocs_...`). Populated once on create or secret rotation.",
+          "readOnly": true
+        },
+        "redirectUris": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Required. Registered redirect URI rules (HTTPS exact, HTTPS /* subpath prefix, or RFC 8252 loopback)."
+        },
+        "allowedScopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Required. Maximum scope ceiling permitted for grants issued to this client."
+        },
+        "tokenEndpointAuthMethod": {
+          "type": "string",
+          "description": "Optional. Token endpoint client auth method (`client_secret_basic`, `client_secret_post`, `none`)."
+        },
+        "refreshTokenPolicy": {
+          "type": "string",
+          "description": "Optional. Refresh token policy (`rotate` or `persistent`)."
+        },
+        "registrationSource": {
+          "type": "string",
+          "description": "Output only. Client registration source (`admin`, `space`, `dcr`, `cimd`).",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the OAuth client was created.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the OAuth client was last updated.",
+          "readOnly": true
+        }
+      },
+      "description": "OAuthClient represents a registered OAuth 2.1 client in the admin context.",
+      "required": [
+        "name",
+        "redirectUris",
+        "allowedScopes"
+      ]
+    },
+    "v1OAuthConsentSpaceOption": {
+      "type": "object",
+      "properties": {
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. The workspace identifier (`spc_...`).",
+          "readOnly": true
+        },
+        "spaceName": {
+          "type": "string",
+          "description": "Output only. The display name of the workspace.",
+          "readOnly": true
+        },
+        "role": {
+          "type": "string",
+          "description": "Output only. The caller's role in the workspace (`owner`, `admin`, `member`, `viewer`).",
+          "readOnly": true
+        },
+        "allowedScopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Output only. Permitted scopes for this workspace given the caller's role and client ceiling.",
+          "readOnly": true
+        }
+      },
+      "description": "OAuthConsentSpaceOption represents a workspace selectable during OAuth 2.1 consent."
     },
     "v1Organizer": {
       "type": "object",
@@ -16802,6 +17824,145 @@
         "role"
       ]
     },
+    "v1SpaceOAuthClient": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. The unique identifier of the OAuth client (`oac_\u003cksuid\u003e`).",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. The workspace identifier (`spc_\u003cksuid\u003e`).",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Required. Display name for the OAuth application."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional. Description of the OAuth application."
+        },
+        "secretPrefix": {
+          "type": "string",
+          "description": "Output only. Display prefix of the client secret when confidential.",
+          "readOnly": true
+        },
+        "rawSecret": {
+          "type": "string",
+          "description": "Output only. Full client secret (`sat_ocs_...`). Populated once on create or secret rotation.",
+          "readOnly": true
+        },
+        "redirectUris": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Required. Registered redirect URI rules."
+        },
+        "allowedScopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Required. Maximum scope ceiling permitted for grants issued to this client."
+        },
+        "tokenEndpointAuthMethod": {
+          "type": "string",
+          "description": "Optional. Token endpoint client auth method (`client_secret_basic`, `client_secret_post`, `none`)."
+        },
+        "refreshTokenPolicy": {
+          "type": "string",
+          "description": "Optional. Refresh token policy (`rotate` or `persistent`)."
+        },
+        "registrationSource": {
+          "type": "string",
+          "description": "Output only. Registration source (`space` or `dcr`).",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the client was created.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the client was last updated.",
+          "readOnly": true
+        }
+      },
+      "description": "SpaceOAuthClient represents a workspace-scoped OAuth 2.1 client resource.",
+      "required": [
+        "name",
+        "redirectUris",
+        "allowedScopes"
+      ]
+    },
+    "v1SpaceOAuthGrant": {
+      "type": "object",
+      "properties": {
+        "grantId": {
+          "type": "string",
+          "description": "Output only. The unique identifier of the grant (`oag_...`).",
+          "readOnly": true
+        },
+        "clientId": {
+          "type": "string",
+          "description": "Output only. The OAuth client identifier (`oac_...` or CIMD URL).",
+          "readOnly": true
+        },
+        "clientName": {
+          "type": "string",
+          "description": "Output only. The display name of the OAuth client.",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. The workspace identifier (`spc_...`).",
+          "readOnly": true
+        },
+        "userId": {
+          "type": "string",
+          "description": "Output only. The user identifier of the grant owner (`usr_...`).",
+          "readOnly": true
+        },
+        "userName": {
+          "type": "string",
+          "description": "Output only. The display name of the grant owner.",
+          "readOnly": true
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Output only. The email address of the grant owner.",
+          "readOnly": true
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Output only. Scopes authorized for this grant.",
+          "readOnly": true
+        },
+        "lastUsedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the grant was last used to authenticate a request.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the grant was created.",
+          "readOnly": true
+        }
+      },
+      "description": "SpaceOAuthGrant represents an active OAuth 2.1 grant targeting a workspace."
+    },
     "v1SpentInsights": {
       "type": "object",
       "properties": {
@@ -17649,6 +18810,62 @@
         }
       },
       "description": "Request message for Identity.UpdateProfile."
+    },
+    "v1UserOAuthGrant": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. The unique identifier of the grant (`oag_...`).",
+          "readOnly": true
+        },
+        "clientId": {
+          "type": "string",
+          "description": "Output only. The OAuth client identifier (`oac_...` or CIMD URL).",
+          "readOnly": true
+        },
+        "clientName": {
+          "type": "string",
+          "description": "Output only. The display name of the OAuth client.",
+          "readOnly": true
+        },
+        "isWorkspaceClient": {
+          "type": "boolean",
+          "description": "Output only. Whether the OAuth client is workspace-scoped rather than instance-wide.",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. The authorized workspace identifier (`spc_...`).",
+          "readOnly": true
+        },
+        "spaceName": {
+          "type": "string",
+          "description": "Output only. The display name of the authorized workspace.",
+          "readOnly": true
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Output only. Scopes authorized for this grant.",
+          "readOnly": true
+        },
+        "lastUsedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the grant was last used.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the grant was created.",
+          "readOnly": true
+        }
+      },
+      "description": "UserOAuthGrant represents an active OAuth 2.1 authorization granted by the caller."
     },
     "v1UserPreferences": {
       "type": "object",

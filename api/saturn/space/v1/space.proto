@@ -119,6 +119,63 @@ service Spaces {
     option (google.api.http) = {delete: "/v1/spaces/{space_id}/api-keys/{api_key_id}"};
     option (google.api.method_signature) = "space_id,api_key_id";
   }
+
+  // Creates a workspace-scoped OAuth 2.1 client (admin/owner only).
+  rpc CreateSpaceOAuthClient(CreateSpaceOAuthClientRequest) returns (SpaceOAuthClient) {
+    option (google.api.http) = {
+      post: "/v1/spaces/{space_id}/oauth-clients"
+      body: "oauth_client"
+    };
+    option (google.api.method_signature) = "space_id,oauth_client";
+  }
+
+  // Retrieves a workspace-scoped OAuth 2.1 client (admin/owner only).
+  rpc GetSpaceOAuthClient(GetSpaceOAuthClientRequest) returns (SpaceOAuthClient) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/oauth-clients/{client_id}"};
+    option (google.api.method_signature) = "space_id,client_id";
+  }
+
+  // Lists workspace-scoped OAuth 2.1 clients (admin/owner only).
+  rpc ListSpaceOAuthClients(ListSpaceOAuthClientsRequest) returns (ListSpaceOAuthClientsResponse) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/oauth-clients"};
+    option (google.api.method_signature) = "space_id";
+  }
+
+  // Updates a workspace-scoped OAuth 2.1 client (admin/owner only).
+  rpc UpdateSpaceOAuthClient(UpdateSpaceOAuthClientRequest) returns (SpaceOAuthClient) {
+    option (google.api.http) = {
+      patch: "/v1/spaces/{space_id}/oauth-clients/{client_id}"
+      body: "oauth_client"
+    };
+    option (google.api.method_signature) = "space_id,client_id,oauth_client,update_mask";
+  }
+
+  // Rotates the secret for a confidential workspace-scoped OAuth 2.1 client (admin/owner only).
+  rpc RotateSpaceOAuthClientSecret(RotateSpaceOAuthClientSecretRequest) returns (SpaceOAuthClient) {
+    option (google.api.http) = {
+      post: "/v1/spaces/{space_id}/oauth-clients/{client_id}:rotate-secret"
+      body: "*"
+    };
+    option (google.api.method_signature) = "space_id,client_id";
+  }
+
+  // Deletes a workspace-scoped OAuth 2.1 client (admin/owner only).
+  rpc DeleteSpaceOAuthClient(DeleteSpaceOAuthClientRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/spaces/{space_id}/oauth-clients/{client_id}"};
+    option (google.api.method_signature) = "space_id,client_id";
+  }
+
+  // Lists all active OAuth 2.1 grants targeting a workspace (admin/owner only).
+  rpc ListSpaceOAuthGrants(ListSpaceOAuthGrantsRequest) returns (ListSpaceOAuthGrantsResponse) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/oauth-grants"};
+    option (google.api.method_signature) = "space_id";
+  }
+
+  // Revokes a user's OAuth 2.1 grant targeting a workspace (admin/owner only).
+  rpc RevokeSpaceOAuthGrant(RevokeSpaceOAuthGrantRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/spaces/{space_id}/oauth-grants/{grant_id}"};
+    option (google.api.method_signature) = "space_id,grant_id";
+  }
 }
 
 // Space represents a workspace resource.
@@ -486,4 +543,163 @@ message RevokeSpaceAPIKeyGrantRequest {
 
   // Required. The unique identifier of the API key (`apk_...`) whose workspace access is revoked.
   string api_key_id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// SpaceOAuthClient represents a workspace-scoped OAuth 2.1 client resource.
+message SpaceOAuthClient {
+  // Output only. The unique identifier of the OAuth client (`oac_<ksuid>`).
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The workspace identifier (`spc_<ksuid>`).
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Display name for the OAuth application.
+  string name = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Description of the OAuth application.
+  string description = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Display prefix of the client secret when confidential.
+  string secret_prefix = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Full client secret (`sat_ocs_...`). Populated once on create or secret rotation.
+  string raw_secret = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Registered redirect URI rules.
+  repeated string redirect_uris = 7 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Maximum scope ceiling permitted for grants issued to this client.
+  repeated string allowed_scopes = 8 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Token endpoint client auth method (`client_secret_basic`, `client_secret_post`, `none`).
+  string token_endpoint_auth_method = 9 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Refresh token policy (`rotate` or `persistent`).
+  string refresh_token_policy = 10 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Registration source (`space` or `dcr`).
+  string registration_source = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the client was created.
+  google.protobuf.Timestamp create_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the client was last updated.
+  google.protobuf.Timestamp update_time = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Spaces.CreateSpaceOAuthClient.
+message CreateSpaceOAuthClientRequest {
+  // Required. The unique identifier of the workspace (`spc_...`).
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The OAuth client resource to create.
+  SpaceOAuthClient oauth_client = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Spaces.GetSpaceOAuthClient.
+message GetSpaceOAuthClientRequest {
+  // Required. The unique identifier of the workspace (`spc_...`).
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The unique identifier of the OAuth client (`oac_...`).
+  string client_id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Spaces.ListSpaceOAuthClients.
+message ListSpaceOAuthClientsRequest {
+  // Required. The unique identifier of the workspace (`spc_...`).
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Response message for Spaces.ListSpaceOAuthClients.
+message ListSpaceOAuthClientsResponse {
+  // Output only. List of OAuth clients belonging to the workspace.
+  repeated SpaceOAuthClient oauth_clients = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Spaces.UpdateSpaceOAuthClient.
+message UpdateSpaceOAuthClientRequest {
+  // Required. The unique identifier of the workspace (`spc_...`).
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The unique identifier of the OAuth client (`oac_...`).
+  string client_id = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Updated OAuth client fields.
+  SpaceOAuthClient oauth_client = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Field mask specifying which fields to update.
+  google.protobuf.FieldMask update_mask = 4 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Spaces.RotateSpaceOAuthClientSecret.
+message RotateSpaceOAuthClientSecretRequest {
+  // Required. The unique identifier of the workspace (`spc_...`).
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The unique identifier of the OAuth client (`oac_...`).
+  string client_id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Spaces.DeleteSpaceOAuthClient.
+message DeleteSpaceOAuthClientRequest {
+  // Required. The unique identifier of the workspace (`spc_...`).
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The unique identifier of the OAuth client (`oac_...`).
+  string client_id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// SpaceOAuthGrant represents an active OAuth 2.1 grant targeting a workspace.
+message SpaceOAuthGrant {
+  // Output only. The unique identifier of the grant (`oag_...`).
+  string grant_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The OAuth client identifier (`oac_...` or CIMD URL).
+  string client_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The display name of the OAuth client.
+  string client_name = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The workspace identifier (`spc_...`).
+  string space_id = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The user identifier of the grant owner (`usr_...`).
+  string user_id = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The display name of the grant owner.
+  string user_name = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The email address of the grant owner.
+  string user_email = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Scopes authorized for this grant.
+  repeated string scopes = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the grant was last used to authenticate a request.
+  optional google.protobuf.Timestamp last_used_at = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the grant was created.
+  google.protobuf.Timestamp create_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Spaces.ListSpaceOAuthGrants.
+message ListSpaceOAuthGrantsRequest {
+  // Required. The unique identifier of the workspace (`spc_...`).
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Response message for Spaces.ListSpaceOAuthGrants.
+message ListSpaceOAuthGrantsResponse {
+  // Output only. List of active OAuth 2.1 grants for this workspace.
+  repeated SpaceOAuthGrant grants = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Spaces.RevokeSpaceOAuthGrant.
+message RevokeSpaceOAuthGrantRequest {
+  // Required. The unique identifier of the workspace (`spc_...`).
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The unique identifier of the OAuth grant (`oag_...`) to revoke.
+  string grant_id = 2 [(google.api.field_behavior) = REQUIRED];
 }

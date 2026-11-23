@@ -1640,6 +1640,819 @@ func (x *RevokeSpaceAPIKeyGrantRequest) GetApiKeyId() string {
 	return ""
 }
 
+// SpaceOAuthClient represents a workspace-scoped OAuth 2.1 client resource.
+type SpaceOAuthClient struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique identifier of the OAuth client (`oac_<ksuid>`).
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Output only. The workspace identifier (`spc_<ksuid>`).
+	SpaceId string `protobuf:"bytes,2,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Required. Display name for the OAuth application.
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional. Description of the OAuth application.
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// Output only. Display prefix of the client secret when confidential.
+	SecretPrefix string `protobuf:"bytes,5,opt,name=secret_prefix,json=secretPrefix,proto3" json:"secret_prefix,omitempty"`
+	// Output only. Full client secret (`sat_ocs_...`). Populated once on create or secret rotation.
+	RawSecret string `protobuf:"bytes,6,opt,name=raw_secret,json=rawSecret,proto3" json:"raw_secret,omitempty"`
+	// Required. Registered redirect URI rules.
+	RedirectUris []string `protobuf:"bytes,7,rep,name=redirect_uris,json=redirectUris,proto3" json:"redirect_uris,omitempty"`
+	// Required. Maximum scope ceiling permitted for grants issued to this client.
+	AllowedScopes []string `protobuf:"bytes,8,rep,name=allowed_scopes,json=allowedScopes,proto3" json:"allowed_scopes,omitempty"`
+	// Optional. Token endpoint client auth method (`client_secret_basic`, `client_secret_post`, `none`).
+	TokenEndpointAuthMethod string `protobuf:"bytes,9,opt,name=token_endpoint_auth_method,json=tokenEndpointAuthMethod,proto3" json:"token_endpoint_auth_method,omitempty"`
+	// Optional. Refresh token policy (`rotate` or `persistent`).
+	RefreshTokenPolicy string `protobuf:"bytes,10,opt,name=refresh_token_policy,json=refreshTokenPolicy,proto3" json:"refresh_token_policy,omitempty"`
+	// Output only. Registration source (`space` or `dcr`).
+	RegistrationSource string `protobuf:"bytes,11,opt,name=registration_source,json=registrationSource,proto3" json:"registration_source,omitempty"`
+	// Output only. Timestamp when the client was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Output only. Timestamp when the client was last updated.
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SpaceOAuthClient) Reset() {
+	*x = SpaceOAuthClient{}
+	mi := &file_saturn_space_v1_space_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SpaceOAuthClient) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SpaceOAuthClient) ProtoMessage() {}
+
+func (x *SpaceOAuthClient) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_space_v1_space_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SpaceOAuthClient.ProtoReflect.Descriptor instead.
+func (*SpaceOAuthClient) Descriptor() ([]byte, []int) {
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *SpaceOAuthClient) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *SpaceOAuthClient) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+func (x *SpaceOAuthClient) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *SpaceOAuthClient) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *SpaceOAuthClient) GetSecretPrefix() string {
+	if x != nil {
+		return x.SecretPrefix
+	}
+	return ""
+}
+
+func (x *SpaceOAuthClient) GetRawSecret() string {
+	if x != nil {
+		return x.RawSecret
+	}
+	return ""
+}
+
+func (x *SpaceOAuthClient) GetRedirectUris() []string {
+	if x != nil {
+		return x.RedirectUris
+	}
+	return nil
+}
+
+func (x *SpaceOAuthClient) GetAllowedScopes() []string {
+	if x != nil {
+		return x.AllowedScopes
+	}
+	return nil
+}
+
+func (x *SpaceOAuthClient) GetTokenEndpointAuthMethod() string {
+	if x != nil {
+		return x.TokenEndpointAuthMethod
+	}
+	return ""
+}
+
+func (x *SpaceOAuthClient) GetRefreshTokenPolicy() string {
+	if x != nil {
+		return x.RefreshTokenPolicy
+	}
+	return ""
+}
+
+func (x *SpaceOAuthClient) GetRegistrationSource() string {
+	if x != nil {
+		return x.RegistrationSource
+	}
+	return ""
+}
+
+func (x *SpaceOAuthClient) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *SpaceOAuthClient) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+// Request message for Spaces.CreateSpaceOAuthClient.
+type CreateSpaceOAuthClientRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the workspace (`spc_...`).
+	SpaceId string `protobuf:"bytes,1,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Required. The OAuth client resource to create.
+	OauthClient   *SpaceOAuthClient `protobuf:"bytes,2,opt,name=oauth_client,json=oauthClient,proto3" json:"oauth_client,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateSpaceOAuthClientRequest) Reset() {
+	*x = CreateSpaceOAuthClientRequest{}
+	mi := &file_saturn_space_v1_space_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateSpaceOAuthClientRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateSpaceOAuthClientRequest) ProtoMessage() {}
+
+func (x *CreateSpaceOAuthClientRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_space_v1_space_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateSpaceOAuthClientRequest.ProtoReflect.Descriptor instead.
+func (*CreateSpaceOAuthClientRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *CreateSpaceOAuthClientRequest) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+func (x *CreateSpaceOAuthClientRequest) GetOauthClient() *SpaceOAuthClient {
+	if x != nil {
+		return x.OauthClient
+	}
+	return nil
+}
+
+// Request message for Spaces.GetSpaceOAuthClient.
+type GetSpaceOAuthClientRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the workspace (`spc_...`).
+	SpaceId string `protobuf:"bytes,1,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Required. The unique identifier of the OAuth client (`oac_...`).
+	ClientId      string `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSpaceOAuthClientRequest) Reset() {
+	*x = GetSpaceOAuthClientRequest{}
+	mi := &file_saturn_space_v1_space_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSpaceOAuthClientRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSpaceOAuthClientRequest) ProtoMessage() {}
+
+func (x *GetSpaceOAuthClientRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_space_v1_space_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSpaceOAuthClientRequest.ProtoReflect.Descriptor instead.
+func (*GetSpaceOAuthClientRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *GetSpaceOAuthClientRequest) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+func (x *GetSpaceOAuthClientRequest) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+// Request message for Spaces.ListSpaceOAuthClients.
+type ListSpaceOAuthClientsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the workspace (`spc_...`).
+	SpaceId       string `protobuf:"bytes,1,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSpaceOAuthClientsRequest) Reset() {
+	*x = ListSpaceOAuthClientsRequest{}
+	mi := &file_saturn_space_v1_space_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSpaceOAuthClientsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSpaceOAuthClientsRequest) ProtoMessage() {}
+
+func (x *ListSpaceOAuthClientsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_space_v1_space_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSpaceOAuthClientsRequest.ProtoReflect.Descriptor instead.
+func (*ListSpaceOAuthClientsRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *ListSpaceOAuthClientsRequest) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+// Response message for Spaces.ListSpaceOAuthClients.
+type ListSpaceOAuthClientsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. List of OAuth clients belonging to the workspace.
+	OauthClients  []*SpaceOAuthClient `protobuf:"bytes,1,rep,name=oauth_clients,json=oauthClients,proto3" json:"oauth_clients,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSpaceOAuthClientsResponse) Reset() {
+	*x = ListSpaceOAuthClientsResponse{}
+	mi := &file_saturn_space_v1_space_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSpaceOAuthClientsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSpaceOAuthClientsResponse) ProtoMessage() {}
+
+func (x *ListSpaceOAuthClientsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_space_v1_space_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSpaceOAuthClientsResponse.ProtoReflect.Descriptor instead.
+func (*ListSpaceOAuthClientsResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *ListSpaceOAuthClientsResponse) GetOauthClients() []*SpaceOAuthClient {
+	if x != nil {
+		return x.OauthClients
+	}
+	return nil
+}
+
+// Request message for Spaces.UpdateSpaceOAuthClient.
+type UpdateSpaceOAuthClientRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the workspace (`spc_...`).
+	SpaceId string `protobuf:"bytes,1,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Required. The unique identifier of the OAuth client (`oac_...`).
+	ClientId string `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	// Required. Updated OAuth client fields.
+	OauthClient *SpaceOAuthClient `protobuf:"bytes,3,opt,name=oauth_client,json=oauthClient,proto3" json:"oauth_client,omitempty"`
+	// Required. Field mask specifying which fields to update.
+	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,4,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateSpaceOAuthClientRequest) Reset() {
+	*x = UpdateSpaceOAuthClientRequest{}
+	mi := &file_saturn_space_v1_space_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateSpaceOAuthClientRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateSpaceOAuthClientRequest) ProtoMessage() {}
+
+func (x *UpdateSpaceOAuthClientRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_space_v1_space_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateSpaceOAuthClientRequest.ProtoReflect.Descriptor instead.
+func (*UpdateSpaceOAuthClientRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *UpdateSpaceOAuthClientRequest) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+func (x *UpdateSpaceOAuthClientRequest) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+func (x *UpdateSpaceOAuthClientRequest) GetOauthClient() *SpaceOAuthClient {
+	if x != nil {
+		return x.OauthClient
+	}
+	return nil
+}
+
+func (x *UpdateSpaceOAuthClientRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.UpdateMask
+	}
+	return nil
+}
+
+// Request message for Spaces.RotateSpaceOAuthClientSecret.
+type RotateSpaceOAuthClientSecretRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the workspace (`spc_...`).
+	SpaceId string `protobuf:"bytes,1,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Required. The unique identifier of the OAuth client (`oac_...`).
+	ClientId      string `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RotateSpaceOAuthClientSecretRequest) Reset() {
+	*x = RotateSpaceOAuthClientSecretRequest{}
+	mi := &file_saturn_space_v1_space_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateSpaceOAuthClientSecretRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateSpaceOAuthClientSecretRequest) ProtoMessage() {}
+
+func (x *RotateSpaceOAuthClientSecretRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_space_v1_space_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateSpaceOAuthClientSecretRequest.ProtoReflect.Descriptor instead.
+func (*RotateSpaceOAuthClientSecretRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *RotateSpaceOAuthClientSecretRequest) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+func (x *RotateSpaceOAuthClientSecretRequest) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+// Request message for Spaces.DeleteSpaceOAuthClient.
+type DeleteSpaceOAuthClientRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the workspace (`spc_...`).
+	SpaceId string `protobuf:"bytes,1,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Required. The unique identifier of the OAuth client (`oac_...`).
+	ClientId      string `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteSpaceOAuthClientRequest) Reset() {
+	*x = DeleteSpaceOAuthClientRequest{}
+	mi := &file_saturn_space_v1_space_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteSpaceOAuthClientRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteSpaceOAuthClientRequest) ProtoMessage() {}
+
+func (x *DeleteSpaceOAuthClientRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_space_v1_space_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteSpaceOAuthClientRequest.ProtoReflect.Descriptor instead.
+func (*DeleteSpaceOAuthClientRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *DeleteSpaceOAuthClientRequest) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+func (x *DeleteSpaceOAuthClientRequest) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+// SpaceOAuthGrant represents an active OAuth 2.1 grant targeting a workspace.
+type SpaceOAuthGrant struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique identifier of the grant (`oag_...`).
+	GrantId string `protobuf:"bytes,1,opt,name=grant_id,json=grantId,proto3" json:"grant_id,omitempty"`
+	// Output only. The OAuth client identifier (`oac_...` or CIMD URL).
+	ClientId string `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	// Output only. The display name of the OAuth client.
+	ClientName string `protobuf:"bytes,3,opt,name=client_name,json=clientName,proto3" json:"client_name,omitempty"`
+	// Output only. The workspace identifier (`spc_...`).
+	SpaceId string `protobuf:"bytes,4,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Output only. The user identifier of the grant owner (`usr_...`).
+	UserId string `protobuf:"bytes,5,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// Output only. The display name of the grant owner.
+	UserName string `protobuf:"bytes,6,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
+	// Output only. The email address of the grant owner.
+	UserEmail string `protobuf:"bytes,7,opt,name=user_email,json=userEmail,proto3" json:"user_email,omitempty"`
+	// Output only. Scopes authorized for this grant.
+	Scopes []string `protobuf:"bytes,8,rep,name=scopes,proto3" json:"scopes,omitempty"`
+	// Output only. Timestamp when the grant was last used to authenticate a request.
+	LastUsedAt *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=last_used_at,json=lastUsedAt,proto3,oneof" json:"last_used_at,omitempty"`
+	// Output only. Timestamp when the grant was created.
+	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SpaceOAuthGrant) Reset() {
+	*x = SpaceOAuthGrant{}
+	mi := &file_saturn_space_v1_space_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SpaceOAuthGrant) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SpaceOAuthGrant) ProtoMessage() {}
+
+func (x *SpaceOAuthGrant) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_space_v1_space_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SpaceOAuthGrant.ProtoReflect.Descriptor instead.
+func (*SpaceOAuthGrant) Descriptor() ([]byte, []int) {
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *SpaceOAuthGrant) GetGrantId() string {
+	if x != nil {
+		return x.GrantId
+	}
+	return ""
+}
+
+func (x *SpaceOAuthGrant) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+func (x *SpaceOAuthGrant) GetClientName() string {
+	if x != nil {
+		return x.ClientName
+	}
+	return ""
+}
+
+func (x *SpaceOAuthGrant) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+func (x *SpaceOAuthGrant) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *SpaceOAuthGrant) GetUserName() string {
+	if x != nil {
+		return x.UserName
+	}
+	return ""
+}
+
+func (x *SpaceOAuthGrant) GetUserEmail() string {
+	if x != nil {
+		return x.UserEmail
+	}
+	return ""
+}
+
+func (x *SpaceOAuthGrant) GetScopes() []string {
+	if x != nil {
+		return x.Scopes
+	}
+	return nil
+}
+
+func (x *SpaceOAuthGrant) GetLastUsedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastUsedAt
+	}
+	return nil
+}
+
+func (x *SpaceOAuthGrant) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+// Request message for Spaces.ListSpaceOAuthGrants.
+type ListSpaceOAuthGrantsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the workspace (`spc_...`).
+	SpaceId       string `protobuf:"bytes,1,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSpaceOAuthGrantsRequest) Reset() {
+	*x = ListSpaceOAuthGrantsRequest{}
+	mi := &file_saturn_space_v1_space_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSpaceOAuthGrantsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSpaceOAuthGrantsRequest) ProtoMessage() {}
+
+func (x *ListSpaceOAuthGrantsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_space_v1_space_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSpaceOAuthGrantsRequest.ProtoReflect.Descriptor instead.
+func (*ListSpaceOAuthGrantsRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *ListSpaceOAuthGrantsRequest) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+// Response message for Spaces.ListSpaceOAuthGrants.
+type ListSpaceOAuthGrantsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. List of active OAuth 2.1 grants for this workspace.
+	Grants        []*SpaceOAuthGrant `protobuf:"bytes,1,rep,name=grants,proto3" json:"grants,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSpaceOAuthGrantsResponse) Reset() {
+	*x = ListSpaceOAuthGrantsResponse{}
+	mi := &file_saturn_space_v1_space_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSpaceOAuthGrantsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSpaceOAuthGrantsResponse) ProtoMessage() {}
+
+func (x *ListSpaceOAuthGrantsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_space_v1_space_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSpaceOAuthGrantsResponse.ProtoReflect.Descriptor instead.
+func (*ListSpaceOAuthGrantsResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *ListSpaceOAuthGrantsResponse) GetGrants() []*SpaceOAuthGrant {
+	if x != nil {
+		return x.Grants
+	}
+	return nil
+}
+
+// Request message for Spaces.RevokeSpaceOAuthGrant.
+type RevokeSpaceOAuthGrantRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the workspace (`spc_...`).
+	SpaceId string `protobuf:"bytes,1,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Required. The unique identifier of the OAuth grant (`oag_...`) to revoke.
+	GrantId       string `protobuf:"bytes,2,opt,name=grant_id,json=grantId,proto3" json:"grant_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeSpaceOAuthGrantRequest) Reset() {
+	*x = RevokeSpaceOAuthGrantRequest{}
+	mi := &file_saturn_space_v1_space_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeSpaceOAuthGrantRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeSpaceOAuthGrantRequest) ProtoMessage() {}
+
+func (x *RevokeSpaceOAuthGrantRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_space_v1_space_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeSpaceOAuthGrantRequest.ProtoReflect.Descriptor instead.
+func (*RevokeSpaceOAuthGrantRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *RevokeSpaceOAuthGrantRequest) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+func (x *RevokeSpaceOAuthGrantRequest) GetGrantId() string {
+	if x != nil {
+		return x.GrantId
+	}
+	return ""
+}
+
 // The nested user profile details.
 type SpaceMember_Profile struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1655,7 +2468,7 @@ type SpaceMember_Profile struct {
 
 func (x *SpaceMember_Profile) Reset() {
 	*x = SpaceMember_Profile{}
-	mi := &file_saturn_space_v1_space_proto_msgTypes[23]
+	mi := &file_saturn_space_v1_space_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1667,7 +2480,7 @@ func (x *SpaceMember_Profile) String() string {
 func (*SpaceMember_Profile) ProtoMessage() {}
 
 func (x *SpaceMember_Profile) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_space_v1_space_proto_msgTypes[23]
+	mi := &file_saturn_space_v1_space_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1847,7 +2660,71 @@ const file_saturn_space_v1_space_proto_rawDesc = "" +
 	"\x1dRevokeSpaceAPIKeyGrantRequest\x12\x1e\n" +
 	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\x12!\n" +
 	"\n" +
-	"api_key_id\x18\x02 \x01(\tB\x03\xe0A\x02R\bapiKeyId2\x8c\x12\n" +
+	"api_key_id\x18\x02 \x01(\tB\x03\xe0A\x02R\bapiKeyId\"\xde\x04\n" +
+	"\x10SpaceOAuthClient\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
+	"\bspace_id\x18\x02 \x01(\tB\x03\xe0A\x03R\aspaceId\x12\x17\n" +
+	"\x04name\x18\x03 \x01(\tB\x03\xe0A\x02R\x04name\x12%\n" +
+	"\vdescription\x18\x04 \x01(\tB\x03\xe0A\x01R\vdescription\x12(\n" +
+	"\rsecret_prefix\x18\x05 \x01(\tB\x03\xe0A\x03R\fsecretPrefix\x12\"\n" +
+	"\n" +
+	"raw_secret\x18\x06 \x01(\tB\x03\xe0A\x03R\trawSecret\x12(\n" +
+	"\rredirect_uris\x18\a \x03(\tB\x03\xe0A\x02R\fredirectUris\x12*\n" +
+	"\x0eallowed_scopes\x18\b \x03(\tB\x03\xe0A\x02R\rallowedScopes\x12@\n" +
+	"\x1atoken_endpoint_auth_method\x18\t \x01(\tB\x03\xe0A\x01R\x17tokenEndpointAuthMethod\x125\n" +
+	"\x14refresh_token_policy\x18\n" +
+	" \x01(\tB\x03\xe0A\x01R\x12refreshTokenPolicy\x124\n" +
+	"\x13registration_source\x18\v \x01(\tB\x03\xe0A\x03R\x12registrationSource\x12@\n" +
+	"\vcreate_time\x18\f \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\x12@\n" +
+	"\vupdate_time\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"updateTime\"\x8a\x01\n" +
+	"\x1dCreateSpaceOAuthClientRequest\x12\x1e\n" +
+	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\x12I\n" +
+	"\foauth_client\x18\x02 \x01(\v2!.saturn.space.v1.SpaceOAuthClientB\x03\xe0A\x02R\voauthClient\"^\n" +
+	"\x1aGetSpaceOAuthClientRequest\x12\x1e\n" +
+	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\x12 \n" +
+	"\tclient_id\x18\x02 \x01(\tB\x03\xe0A\x02R\bclientId\">\n" +
+	"\x1cListSpaceOAuthClientsRequest\x12\x1e\n" +
+	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\"l\n" +
+	"\x1dListSpaceOAuthClientsResponse\x12K\n" +
+	"\roauth_clients\x18\x01 \x03(\v2!.saturn.space.v1.SpaceOAuthClientB\x03\xe0A\x03R\foauthClients\"\xee\x01\n" +
+	"\x1dUpdateSpaceOAuthClientRequest\x12\x1e\n" +
+	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\x12 \n" +
+	"\tclient_id\x18\x02 \x01(\tB\x03\xe0A\x02R\bclientId\x12I\n" +
+	"\foauth_client\x18\x03 \x01(\v2!.saturn.space.v1.SpaceOAuthClientB\x03\xe0A\x02R\voauthClient\x12@\n" +
+	"\vupdate_mask\x18\x04 \x01(\v2\x1a.google.protobuf.FieldMaskB\x03\xe0A\x02R\n" +
+	"updateMask\"g\n" +
+	"#RotateSpaceOAuthClientSecretRequest\x12\x1e\n" +
+	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\x12 \n" +
+	"\tclient_id\x18\x02 \x01(\tB\x03\xe0A\x02R\bclientId\"a\n" +
+	"\x1dDeleteSpaceOAuthClientRequest\x12\x1e\n" +
+	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\x12 \n" +
+	"\tclient_id\x18\x02 \x01(\tB\x03\xe0A\x02R\bclientId\"\xb5\x03\n" +
+	"\x0fSpaceOAuthGrant\x12\x1e\n" +
+	"\bgrant_id\x18\x01 \x01(\tB\x03\xe0A\x03R\agrantId\x12 \n" +
+	"\tclient_id\x18\x02 \x01(\tB\x03\xe0A\x03R\bclientId\x12$\n" +
+	"\vclient_name\x18\x03 \x01(\tB\x03\xe0A\x03R\n" +
+	"clientName\x12\x1e\n" +
+	"\bspace_id\x18\x04 \x01(\tB\x03\xe0A\x03R\aspaceId\x12\x1c\n" +
+	"\auser_id\x18\x05 \x01(\tB\x03\xe0A\x03R\x06userId\x12 \n" +
+	"\tuser_name\x18\x06 \x01(\tB\x03\xe0A\x03R\buserName\x12\"\n" +
+	"\n" +
+	"user_email\x18\a \x01(\tB\x03\xe0A\x03R\tuserEmail\x12\x1b\n" +
+	"\x06scopes\x18\b \x03(\tB\x03\xe0A\x03R\x06scopes\x12F\n" +
+	"\flast_used_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03H\x00R\n" +
+	"lastUsedAt\x88\x01\x01\x12@\n" +
+	"\vcreate_time\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTimeB\x0f\n" +
+	"\r_last_used_at\"=\n" +
+	"\x1bListSpaceOAuthGrantsRequest\x12\x1e\n" +
+	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\"]\n" +
+	"\x1cListSpaceOAuthGrantsResponse\x12=\n" +
+	"\x06grants\x18\x01 \x03(\v2 .saturn.space.v1.SpaceOAuthGrantB\x03\xe0A\x03R\x06grants\"^\n" +
+	"\x1cRevokeSpaceOAuthGrantRequest\x12\x1e\n" +
+	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\x12\x1e\n" +
+	"\bgrant_id\x18\x02 \x01(\tB\x03\xe0A\x02R\agrantId2\xfa\x1d\n" +
 	"\x06Spaces\x12h\n" +
 	"\vCreateSpace\x12#.saturn.space.v1.CreateSpaceRequest\x1a\x16.saturn.space.v1.Space\"\x1c\xdaA\x04name\x82\xd3\xe4\x93\x02\x0f:\x01*\"\n" +
 	"/v1/spaces\x12n\n" +
@@ -1866,7 +2743,15 @@ const file_saturn_space_v1_space_proto_rawDesc = "" +
 	"\x17GetDashboardPreferences\x12/.saturn.space.v1.GetDashboardPreferencesRequest\x1a%.saturn.space.v1.DashboardPreferences\">\xdaA\bspace_id\x82\xd3\xe4\x93\x02-\x12+/v1/spaces/{space_id}/dashboard-preferences\x12\xf0\x01\n" +
 	"\x1aUpdateDashboardPreferences\x122.saturn.space.v1.UpdateDashboardPreferencesRequest\x1a%.saturn.space.v1.DashboardPreferences\"w\xdaA*space_id,dashboard_preferences,update_mask\x82\xd3\xe4\x93\x02D:\x15dashboard_preferences2+/v1/spaces/{space_id}/dashboard-preferences\x12\xa9\x01\n" +
 	"\x15ListSpaceAPIKeyGrants\x12-.saturn.space.v1.ListSpaceAPIKeyGrantsRequest\x1a..saturn.space.v1.ListSpaceAPIKeyGrantsResponse\"1\xdaA\bspace_id\x82\xd3\xe4\x93\x02 \x12\x1e/v1/spaces/{space_id}/api-keys\x12\xab\x01\n" +
-	"\x16RevokeSpaceAPIKeyGrant\x12..saturn.space.v1.RevokeSpaceAPIKeyGrantRequest\x1a\x16.google.protobuf.Empty\"I\xdaA\x13space_id,api_key_id\x82\xd3\xe4\x93\x02-*+/v1/spaces/{space_id}/api-keys/{api_key_id}B=Z;github.com/masterkeysrd/saturn/apis/saturn/space/v1;spacev1b\x06proto3"
+	"\x16RevokeSpaceAPIKeyGrant\x12..saturn.space.v1.RevokeSpaceAPIKeyGrantRequest\x1a\x16.google.protobuf.Empty\"I\xdaA\x13space_id,api_key_id\x82\xd3\xe4\x93\x02-*+/v1/spaces/{space_id}/api-keys/{api_key_id}\x12\xbe\x01\n" +
+	"\x16CreateSpaceOAuthClient\x12..saturn.space.v1.CreateSpaceOAuthClientRequest\x1a!.saturn.space.v1.SpaceOAuthClient\"Q\xdaA\x15space_id,oauth_client\x82\xd3\xe4\x93\x023:\foauth_client\"#/v1/spaces/{space_id}/oauth-clients\x12\xb3\x01\n" +
+	"\x13GetSpaceOAuthClient\x12+.saturn.space.v1.GetSpaceOAuthClientRequest\x1a!.saturn.space.v1.SpaceOAuthClient\"L\xdaA\x12space_id,client_id\x82\xd3\xe4\x93\x021\x12//v1/spaces/{space_id}/oauth-clients/{client_id}\x12\xae\x01\n" +
+	"\x15ListSpaceOAuthClients\x12-.saturn.space.v1.ListSpaceOAuthClientsRequest\x1a..saturn.space.v1.ListSpaceOAuthClientsResponse\"6\xdaA\bspace_id\x82\xd3\xe4\x93\x02%\x12#/v1/spaces/{space_id}/oauth-clients\x12\xe0\x01\n" +
+	"\x16UpdateSpaceOAuthClient\x12..saturn.space.v1.UpdateSpaceOAuthClientRequest\x1a!.saturn.space.v1.SpaceOAuthClient\"s\xdaA+space_id,client_id,oauth_client,update_mask\x82\xd3\xe4\x93\x02?:\foauth_client2//v1/spaces/{space_id}/oauth-clients/{client_id}\x12\xd6\x01\n" +
+	"\x1cRotateSpaceOAuthClientSecret\x124.saturn.space.v1.RotateSpaceOAuthClientSecretRequest\x1a!.saturn.space.v1.SpaceOAuthClient\"]\xdaA\x12space_id,client_id\x82\xd3\xe4\x93\x02B:\x01*\"=/v1/spaces/{space_id}/oauth-clients/{client_id}:rotate-secret\x12\xae\x01\n" +
+	"\x16DeleteSpaceOAuthClient\x12..saturn.space.v1.DeleteSpaceOAuthClientRequest\x1a\x16.google.protobuf.Empty\"L\xdaA\x12space_id,client_id\x82\xd3\xe4\x93\x021*//v1/spaces/{space_id}/oauth-clients/{client_id}\x12\xaa\x01\n" +
+	"\x14ListSpaceOAuthGrants\x12,.saturn.space.v1.ListSpaceOAuthGrantsRequest\x1a-.saturn.space.v1.ListSpaceOAuthGrantsResponse\"5\xdaA\bspace_id\x82\xd3\xe4\x93\x02$\x12\"/v1/spaces/{space_id}/oauth-grants\x12\xa9\x01\n" +
+	"\x15RevokeSpaceOAuthGrant\x12-.saturn.space.v1.RevokeSpaceOAuthGrantRequest\x1a\x16.google.protobuf.Empty\"I\xdaA\x11space_id,grant_id\x82\xd3\xe4\x93\x02/*-/v1/spaces/{space_id}/oauth-grants/{grant_id}B=Z;github.com/masterkeysrd/saturn/apis/saturn/space/v1;spacev1b\x06proto3"
 
 var (
 	file_saturn_space_v1_space_proto_rawDescOnce sync.Once
@@ -1881,98 +2766,135 @@ func file_saturn_space_v1_space_proto_rawDescGZIP() []byte {
 }
 
 var file_saturn_space_v1_space_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_saturn_space_v1_space_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_saturn_space_v1_space_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
 var file_saturn_space_v1_space_proto_goTypes = []any{
-	(SpaceMember_Role)(0),                     // 0: saturn.space.v1.SpaceMember.Role
-	(*Space)(nil),                             // 1: saturn.space.v1.Space
-	(*SpaceMember)(nil),                       // 2: saturn.space.v1.SpaceMember
-	(*CreateSpaceRequest)(nil),                // 3: saturn.space.v1.CreateSpaceRequest
-	(*GetSpaceRequest)(nil),                   // 4: saturn.space.v1.GetSpaceRequest
-	(*UpdateSpaceRequest)(nil),                // 5: saturn.space.v1.UpdateSpaceRequest
-	(*DeleteSpaceRequest)(nil),                // 6: saturn.space.v1.DeleteSpaceRequest
-	(*ListSpacesRequest)(nil),                 // 7: saturn.space.v1.ListSpacesRequest
-	(*ListSpacesResponse)(nil),                // 8: saturn.space.v1.ListSpacesResponse
-	(*CreateSpaceMemberRequest)(nil),          // 9: saturn.space.v1.CreateSpaceMemberRequest
-	(*DeleteSpaceMemberRequest)(nil),          // 10: saturn.space.v1.DeleteSpaceMemberRequest
-	(*UpdateSpaceMemberRequest)(nil),          // 11: saturn.space.v1.UpdateSpaceMemberRequest
-	(*ListSpaceMembersRequest)(nil),           // 12: saturn.space.v1.ListSpaceMembersRequest
-	(*ListSpaceMembersResponse)(nil),          // 13: saturn.space.v1.ListSpaceMembersResponse
-	(*Settings)(nil),                          // 14: saturn.space.v1.Settings
-	(*GetSettingsRequest)(nil),                // 15: saturn.space.v1.GetSettingsRequest
-	(*UpdateSettingsRequest)(nil),             // 16: saturn.space.v1.UpdateSettingsRequest
-	(*DashboardPreferences)(nil),              // 17: saturn.space.v1.DashboardPreferences
-	(*GetDashboardPreferencesRequest)(nil),    // 18: saturn.space.v1.GetDashboardPreferencesRequest
-	(*UpdateDashboardPreferencesRequest)(nil), // 19: saturn.space.v1.UpdateDashboardPreferencesRequest
-	(*APIKeyGrant)(nil),                       // 20: saturn.space.v1.APIKeyGrant
-	(*ListSpaceAPIKeyGrantsRequest)(nil),      // 21: saturn.space.v1.ListSpaceAPIKeyGrantsRequest
-	(*ListSpaceAPIKeyGrantsResponse)(nil),     // 22: saturn.space.v1.ListSpaceAPIKeyGrantsResponse
-	(*RevokeSpaceAPIKeyGrantRequest)(nil),     // 23: saturn.space.v1.RevokeSpaceAPIKeyGrantRequest
-	(*SpaceMember_Profile)(nil),               // 24: saturn.space.v1.SpaceMember.Profile
-	(*timestamppb.Timestamp)(nil),             // 25: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),             // 26: google.protobuf.FieldMask
-	(*emptypb.Empty)(nil),                     // 27: google.protobuf.Empty
+	(SpaceMember_Role)(0),                       // 0: saturn.space.v1.SpaceMember.Role
+	(*Space)(nil),                               // 1: saturn.space.v1.Space
+	(*SpaceMember)(nil),                         // 2: saturn.space.v1.SpaceMember
+	(*CreateSpaceRequest)(nil),                  // 3: saturn.space.v1.CreateSpaceRequest
+	(*GetSpaceRequest)(nil),                     // 4: saturn.space.v1.GetSpaceRequest
+	(*UpdateSpaceRequest)(nil),                  // 5: saturn.space.v1.UpdateSpaceRequest
+	(*DeleteSpaceRequest)(nil),                  // 6: saturn.space.v1.DeleteSpaceRequest
+	(*ListSpacesRequest)(nil),                   // 7: saturn.space.v1.ListSpacesRequest
+	(*ListSpacesResponse)(nil),                  // 8: saturn.space.v1.ListSpacesResponse
+	(*CreateSpaceMemberRequest)(nil),            // 9: saturn.space.v1.CreateSpaceMemberRequest
+	(*DeleteSpaceMemberRequest)(nil),            // 10: saturn.space.v1.DeleteSpaceMemberRequest
+	(*UpdateSpaceMemberRequest)(nil),            // 11: saturn.space.v1.UpdateSpaceMemberRequest
+	(*ListSpaceMembersRequest)(nil),             // 12: saturn.space.v1.ListSpaceMembersRequest
+	(*ListSpaceMembersResponse)(nil),            // 13: saturn.space.v1.ListSpaceMembersResponse
+	(*Settings)(nil),                            // 14: saturn.space.v1.Settings
+	(*GetSettingsRequest)(nil),                  // 15: saturn.space.v1.GetSettingsRequest
+	(*UpdateSettingsRequest)(nil),               // 16: saturn.space.v1.UpdateSettingsRequest
+	(*DashboardPreferences)(nil),                // 17: saturn.space.v1.DashboardPreferences
+	(*GetDashboardPreferencesRequest)(nil),      // 18: saturn.space.v1.GetDashboardPreferencesRequest
+	(*UpdateDashboardPreferencesRequest)(nil),   // 19: saturn.space.v1.UpdateDashboardPreferencesRequest
+	(*APIKeyGrant)(nil),                         // 20: saturn.space.v1.APIKeyGrant
+	(*ListSpaceAPIKeyGrantsRequest)(nil),        // 21: saturn.space.v1.ListSpaceAPIKeyGrantsRequest
+	(*ListSpaceAPIKeyGrantsResponse)(nil),       // 22: saturn.space.v1.ListSpaceAPIKeyGrantsResponse
+	(*RevokeSpaceAPIKeyGrantRequest)(nil),       // 23: saturn.space.v1.RevokeSpaceAPIKeyGrantRequest
+	(*SpaceOAuthClient)(nil),                    // 24: saturn.space.v1.SpaceOAuthClient
+	(*CreateSpaceOAuthClientRequest)(nil),       // 25: saturn.space.v1.CreateSpaceOAuthClientRequest
+	(*GetSpaceOAuthClientRequest)(nil),          // 26: saturn.space.v1.GetSpaceOAuthClientRequest
+	(*ListSpaceOAuthClientsRequest)(nil),        // 27: saturn.space.v1.ListSpaceOAuthClientsRequest
+	(*ListSpaceOAuthClientsResponse)(nil),       // 28: saturn.space.v1.ListSpaceOAuthClientsResponse
+	(*UpdateSpaceOAuthClientRequest)(nil),       // 29: saturn.space.v1.UpdateSpaceOAuthClientRequest
+	(*RotateSpaceOAuthClientSecretRequest)(nil), // 30: saturn.space.v1.RotateSpaceOAuthClientSecretRequest
+	(*DeleteSpaceOAuthClientRequest)(nil),       // 31: saturn.space.v1.DeleteSpaceOAuthClientRequest
+	(*SpaceOAuthGrant)(nil),                     // 32: saturn.space.v1.SpaceOAuthGrant
+	(*ListSpaceOAuthGrantsRequest)(nil),         // 33: saturn.space.v1.ListSpaceOAuthGrantsRequest
+	(*ListSpaceOAuthGrantsResponse)(nil),        // 34: saturn.space.v1.ListSpaceOAuthGrantsResponse
+	(*RevokeSpaceOAuthGrantRequest)(nil),        // 35: saturn.space.v1.RevokeSpaceOAuthGrantRequest
+	(*SpaceMember_Profile)(nil),                 // 36: saturn.space.v1.SpaceMember.Profile
+	(*timestamppb.Timestamp)(nil),               // 37: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),               // 38: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),                       // 39: google.protobuf.Empty
 }
 var file_saturn_space_v1_space_proto_depIdxs = []int32{
-	25, // 0: saturn.space.v1.Space.create_time:type_name -> google.protobuf.Timestamp
-	25, // 1: saturn.space.v1.Space.update_time:type_name -> google.protobuf.Timestamp
+	37, // 0: saturn.space.v1.Space.create_time:type_name -> google.protobuf.Timestamp
+	37, // 1: saturn.space.v1.Space.update_time:type_name -> google.protobuf.Timestamp
 	0,  // 2: saturn.space.v1.SpaceMember.role:type_name -> saturn.space.v1.SpaceMember.Role
-	25, // 3: saturn.space.v1.SpaceMember.create_time:type_name -> google.protobuf.Timestamp
-	25, // 4: saturn.space.v1.SpaceMember.update_time:type_name -> google.protobuf.Timestamp
-	24, // 5: saturn.space.v1.SpaceMember.profile:type_name -> saturn.space.v1.SpaceMember.Profile
+	37, // 3: saturn.space.v1.SpaceMember.create_time:type_name -> google.protobuf.Timestamp
+	37, // 4: saturn.space.v1.SpaceMember.update_time:type_name -> google.protobuf.Timestamp
+	36, // 5: saturn.space.v1.SpaceMember.profile:type_name -> saturn.space.v1.SpaceMember.Profile
 	1,  // 6: saturn.space.v1.UpdateSpaceRequest.space:type_name -> saturn.space.v1.Space
-	26, // 7: saturn.space.v1.UpdateSpaceRequest.update_mask:type_name -> google.protobuf.FieldMask
+	38, // 7: saturn.space.v1.UpdateSpaceRequest.update_mask:type_name -> google.protobuf.FieldMask
 	1,  // 8: saturn.space.v1.ListSpacesResponse.spaces:type_name -> saturn.space.v1.Space
 	2,  // 9: saturn.space.v1.CreateSpaceMemberRequest.member:type_name -> saturn.space.v1.SpaceMember
 	2,  // 10: saturn.space.v1.UpdateSpaceMemberRequest.member:type_name -> saturn.space.v1.SpaceMember
-	26, // 11: saturn.space.v1.UpdateSpaceMemberRequest.update_mask:type_name -> google.protobuf.FieldMask
+	38, // 11: saturn.space.v1.UpdateSpaceMemberRequest.update_mask:type_name -> google.protobuf.FieldMask
 	2,  // 12: saturn.space.v1.ListSpaceMembersResponse.members:type_name -> saturn.space.v1.SpaceMember
-	25, // 13: saturn.space.v1.Settings.create_time:type_name -> google.protobuf.Timestamp
-	25, // 14: saturn.space.v1.Settings.update_time:type_name -> google.protobuf.Timestamp
+	37, // 13: saturn.space.v1.Settings.create_time:type_name -> google.protobuf.Timestamp
+	37, // 14: saturn.space.v1.Settings.update_time:type_name -> google.protobuf.Timestamp
 	14, // 15: saturn.space.v1.UpdateSettingsRequest.settings:type_name -> saturn.space.v1.Settings
-	26, // 16: saturn.space.v1.UpdateSettingsRequest.update_mask:type_name -> google.protobuf.FieldMask
-	25, // 17: saturn.space.v1.DashboardPreferences.create_time:type_name -> google.protobuf.Timestamp
-	25, // 18: saturn.space.v1.DashboardPreferences.update_time:type_name -> google.protobuf.Timestamp
+	38, // 16: saturn.space.v1.UpdateSettingsRequest.update_mask:type_name -> google.protobuf.FieldMask
+	37, // 17: saturn.space.v1.DashboardPreferences.create_time:type_name -> google.protobuf.Timestamp
+	37, // 18: saturn.space.v1.DashboardPreferences.update_time:type_name -> google.protobuf.Timestamp
 	17, // 19: saturn.space.v1.UpdateDashboardPreferencesRequest.dashboard_preferences:type_name -> saturn.space.v1.DashboardPreferences
-	26, // 20: saturn.space.v1.UpdateDashboardPreferencesRequest.update_mask:type_name -> google.protobuf.FieldMask
-	25, // 21: saturn.space.v1.APIKeyGrant.expires_at:type_name -> google.protobuf.Timestamp
-	25, // 22: saturn.space.v1.APIKeyGrant.last_used_at:type_name -> google.protobuf.Timestamp
-	25, // 23: saturn.space.v1.APIKeyGrant.grant_create_time:type_name -> google.protobuf.Timestamp
+	38, // 20: saturn.space.v1.UpdateDashboardPreferencesRequest.update_mask:type_name -> google.protobuf.FieldMask
+	37, // 21: saturn.space.v1.APIKeyGrant.expires_at:type_name -> google.protobuf.Timestamp
+	37, // 22: saturn.space.v1.APIKeyGrant.last_used_at:type_name -> google.protobuf.Timestamp
+	37, // 23: saturn.space.v1.APIKeyGrant.grant_create_time:type_name -> google.protobuf.Timestamp
 	20, // 24: saturn.space.v1.ListSpaceAPIKeyGrantsResponse.grants:type_name -> saturn.space.v1.APIKeyGrant
-	3,  // 25: saturn.space.v1.Spaces.CreateSpace:input_type -> saturn.space.v1.CreateSpaceRequest
-	4,  // 26: saturn.space.v1.Spaces.GetSpace:input_type -> saturn.space.v1.GetSpaceRequest
-	5,  // 27: saturn.space.v1.Spaces.UpdateSpace:input_type -> saturn.space.v1.UpdateSpaceRequest
-	6,  // 28: saturn.space.v1.Spaces.DeleteSpace:input_type -> saturn.space.v1.DeleteSpaceRequest
-	7,  // 29: saturn.space.v1.Spaces.ListSpaces:input_type -> saturn.space.v1.ListSpacesRequest
-	9,  // 30: saturn.space.v1.Spaces.CreateSpaceMember:input_type -> saturn.space.v1.CreateSpaceMemberRequest
-	10, // 31: saturn.space.v1.Spaces.DeleteSpaceMember:input_type -> saturn.space.v1.DeleteSpaceMemberRequest
-	11, // 32: saturn.space.v1.Spaces.UpdateSpaceMember:input_type -> saturn.space.v1.UpdateSpaceMemberRequest
-	12, // 33: saturn.space.v1.Spaces.ListSpaceMembers:input_type -> saturn.space.v1.ListSpaceMembersRequest
-	15, // 34: saturn.space.v1.Spaces.GetSettings:input_type -> saturn.space.v1.GetSettingsRequest
-	16, // 35: saturn.space.v1.Spaces.UpdateSettings:input_type -> saturn.space.v1.UpdateSettingsRequest
-	18, // 36: saturn.space.v1.Spaces.GetDashboardPreferences:input_type -> saturn.space.v1.GetDashboardPreferencesRequest
-	19, // 37: saturn.space.v1.Spaces.UpdateDashboardPreferences:input_type -> saturn.space.v1.UpdateDashboardPreferencesRequest
-	21, // 38: saturn.space.v1.Spaces.ListSpaceAPIKeyGrants:input_type -> saturn.space.v1.ListSpaceAPIKeyGrantsRequest
-	23, // 39: saturn.space.v1.Spaces.RevokeSpaceAPIKeyGrant:input_type -> saturn.space.v1.RevokeSpaceAPIKeyGrantRequest
-	1,  // 40: saturn.space.v1.Spaces.CreateSpace:output_type -> saturn.space.v1.Space
-	1,  // 41: saturn.space.v1.Spaces.GetSpace:output_type -> saturn.space.v1.Space
-	1,  // 42: saturn.space.v1.Spaces.UpdateSpace:output_type -> saturn.space.v1.Space
-	27, // 43: saturn.space.v1.Spaces.DeleteSpace:output_type -> google.protobuf.Empty
-	8,  // 44: saturn.space.v1.Spaces.ListSpaces:output_type -> saturn.space.v1.ListSpacesResponse
-	2,  // 45: saturn.space.v1.Spaces.CreateSpaceMember:output_type -> saturn.space.v1.SpaceMember
-	27, // 46: saturn.space.v1.Spaces.DeleteSpaceMember:output_type -> google.protobuf.Empty
-	2,  // 47: saturn.space.v1.Spaces.UpdateSpaceMember:output_type -> saturn.space.v1.SpaceMember
-	13, // 48: saturn.space.v1.Spaces.ListSpaceMembers:output_type -> saturn.space.v1.ListSpaceMembersResponse
-	14, // 49: saturn.space.v1.Spaces.GetSettings:output_type -> saturn.space.v1.Settings
-	14, // 50: saturn.space.v1.Spaces.UpdateSettings:output_type -> saturn.space.v1.Settings
-	17, // 51: saturn.space.v1.Spaces.GetDashboardPreferences:output_type -> saturn.space.v1.DashboardPreferences
-	17, // 52: saturn.space.v1.Spaces.UpdateDashboardPreferences:output_type -> saturn.space.v1.DashboardPreferences
-	22, // 53: saturn.space.v1.Spaces.ListSpaceAPIKeyGrants:output_type -> saturn.space.v1.ListSpaceAPIKeyGrantsResponse
-	27, // 54: saturn.space.v1.Spaces.RevokeSpaceAPIKeyGrant:output_type -> google.protobuf.Empty
-	40, // [40:55] is the sub-list for method output_type
-	25, // [25:40] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	37, // 25: saturn.space.v1.SpaceOAuthClient.create_time:type_name -> google.protobuf.Timestamp
+	37, // 26: saturn.space.v1.SpaceOAuthClient.update_time:type_name -> google.protobuf.Timestamp
+	24, // 27: saturn.space.v1.CreateSpaceOAuthClientRequest.oauth_client:type_name -> saturn.space.v1.SpaceOAuthClient
+	24, // 28: saturn.space.v1.ListSpaceOAuthClientsResponse.oauth_clients:type_name -> saturn.space.v1.SpaceOAuthClient
+	24, // 29: saturn.space.v1.UpdateSpaceOAuthClientRequest.oauth_client:type_name -> saturn.space.v1.SpaceOAuthClient
+	38, // 30: saturn.space.v1.UpdateSpaceOAuthClientRequest.update_mask:type_name -> google.protobuf.FieldMask
+	37, // 31: saturn.space.v1.SpaceOAuthGrant.last_used_at:type_name -> google.protobuf.Timestamp
+	37, // 32: saturn.space.v1.SpaceOAuthGrant.create_time:type_name -> google.protobuf.Timestamp
+	32, // 33: saturn.space.v1.ListSpaceOAuthGrantsResponse.grants:type_name -> saturn.space.v1.SpaceOAuthGrant
+	3,  // 34: saturn.space.v1.Spaces.CreateSpace:input_type -> saturn.space.v1.CreateSpaceRequest
+	4,  // 35: saturn.space.v1.Spaces.GetSpace:input_type -> saturn.space.v1.GetSpaceRequest
+	5,  // 36: saturn.space.v1.Spaces.UpdateSpace:input_type -> saturn.space.v1.UpdateSpaceRequest
+	6,  // 37: saturn.space.v1.Spaces.DeleteSpace:input_type -> saturn.space.v1.DeleteSpaceRequest
+	7,  // 38: saturn.space.v1.Spaces.ListSpaces:input_type -> saturn.space.v1.ListSpacesRequest
+	9,  // 39: saturn.space.v1.Spaces.CreateSpaceMember:input_type -> saturn.space.v1.CreateSpaceMemberRequest
+	10, // 40: saturn.space.v1.Spaces.DeleteSpaceMember:input_type -> saturn.space.v1.DeleteSpaceMemberRequest
+	11, // 41: saturn.space.v1.Spaces.UpdateSpaceMember:input_type -> saturn.space.v1.UpdateSpaceMemberRequest
+	12, // 42: saturn.space.v1.Spaces.ListSpaceMembers:input_type -> saturn.space.v1.ListSpaceMembersRequest
+	15, // 43: saturn.space.v1.Spaces.GetSettings:input_type -> saturn.space.v1.GetSettingsRequest
+	16, // 44: saturn.space.v1.Spaces.UpdateSettings:input_type -> saturn.space.v1.UpdateSettingsRequest
+	18, // 45: saturn.space.v1.Spaces.GetDashboardPreferences:input_type -> saturn.space.v1.GetDashboardPreferencesRequest
+	19, // 46: saturn.space.v1.Spaces.UpdateDashboardPreferences:input_type -> saturn.space.v1.UpdateDashboardPreferencesRequest
+	21, // 47: saturn.space.v1.Spaces.ListSpaceAPIKeyGrants:input_type -> saturn.space.v1.ListSpaceAPIKeyGrantsRequest
+	23, // 48: saturn.space.v1.Spaces.RevokeSpaceAPIKeyGrant:input_type -> saturn.space.v1.RevokeSpaceAPIKeyGrantRequest
+	25, // 49: saturn.space.v1.Spaces.CreateSpaceOAuthClient:input_type -> saturn.space.v1.CreateSpaceOAuthClientRequest
+	26, // 50: saturn.space.v1.Spaces.GetSpaceOAuthClient:input_type -> saturn.space.v1.GetSpaceOAuthClientRequest
+	27, // 51: saturn.space.v1.Spaces.ListSpaceOAuthClients:input_type -> saturn.space.v1.ListSpaceOAuthClientsRequest
+	29, // 52: saturn.space.v1.Spaces.UpdateSpaceOAuthClient:input_type -> saturn.space.v1.UpdateSpaceOAuthClientRequest
+	30, // 53: saturn.space.v1.Spaces.RotateSpaceOAuthClientSecret:input_type -> saturn.space.v1.RotateSpaceOAuthClientSecretRequest
+	31, // 54: saturn.space.v1.Spaces.DeleteSpaceOAuthClient:input_type -> saturn.space.v1.DeleteSpaceOAuthClientRequest
+	33, // 55: saturn.space.v1.Spaces.ListSpaceOAuthGrants:input_type -> saturn.space.v1.ListSpaceOAuthGrantsRequest
+	35, // 56: saturn.space.v1.Spaces.RevokeSpaceOAuthGrant:input_type -> saturn.space.v1.RevokeSpaceOAuthGrantRequest
+	1,  // 57: saturn.space.v1.Spaces.CreateSpace:output_type -> saturn.space.v1.Space
+	1,  // 58: saturn.space.v1.Spaces.GetSpace:output_type -> saturn.space.v1.Space
+	1,  // 59: saturn.space.v1.Spaces.UpdateSpace:output_type -> saturn.space.v1.Space
+	39, // 60: saturn.space.v1.Spaces.DeleteSpace:output_type -> google.protobuf.Empty
+	8,  // 61: saturn.space.v1.Spaces.ListSpaces:output_type -> saturn.space.v1.ListSpacesResponse
+	2,  // 62: saturn.space.v1.Spaces.CreateSpaceMember:output_type -> saturn.space.v1.SpaceMember
+	39, // 63: saturn.space.v1.Spaces.DeleteSpaceMember:output_type -> google.protobuf.Empty
+	2,  // 64: saturn.space.v1.Spaces.UpdateSpaceMember:output_type -> saturn.space.v1.SpaceMember
+	13, // 65: saturn.space.v1.Spaces.ListSpaceMembers:output_type -> saturn.space.v1.ListSpaceMembersResponse
+	14, // 66: saturn.space.v1.Spaces.GetSettings:output_type -> saturn.space.v1.Settings
+	14, // 67: saturn.space.v1.Spaces.UpdateSettings:output_type -> saturn.space.v1.Settings
+	17, // 68: saturn.space.v1.Spaces.GetDashboardPreferences:output_type -> saturn.space.v1.DashboardPreferences
+	17, // 69: saturn.space.v1.Spaces.UpdateDashboardPreferences:output_type -> saturn.space.v1.DashboardPreferences
+	22, // 70: saturn.space.v1.Spaces.ListSpaceAPIKeyGrants:output_type -> saturn.space.v1.ListSpaceAPIKeyGrantsResponse
+	39, // 71: saturn.space.v1.Spaces.RevokeSpaceAPIKeyGrant:output_type -> google.protobuf.Empty
+	24, // 72: saturn.space.v1.Spaces.CreateSpaceOAuthClient:output_type -> saturn.space.v1.SpaceOAuthClient
+	24, // 73: saturn.space.v1.Spaces.GetSpaceOAuthClient:output_type -> saturn.space.v1.SpaceOAuthClient
+	28, // 74: saturn.space.v1.Spaces.ListSpaceOAuthClients:output_type -> saturn.space.v1.ListSpaceOAuthClientsResponse
+	24, // 75: saturn.space.v1.Spaces.UpdateSpaceOAuthClient:output_type -> saturn.space.v1.SpaceOAuthClient
+	24, // 76: saturn.space.v1.Spaces.RotateSpaceOAuthClientSecret:output_type -> saturn.space.v1.SpaceOAuthClient
+	39, // 77: saturn.space.v1.Spaces.DeleteSpaceOAuthClient:output_type -> google.protobuf.Empty
+	34, // 78: saturn.space.v1.Spaces.ListSpaceOAuthGrants:output_type -> saturn.space.v1.ListSpaceOAuthGrantsResponse
+	39, // 79: saturn.space.v1.Spaces.RevokeSpaceOAuthGrant:output_type -> google.protobuf.Empty
+	57, // [57:80] is the sub-list for method output_type
+	34, // [34:57] is the sub-list for method input_type
+	34, // [34:34] is the sub-list for extension type_name
+	34, // [34:34] is the sub-list for extension extendee
+	0,  // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_saturn_space_v1_space_proto_init() }
@@ -1985,13 +2907,14 @@ func file_saturn_space_v1_space_proto_init() {
 	file_saturn_space_v1_space_proto_msgTypes[15].OneofWrappers = []any{}
 	file_saturn_space_v1_space_proto_msgTypes[18].OneofWrappers = []any{}
 	file_saturn_space_v1_space_proto_msgTypes[19].OneofWrappers = []any{}
+	file_saturn_space_v1_space_proto_msgTypes[31].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_space_v1_space_proto_rawDesc), len(file_saturn_space_v1_space_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   24,
+			NumMessages:   36,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

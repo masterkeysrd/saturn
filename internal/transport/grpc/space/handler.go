@@ -8,6 +8,7 @@ import (
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
 	spaceaggregator "github.com/masterkeysrd/saturn/internal/aggregator/space"
 	spaceapp "github.com/masterkeysrd/saturn/internal/application/space"
+	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
@@ -592,6 +593,224 @@ func toProtoAPIKeyGrant(g *spaceaggregator.APIKeyGrant) *spacev1.APIKeyGrant {
 	}
 	if g.LastUsedAt != nil {
 		pb.LastUsedAt = timestamppb.New(*g.LastUsedAt)
+	}
+	return pb
+}
+
+// CreateSpaceOAuthClient creates a workspace-scoped OAuth 2.1 client.
+func (h *Handler) CreateSpaceOAuthClient(ctx context.Context, req *spacev1.CreateSpaceOAuthClientRequest) (*spacev1.SpaceOAuthClient, error) {
+	const op errors.Op = "transport/grpc/space.CreateSpaceOAuthClient"
+	userID, err := h.getSpaceUserID(ctx)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	pb := req.GetOauthClient()
+	client, err := h.Coordinator.CreateSpaceOAuthClient(ctx, &spaceapp.CreateSpaceOAuthClientRequest{
+		SpaceID:                 req.GetSpaceId(),
+		UserID:                  userID,
+		Name:                    pb.GetName(),
+		Description:             pb.GetDescription(),
+		RedirectURIs:            pb.GetRedirectUris(),
+		AllowedScopes:           pb.GetAllowedScopes(),
+		TokenEndpointAuthMethod: identity.TokenEndpointAuthMethod(pb.GetTokenEndpointAuthMethod()),
+		RefreshTokenPolicy:      identity.RefreshTokenPolicy(pb.GetRefreshTokenPolicy()),
+	})
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return toProtoSpaceOAuthClient(client, true), nil
+}
+
+// GetSpaceOAuthClient retrieves a workspace-scoped OAuth 2.1 client.
+func (h *Handler) GetSpaceOAuthClient(ctx context.Context, req *spacev1.GetSpaceOAuthClientRequest) (*spacev1.SpaceOAuthClient, error) {
+	const op errors.Op = "transport/grpc/space.GetSpaceOAuthClient"
+	userID, err := h.getSpaceUserID(ctx)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	clientID, err := identity.ParseOAuthClientID(req.GetClientId())
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	client, err := h.Aggregator.GetSpaceOAuthClient(ctx, space.SpaceID(req.GetSpaceId()), space.UserID(userID), clientID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return toProtoSpaceOAuthClient(client, false), nil
+}
+
+// ListSpaceOAuthClients lists workspace-scoped OAuth 2.1 clients.
+func (h *Handler) ListSpaceOAuthClients(ctx context.Context, req *spacev1.ListSpaceOAuthClientsRequest) (*spacev1.ListSpaceOAuthClientsResponse, error) {
+	const op errors.Op = "transport/grpc/space.ListSpaceOAuthClients"
+	userID, err := h.getSpaceUserID(ctx)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	clients, err := h.Aggregator.ListSpaceOAuthClients(ctx, space.SpaceID(req.GetSpaceId()), space.UserID(userID))
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	pbClients := make([]*spacev1.SpaceOAuthClient, len(clients))
+	for i, cl := range clients {
+		pbClients[i] = toProtoSpaceOAuthClient(cl, false)
+	}
+	return &spacev1.ListSpaceOAuthClientsResponse{
+		OauthClients: pbClients,
+	}, nil
+}
+
+// UpdateSpaceOAuthClient updates a workspace-scoped OAuth 2.1 client.
+func (h *Handler) UpdateSpaceOAuthClient(ctx context.Context, req *spacev1.UpdateSpaceOAuthClientRequest) (*spacev1.SpaceOAuthClient, error) {
+	const op errors.Op = "transport/grpc/space.UpdateSpaceOAuthClient"
+	userID, err := h.getSpaceUserID(ctx)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	clientID, err := identity.ParseOAuthClientID(req.GetClientId())
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	pb := req.GetOauthClient()
+	client, err := h.Coordinator.UpdateSpaceOAuthClient(ctx, &spaceapp.UpdateSpaceOAuthClientRequest{
+		SpaceID:                 req.GetSpaceId(),
+		UserID:                  userID,
+		ClientID:                clientID,
+		Name:                    pb.GetName(),
+		Description:             pb.GetDescription(),
+		RedirectURIs:            pb.GetRedirectUris(),
+		AllowedScopes:           pb.GetAllowedScopes(),
+		TokenEndpointAuthMethod: identity.TokenEndpointAuthMethod(pb.GetTokenEndpointAuthMethod()),
+		RefreshTokenPolicy:      identity.RefreshTokenPolicy(pb.GetRefreshTokenPolicy()),
+		UpdateMask:              req.GetUpdateMask().GetPaths(),
+	})
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return toProtoSpaceOAuthClient(client, client.RawSecret != ""), nil
+}
+
+// RotateSpaceOAuthClientSecret rotates the secret of a workspace-scoped OAuth 2.1 client.
+func (h *Handler) RotateSpaceOAuthClientSecret(ctx context.Context, req *spacev1.RotateSpaceOAuthClientSecretRequest) (*spacev1.SpaceOAuthClient, error) {
+	const op errors.Op = "transport/grpc/space.RotateSpaceOAuthClientSecret"
+	userID, err := h.getSpaceUserID(ctx)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	clientID, err := identity.ParseOAuthClientID(req.GetClientId())
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	client, err := h.Coordinator.RotateSpaceOAuthClientSecret(ctx, &spaceapp.RotateSpaceOAuthClientSecretRequest{
+		SpaceID:  req.GetSpaceId(),
+		UserID:   userID,
+		ClientID: clientID,
+	})
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return toProtoSpaceOAuthClient(client, true), nil
+}
+
+// DeleteSpaceOAuthClient deletes a workspace-scoped OAuth 2.1 client.
+func (h *Handler) DeleteSpaceOAuthClient(ctx context.Context, req *spacev1.DeleteSpaceOAuthClientRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "transport/grpc/space.DeleteSpaceOAuthClient"
+	userID, err := h.getSpaceUserID(ctx)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	clientID, err := identity.ParseOAuthClientID(req.GetClientId())
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	if err := h.Coordinator.DeleteSpaceOAuthClient(ctx, &spaceapp.DeleteSpaceOAuthClientRequest{
+		SpaceID:  req.GetSpaceId(),
+		UserID:   userID,
+		ClientID: clientID,
+	}); err != nil {
+		return nil, errors.E(op, err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+// ListSpaceOAuthGrants lists all active OAuth 2.1 grants targeting a workspace.
+func (h *Handler) ListSpaceOAuthGrants(ctx context.Context, req *spacev1.ListSpaceOAuthGrantsRequest) (*spacev1.ListSpaceOAuthGrantsResponse, error) {
+	const op errors.Op = "transport/grpc/space.ListSpaceOAuthGrants"
+	userID, err := h.getSpaceUserID(ctx)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	grants, err := h.Aggregator.ListSpaceOAuthGrants(ctx, space.SpaceID(req.GetSpaceId()), space.UserID(userID))
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	pbGrants := make([]*spacev1.SpaceOAuthGrant, len(grants))
+	for i, g := range grants {
+		pb := &spacev1.SpaceOAuthGrant{
+			GrantId:    g.GrantID,
+			ClientId:   g.ClientID,
+			ClientName: g.ClientName,
+			SpaceId:    string(g.SpaceID),
+			UserId:     string(g.UserID),
+			UserName:   g.UserName,
+			UserEmail:  g.UserEmail,
+			Scopes:     g.Scopes,
+			CreateTime: timestamppb.New(g.CreateTime),
+		}
+		if g.LastUsedAt != nil {
+			pb.LastUsedAt = timestamppb.New(*g.LastUsedAt)
+		}
+		pbGrants[i] = pb
+	}
+	return &spacev1.ListSpaceOAuthGrantsResponse{
+		Grants: pbGrants,
+	}, nil
+}
+
+// RevokeSpaceOAuthGrant revokes a user's OAuth 2.1 grant targeting a workspace.
+func (h *Handler) RevokeSpaceOAuthGrant(ctx context.Context, req *spacev1.RevokeSpaceOAuthGrantRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "transport/grpc/space.RevokeSpaceOAuthGrant"
+	userID, err := h.getSpaceUserID(ctx)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	grantID, err := identity.ParseOAuthGrantID(req.GetGrantId())
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	if err := h.Coordinator.RevokeSpaceOAuthGrant(ctx, &spaceapp.RevokeSpaceOAuthGrantRequest{
+		SpaceID: req.GetSpaceId(),
+		UserID:  userID,
+		GrantID: grantID,
+	}); err != nil {
+		return nil, errors.E(op, err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func toProtoSpaceOAuthClient(c *identity.OAuthClient, includeRawSecret bool) *spacev1.SpaceOAuthClient {
+	if c == nil {
+		return nil
+	}
+	var spaceID string
+	if c.SpaceID != nil {
+		spaceID = *c.SpaceID
+	}
+	pb := &spacev1.SpaceOAuthClient{
+		Id:                      string(c.ID),
+		SpaceId:                 spaceID,
+		Name:                    c.Name,
+		Description:             c.Description,
+		SecretPrefix:            c.SecretPrefix,
+		RedirectUris:            c.RedirectURIs,
+		AllowedScopes:           c.AllowedScopes,
+		TokenEndpointAuthMethod: string(c.TokenEndpointAuthMethod),
+		RefreshTokenPolicy:      string(c.RefreshTokenPolicy),
+		RegistrationSource:      string(c.RegistrationSource),
+		CreateTime:              timestamppb.New(c.CreateTime),
+		UpdateTime:              timestamppb.New(c.UpdateTime),
+	}
+	if includeRawSecret {
+		pb.RawSecret = c.RawSecret
 	}
 	return pb
 }

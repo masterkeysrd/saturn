@@ -28,6 +28,9 @@ type SpaceServiceMock struct {
 	// ListSpaceAPIKeyGrantsFunc mocks the ListSpaceAPIKeyGrants method.
 	ListSpaceAPIKeyGrantsFunc func(ctx context.Context, session space.Session) ([]*space.APIKeyGrant, error)
 
+	// AuthorizeSpaceAdminFunc mocks the AuthorizeSpaceAdmin method.
+	AuthorizeSpaceAdminFunc func(ctx context.Context, session space.Session) (*space.Member, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		GetSpace []struct {
@@ -48,11 +51,16 @@ type SpaceServiceMock struct {
 			Ctx     context.Context
 			Session space.Session
 		}
+		AuthorizeSpaceAdmin []struct {
+			Ctx     context.Context
+			Session space.Session
+		}
 	}
 	lockGetSpace              sync.RWMutex
 	lockListSpaces            sync.RWMutex
 	lockListSpaceMembers      sync.RWMutex
 	lockListSpaceAPIKeyGrants sync.RWMutex
+	lockAuthorizeSpaceAdmin   sync.RWMutex
 }
 
 // GetSpace calls GetSpaceFunc.
@@ -169,6 +177,33 @@ func (mock *SpaceServiceMock) ListSpaceAPIKeyGrantsCalls() []struct {
 	return mock.calls.ListSpaceAPIKeyGrants
 }
 
+// AuthorizeSpaceAdmin calls AuthorizeSpaceAdminFunc.
+func (mock *SpaceServiceMock) AuthorizeSpaceAdmin(ctx context.Context, session space.Session) (*space.Member, error) {
+	if mock.AuthorizeSpaceAdminFunc == nil {
+		panic("SpaceServiceMock.AuthorizeSpaceAdminFunc: method is nil but SpaceService.AuthorizeSpaceAdmin was just called")
+	}
+	mock.lockAuthorizeSpaceAdmin.Lock()
+	mock.calls.AuthorizeSpaceAdmin = append(mock.calls.AuthorizeSpaceAdmin, struct {
+		Ctx     context.Context
+		Session space.Session
+	}{
+		Ctx:     ctx,
+		Session: session,
+	})
+	mock.lockAuthorizeSpaceAdmin.Unlock()
+	return mock.AuthorizeSpaceAdminFunc(ctx, session)
+}
+
+// AuthorizeSpaceAdminCalls returns all calls made to AuthorizeSpaceAdmin.
+func (mock *SpaceServiceMock) AuthorizeSpaceAdminCalls() []struct {
+	Ctx     context.Context
+	Session space.Session
+} {
+	mock.lockAuthorizeSpaceAdmin.RLock()
+	defer mock.lockAuthorizeSpaceAdmin.RUnlock()
+	return mock.calls.AuthorizeSpaceAdmin
+}
+
 // Compile-time interface assertion.
 var _ IdentityService = (*IdentityServiceMock)(nil)
 
@@ -182,6 +217,18 @@ type IdentityServiceMock struct {
 
 	// ListAPIKeysByIDsFunc mocks the ListAPIKeysByIDs method.
 	ListAPIKeysByIDsFunc func(ctx context.Context, ids []identity.APIKeyID) ([]*identity.APIKey, error)
+
+	// GetOAuthClientFunc mocks the GetOAuthClient method.
+	GetOAuthClientFunc func(ctx context.Context, id identity.OAuthClientID) (*identity.OAuthClient, error)
+
+	// ListSpaceOAuthClientsFunc mocks the ListSpaceOAuthClients method.
+	ListSpaceOAuthClientsFunc func(ctx context.Context, spaceID string) ([]*identity.OAuthClient, error)
+
+	// ListOAuthClientsByIDsFunc mocks the ListOAuthClientsByIDs method.
+	ListOAuthClientsByIDsFunc func(ctx context.Context, ids []identity.OAuthClientID) ([]*identity.OAuthClient, error)
+
+	// ListSpaceOAuthGrantsFunc mocks the ListSpaceOAuthGrants method.
+	ListSpaceOAuthGrantsFunc func(ctx context.Context, spaceID string) ([]*identity.OAuthGrant, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -197,10 +244,30 @@ type IdentityServiceMock struct {
 			Ctx context.Context
 			Ids []identity.APIKeyID
 		}
+		GetOAuthClient []struct {
+			Ctx context.Context
+			Id  identity.OAuthClientID
+		}
+		ListSpaceOAuthClients []struct {
+			Ctx     context.Context
+			SpaceID string
+		}
+		ListOAuthClientsByIDs []struct {
+			Ctx context.Context
+			Ids []identity.OAuthClientID
+		}
+		ListSpaceOAuthGrants []struct {
+			Ctx     context.Context
+			SpaceID string
+		}
 	}
-	lockGetUserByID      sync.RWMutex
-	lockGetUsersByIDs    sync.RWMutex
-	lockListAPIKeysByIDs sync.RWMutex
+	lockGetUserByID           sync.RWMutex
+	lockGetUsersByIDs         sync.RWMutex
+	lockListAPIKeysByIDs      sync.RWMutex
+	lockGetOAuthClient        sync.RWMutex
+	lockListSpaceOAuthClients sync.RWMutex
+	lockListOAuthClientsByIDs sync.RWMutex
+	lockListSpaceOAuthGrants  sync.RWMutex
 }
 
 // GetUserByID calls GetUserByIDFunc.
@@ -282,4 +349,112 @@ func (mock *IdentityServiceMock) ListAPIKeysByIDsCalls() []struct {
 	mock.lockListAPIKeysByIDs.RLock()
 	defer mock.lockListAPIKeysByIDs.RUnlock()
 	return mock.calls.ListAPIKeysByIDs
+}
+
+// GetOAuthClient calls GetOAuthClientFunc.
+func (mock *IdentityServiceMock) GetOAuthClient(ctx context.Context, id identity.OAuthClientID) (*identity.OAuthClient, error) {
+	if mock.GetOAuthClientFunc == nil {
+		panic("IdentityServiceMock.GetOAuthClientFunc: method is nil but IdentityService.GetOAuthClient was just called")
+	}
+	mock.lockGetOAuthClient.Lock()
+	mock.calls.GetOAuthClient = append(mock.calls.GetOAuthClient, struct {
+		Ctx context.Context
+		Id  identity.OAuthClientID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockGetOAuthClient.Unlock()
+	return mock.GetOAuthClientFunc(ctx, id)
+}
+
+// GetOAuthClientCalls returns all calls made to GetOAuthClient.
+func (mock *IdentityServiceMock) GetOAuthClientCalls() []struct {
+	Ctx context.Context
+	Id  identity.OAuthClientID
+} {
+	mock.lockGetOAuthClient.RLock()
+	defer mock.lockGetOAuthClient.RUnlock()
+	return mock.calls.GetOAuthClient
+}
+
+// ListSpaceOAuthClients calls ListSpaceOAuthClientsFunc.
+func (mock *IdentityServiceMock) ListSpaceOAuthClients(ctx context.Context, spaceID string) ([]*identity.OAuthClient, error) {
+	if mock.ListSpaceOAuthClientsFunc == nil {
+		panic("IdentityServiceMock.ListSpaceOAuthClientsFunc: method is nil but IdentityService.ListSpaceOAuthClients was just called")
+	}
+	mock.lockListSpaceOAuthClients.Lock()
+	mock.calls.ListSpaceOAuthClients = append(mock.calls.ListSpaceOAuthClients, struct {
+		Ctx     context.Context
+		SpaceID string
+	}{
+		Ctx:     ctx,
+		SpaceID: spaceID,
+	})
+	mock.lockListSpaceOAuthClients.Unlock()
+	return mock.ListSpaceOAuthClientsFunc(ctx, spaceID)
+}
+
+// ListSpaceOAuthClientsCalls returns all calls made to ListSpaceOAuthClients.
+func (mock *IdentityServiceMock) ListSpaceOAuthClientsCalls() []struct {
+	Ctx     context.Context
+	SpaceID string
+} {
+	mock.lockListSpaceOAuthClients.RLock()
+	defer mock.lockListSpaceOAuthClients.RUnlock()
+	return mock.calls.ListSpaceOAuthClients
+}
+
+// ListOAuthClientsByIDs calls ListOAuthClientsByIDsFunc.
+func (mock *IdentityServiceMock) ListOAuthClientsByIDs(ctx context.Context, ids []identity.OAuthClientID) ([]*identity.OAuthClient, error) {
+	if mock.ListOAuthClientsByIDsFunc == nil {
+		panic("IdentityServiceMock.ListOAuthClientsByIDsFunc: method is nil but IdentityService.ListOAuthClientsByIDs was just called")
+	}
+	mock.lockListOAuthClientsByIDs.Lock()
+	mock.calls.ListOAuthClientsByIDs = append(mock.calls.ListOAuthClientsByIDs, struct {
+		Ctx context.Context
+		Ids []identity.OAuthClientID
+	}{
+		Ctx: ctx,
+		Ids: ids,
+	})
+	mock.lockListOAuthClientsByIDs.Unlock()
+	return mock.ListOAuthClientsByIDsFunc(ctx, ids)
+}
+
+// ListOAuthClientsByIDsCalls returns all calls made to ListOAuthClientsByIDs.
+func (mock *IdentityServiceMock) ListOAuthClientsByIDsCalls() []struct {
+	Ctx context.Context
+	Ids []identity.OAuthClientID
+} {
+	mock.lockListOAuthClientsByIDs.RLock()
+	defer mock.lockListOAuthClientsByIDs.RUnlock()
+	return mock.calls.ListOAuthClientsByIDs
+}
+
+// ListSpaceOAuthGrants calls ListSpaceOAuthGrantsFunc.
+func (mock *IdentityServiceMock) ListSpaceOAuthGrants(ctx context.Context, spaceID string) ([]*identity.OAuthGrant, error) {
+	if mock.ListSpaceOAuthGrantsFunc == nil {
+		panic("IdentityServiceMock.ListSpaceOAuthGrantsFunc: method is nil but IdentityService.ListSpaceOAuthGrants was just called")
+	}
+	mock.lockListSpaceOAuthGrants.Lock()
+	mock.calls.ListSpaceOAuthGrants = append(mock.calls.ListSpaceOAuthGrants, struct {
+		Ctx     context.Context
+		SpaceID string
+	}{
+		Ctx:     ctx,
+		SpaceID: spaceID,
+	})
+	mock.lockListSpaceOAuthGrants.Unlock()
+	return mock.ListSpaceOAuthGrantsFunc(ctx, spaceID)
+}
+
+// ListSpaceOAuthGrantsCalls returns all calls made to ListSpaceOAuthGrants.
+func (mock *IdentityServiceMock) ListSpaceOAuthGrantsCalls() []struct {
+	Ctx     context.Context
+	SpaceID string
+} {
+	mock.lockListSpaceOAuthGrants.RLock()
+	defer mock.lockListSpaceOAuthGrants.RUnlock()
+	return mock.calls.ListSpaceOAuthGrants
 }

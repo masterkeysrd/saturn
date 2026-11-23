@@ -1011,3 +1011,339 @@ func (l *LoggingCoordinator) DeleteAPIKey(ctx context.Context, req *DeleteAPIKey
 	)
 	return nil
 }
+
+// AdminCreateOAuthClient executes next.AdminCreateOAuthClient and logs execution duration and errors.
+func (l *LoggingCoordinator) AdminCreateOAuthClient(ctx context.Context, req *AdminCreateOAuthClientRequest) (*identity.OAuthClient, error) {
+	start := time.Now()
+	res, err := l.next.AdminCreateOAuthClient(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.AdminCreateOAuthClient failed",
+			log.String("component", "iam"),
+			log.String("operation", "AdminCreateOAuthClient"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.AdminCreateOAuthClient completed",
+		log.String("component", "iam"),
+		log.String("operation", "AdminCreateOAuthClient"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// AdminGetOAuthClient executes next.AdminGetOAuthClient and logs execution duration and errors.
+func (l *LoggingCoordinator) AdminGetOAuthClient(ctx context.Context, req *AdminGetOAuthClientRequest) (*identity.OAuthClient, error) {
+	start := time.Now()
+	res, err := l.next.AdminGetOAuthClient(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.AdminGetOAuthClient failed",
+			log.String("component", "iam"),
+			log.String("operation", "AdminGetOAuthClient"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.AdminGetOAuthClient completed",
+		log.String("component", "iam"),
+		log.String("operation", "AdminGetOAuthClient"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// AdminListOAuthClients executes next.AdminListOAuthClients and logs execution duration and errors.
+func (l *LoggingCoordinator) AdminListOAuthClients(ctx context.Context) ([]*identity.OAuthClient, error) {
+	start := time.Now()
+	res, err := l.next.AdminListOAuthClients(ctx)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.AdminListOAuthClients failed",
+			log.String("component", "iam"),
+			log.String("operation", "AdminListOAuthClients"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.AdminListOAuthClients completed",
+		log.String("component", "iam"),
+		log.String("operation", "AdminListOAuthClients"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// AdminUpdateOAuthClient executes next.AdminUpdateOAuthClient and logs execution duration and errors.
+func (l *LoggingCoordinator) AdminUpdateOAuthClient(ctx context.Context, req *AdminUpdateOAuthClientRequest) (*identity.OAuthClient, error) {
+	start := time.Now()
+	res, err := l.next.AdminUpdateOAuthClient(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.AdminUpdateOAuthClient failed",
+			log.String("component", "iam"),
+			log.String("operation", "AdminUpdateOAuthClient"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.AdminUpdateOAuthClient completed",
+		log.String("component", "iam"),
+		log.String("operation", "AdminUpdateOAuthClient"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// AdminRotateOAuthClientSecret executes next.AdminRotateOAuthClientSecret and logs execution duration and errors.
+func (l *LoggingCoordinator) AdminRotateOAuthClientSecret(ctx context.Context, req *AdminRotateOAuthClientSecretRequest) (*identity.OAuthClient, error) {
+	start := time.Now()
+	res, err := l.next.AdminRotateOAuthClientSecret(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.AdminRotateOAuthClientSecret failed",
+			log.String("component", "iam"),
+			log.String("operation", "AdminRotateOAuthClientSecret"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.AdminRotateOAuthClientSecret completed",
+		log.String("component", "iam"),
+		log.String("operation", "AdminRotateOAuthClientSecret"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// AdminDeleteOAuthClient executes next.AdminDeleteOAuthClient and logs execution duration and errors.
+func (l *LoggingCoordinator) AdminDeleteOAuthClient(ctx context.Context, req *AdminDeleteOAuthClientRequest) error {
+	start := time.Now()
+	err := l.next.AdminDeleteOAuthClient(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.AdminDeleteOAuthClient failed",
+			log.String("component", "iam"),
+			log.String("operation", "AdminDeleteOAuthClient"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return err
+	}
+
+	l.logger.Info(ctx, "iam.AdminDeleteOAuthClient completed",
+		log.String("component", "iam"),
+		log.String("operation", "AdminDeleteOAuthClient"),
+		log.Duration("duration", duration),
+	)
+	return nil
+}
+
+// ListUserOAuthGrants executes next.ListUserOAuthGrants and logs execution duration and errors.
+func (l *LoggingCoordinator) ListUserOAuthGrants(ctx context.Context, req *ListUserOAuthGrantsRequest) ([]*UserOAuthGrant, error) {
+	start := time.Now()
+	res, err := l.next.ListUserOAuthGrants(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.ListUserOAuthGrants failed",
+			log.String("component", "iam"),
+			log.String("operation", "ListUserOAuthGrants"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.ListUserOAuthGrants completed",
+		log.String("component", "iam"),
+		log.String("operation", "ListUserOAuthGrants"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// RevokeUserOAuthGrant executes next.RevokeUserOAuthGrant and logs execution duration and errors.
+func (l *LoggingCoordinator) RevokeUserOAuthGrant(ctx context.Context, req *RevokeUserOAuthGrantRequest) error {
+	start := time.Now()
+	err := l.next.RevokeUserOAuthGrant(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.RevokeUserOAuthGrant failed",
+			log.String("component", "iam"),
+			log.String("operation", "RevokeUserOAuthGrant"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return err
+	}
+
+	l.logger.Info(ctx, "iam.RevokeUserOAuthGrant completed",
+		log.String("component", "iam"),
+		log.String("operation", "RevokeUserOAuthGrant"),
+		log.Duration("duration", duration),
+	)
+	return nil
+}
+
+// InspectOAuthConsent executes next.InspectOAuthConsent and logs execution duration and errors.
+func (l *LoggingCoordinator) InspectOAuthConsent(ctx context.Context, req *InspectOAuthConsentRequest) (*InspectOAuthConsentResponse, error) {
+	start := time.Now()
+	res, err := l.next.InspectOAuthConsent(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.InspectOAuthConsent failed",
+			log.String("component", "iam"),
+			log.String("operation", "InspectOAuthConsent"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.InspectOAuthConsent completed",
+		log.String("component", "iam"),
+		log.String("operation", "InspectOAuthConsent"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// DecideOAuthConsent executes next.DecideOAuthConsent and logs execution duration and errors.
+func (l *LoggingCoordinator) DecideOAuthConsent(ctx context.Context, req *DecideOAuthConsentRequest) (*DecideOAuthConsentResponse, error) {
+	start := time.Now()
+	res, err := l.next.DecideOAuthConsent(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.DecideOAuthConsent failed",
+			log.String("component", "iam"),
+			log.String("operation", "DecideOAuthConsent"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.DecideOAuthConsent completed",
+		log.String("component", "iam"),
+		log.String("operation", "DecideOAuthConsent"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// RegisterDynamicOAuthClient executes next.RegisterDynamicOAuthClient and logs execution duration and errors.
+func (l *LoggingCoordinator) RegisterDynamicOAuthClient(ctx context.Context, req *RegisterDynamicOAuthClientRequest) (*identity.OAuthClient, error) {
+	start := time.Now()
+	res, err := l.next.RegisterDynamicOAuthClient(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.RegisterDynamicOAuthClient failed",
+			log.String("component", "iam"),
+			log.String("operation", "RegisterDynamicOAuthClient"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.RegisterDynamicOAuthClient completed",
+		log.String("component", "iam"),
+		log.String("operation", "RegisterDynamicOAuthClient"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// ConsumeOAuthRedirectHandoff executes next.ConsumeOAuthRedirectHandoff and logs execution duration and errors.
+func (l *LoggingCoordinator) ConsumeOAuthRedirectHandoff(ctx context.Context, req *ConsumeOAuthRedirectHandoffRequest) (*ConsumeOAuthRedirectHandoffResponse, error) {
+	start := time.Now()
+	res, err := l.next.ConsumeOAuthRedirectHandoff(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.ConsumeOAuthRedirectHandoff failed",
+			log.String("component", "iam"),
+			log.String("operation", "ConsumeOAuthRedirectHandoff"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.ConsumeOAuthRedirectHandoff completed",
+		log.String("component", "iam"),
+		log.String("operation", "ConsumeOAuthRedirectHandoff"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// ExchangeOAuthToken executes next.ExchangeOAuthToken and logs execution duration and errors.
+func (l *LoggingCoordinator) ExchangeOAuthToken(ctx context.Context, req *ExchangeOAuthTokenRequest) (*ExchangeOAuthTokenResponse, error) {
+	start := time.Now()
+	res, err := l.next.ExchangeOAuthToken(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.ExchangeOAuthToken failed",
+			log.String("component", "iam"),
+			log.String("operation", "ExchangeOAuthToken"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.ExchangeOAuthToken completed",
+		log.String("component", "iam"),
+		log.String("operation", "ExchangeOAuthToken"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// RevokeOAuthToken executes next.RevokeOAuthToken and logs execution duration and errors.
+func (l *LoggingCoordinator) RevokeOAuthToken(ctx context.Context, req *RevokeOAuthTokenRequest) error {
+	start := time.Now()
+	err := l.next.RevokeOAuthToken(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.RevokeOAuthToken failed",
+			log.String("component", "iam"),
+			log.String("operation", "RevokeOAuthToken"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return err
+	}
+
+	l.logger.Info(ctx, "iam.RevokeOAuthToken completed",
+		log.String("component", "iam"),
+		log.String("operation", "RevokeOAuthToken"),
+		log.Duration("duration", duration),
+	)
+	return nil
+}

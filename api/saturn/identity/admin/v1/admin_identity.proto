@@ -5,6 +5,8 @@ package saturn.identity.admin.v1;
 import "google/api/annotations.proto";
 import "google/api/client.proto";
 import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1;adminidentityv1";
@@ -73,6 +75,53 @@ service AdminIdentity {
       body: "*"
     };
     option (google.api.method_signature) = "user_id";
+  }
+
+  // Creates a new instance-wide OAuth 2.1 client.
+  rpc CreateOAuthClient(CreateOAuthClientRequest) returns (OAuthClient) {
+    option (google.api.http) = {
+      post: "/v1/admin/identity/oauth-clients"
+      body: "oauth_client"
+    };
+    option (google.api.method_signature) = "oauth_client";
+  }
+
+  // Retrieves an instance-wide, DCR, or CIMD OAuth 2.1 client by ID.
+  rpc GetOAuthClient(GetOAuthClientRequest) returns (OAuthClient) {
+    option (google.api.http) = {get: "/v1/admin/identity/oauth-clients/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Lists instance-wide, DCR, and CIMD OAuth 2.1 clients.
+  rpc ListOAuthClients(ListOAuthClientsRequest) returns (ListOAuthClientsResponse) {
+    option (google.api.http) = {get: "/v1/admin/identity/oauth-clients"};
+  }
+
+  // Updates an instance-wide OAuth 2.1 client.
+  rpc UpdateOAuthClient(UpdateOAuthClientRequest) returns (OAuthClient) {
+    option (google.api.http) = {
+      patch: "/v1/admin/identity/oauth-clients/{id}"
+      body: "oauth_client"
+    };
+    option (google.api.method_signature) = "id,oauth_client,update_mask";
+  }
+
+  // Rotates the client secret for a confidential instance-wide OAuth 2.1 client.
+  rpc RotateOAuthClientSecret(RotateOAuthClientSecretRequest) returns (OAuthClient) {
+    option (google.api.http) = {
+      post: "/v1/admin/identity/oauth-clients/{id}:rotate-secret"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+
+  // Deletes an instance-wide, DCR, or CIMD OAuth 2.1 client.
+  rpc DeleteOAuthClient(DeleteOAuthClientRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/admin/identity/oauth-clients"
+      additional_bindings: {delete: "/v1/admin/identity/oauth-clients/{id}"}
+    };
+    option (google.api.method_signature) = "id";
   }
 }
 
@@ -288,4 +337,91 @@ message UnlockUserRequest {
   // Required. The unique identifier of the user to unlock.
   // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string user_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// OAuthClient represents a registered OAuth 2.1 client in the admin context.
+message OAuthClient {
+  // Output only. The client's unique identifier (`oac_<ksuid>` or HTTPS CIMD URL).
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Optional workspace identifier (`spc_<ksuid>`) when workspace-scoped.
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Human-readable application display name.
+  string name = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Description of the OAuth application.
+  string description = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Display prefix of the client secret when confidential.
+  string secret_prefix = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Full client secret (`sat_ocs_...`). Populated once on create or secret rotation.
+  string raw_secret = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Registered redirect URI rules (HTTPS exact, HTTPS /* subpath prefix, or RFC 8252 loopback).
+  repeated string redirect_uris = 7 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Maximum scope ceiling permitted for grants issued to this client.
+  repeated string allowed_scopes = 8 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Token endpoint client auth method (`client_secret_basic`, `client_secret_post`, `none`).
+  string token_endpoint_auth_method = 9 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Refresh token policy (`rotate` or `persistent`).
+  string refresh_token_policy = 10 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Client registration source (`admin`, `space`, `dcr`, `cimd`).
+  string registration_source = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the OAuth client was created.
+  google.protobuf.Timestamp create_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the OAuth client was last updated.
+  google.protobuf.Timestamp update_time = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AdminIdentity.CreateOAuthClient.
+message CreateOAuthClientRequest {
+  // Required. The OAuth client resource to create.
+  OAuthClient oauth_client = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AdminIdentity.GetOAuthClient.
+message GetOAuthClientRequest {
+  // Required. The unique identifier of the OAuth client.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AdminIdentity.ListOAuthClients.
+message ListOAuthClientsRequest {}
+
+// Response message for AdminIdentity.ListOAuthClients.
+message ListOAuthClientsResponse {
+  // Output only. List of instance-wide, DCR, and CIMD OAuth clients.
+  repeated OAuthClient oauth_clients = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AdminIdentity.UpdateOAuthClient.
+message UpdateOAuthClientRequest {
+  // Required. The unique identifier of the OAuth client to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Updated OAuth client fields.
+  OAuthClient oauth_client = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Field mask specifying which fields to update.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AdminIdentity.RotateOAuthClientSecret.
+message RotateOAuthClientSecretRequest {
+  // Required. The unique identifier of the OAuth client whose secret to rotate.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AdminIdentity.DeleteOAuthClient.
+message DeleteOAuthClientRequest {
+  // Required. The unique identifier of the OAuth client to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
 }

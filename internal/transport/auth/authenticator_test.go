@@ -149,6 +149,128 @@ func TestAuthenticator_AuthenticateToken(t *testing.T) {
 	}
 }
 
+func TestAuthenticator_AuthenticateOAuthToken(t *testing.T) {
+	now := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name           string
+		rawToken       string
+		setupMocks     func(us *UserStoreProviderMock, ot *OAuthAccessTokenProviderMock, og *OAuthGrantProviderMock)
+		wantErr        bool
+		wantSubject    string
+		wantGrantID    string
+		wantTouchCalls int
+	}{
+		{
+			name:     "valid OAuth access token succeeds and touches grant last_used",
+			rawToken: "sat_oat_valid123",
+			setupMocks: func(us *UserStoreProviderMock, ot *OAuthAccessTokenProviderMock, og *OAuthGrantProviderMock) {
+				ot.GetByHashFunc = func(_ context.Context, _ string) (*identity.OAuthAccessToken, error) {
+					return &identity.OAuthAccessToken{
+						ID:        "oat_1",
+						GrantID:   "oag_1",
+						ExpiresAt: now.Add(time.Hour),
+					}, nil
+				}
+				og.GetByIDFunc = func(_ context.Context, _ identity.OAuthGrantID) (*identity.OAuthGrant, error) {
+					return &identity.OAuthGrant{
+						ID:      "oag_1",
+						UserID:  "usr_1",
+						SpaceID: "spc_000000000000000000000000001",
+						Scopes:  []string{"finance:read", "spaces:read"},
+					}, nil
+				}
+				og.TouchLastUsedFunc = func(_ context.Context, _ identity.OAuthGrantID, _ time.Time) error {
+					return nil
+				}
+				us.GetByIDFunc = func(_ context.Context, _ identity.UserID) (*identity.User, error) {
+					return &identity.User{ID: "usr_1", Status: identity.UserStatusActive, AccessLevel: identity.AccessLevelUser}, nil
+				}
+			},
+			wantSubject:    "usr_1",
+			wantGrantID:    "oag_1",
+			wantTouchCalls: 1,
+		},
+		{
+			name:     "expired OAuth access token fails",
+			rawToken: "sat_oat_expired",
+			setupMocks: func(_ *UserStoreProviderMock, ot *OAuthAccessTokenProviderMock, _ *OAuthGrantProviderMock) {
+				ot.GetByHashFunc = func(_ context.Context, _ string) (*identity.OAuthAccessToken, error) {
+					return &identity.OAuthAccessToken{
+						ID:        "oat_1",
+						GrantID:   "oag_1",
+						ExpiresAt: now.Add(-time.Minute),
+					}, nil
+				}
+			},
+			wantErr: true,
+		},
+		{
+			name:     "revoked OAuth grant fails",
+			rawToken: "sat_oat_revokedgrant",
+			setupMocks: func(_ *UserStoreProviderMock, ot *OAuthAccessTokenProviderMock, og *OAuthGrantProviderMock) {
+				ot.GetByHashFunc = func(_ context.Context, _ string) (*identity.OAuthAccessToken, error) {
+					return &identity.OAuthAccessToken{
+						ID:        "oat_1",
+						GrantID:   "oag_1",
+						ExpiresAt: now.Add(time.Hour),
+					}, nil
+				}
+				og.GetByIDFunc = func(_ context.Context, _ identity.OAuthGrantID) (*identity.OAuthGrant, error) {
+					return &identity.OAuthGrant{
+						ID:        "oag_1",
+						UserID:    "usr_1",
+						SpaceID:   "spc_1",
+						RevokedAt: new(now.Add(-time.Second)),
+					}, nil
+				}
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			us := &UserStoreProviderMock{}
+			ot := &OAuthAccessTokenProviderMock{}
+			og := &OAuthGrantProviderMock{}
+			if tc.setupMocks != nil {
+				tc.setupMocks(us, ot, og)
+			}
+
+			a := NewAuthenticator(Config{
+				UserStore:       us,
+				OAuthTokenStore: ot,
+				OAuthGrantStore: og,
+				NowFunc:         func() time.Time { return now },
+			})
+
+			res, err := a.AuthenticateToken(context.Background(), tc.rawToken)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if res.Principal.Subject != tc.wantSubject || res.Principal.OAuthGrantID != tc.wantGrantID || !res.Principal.IsOAuth() || !res.Principal.IsScopedGrant() {
+				t.Errorf("unexpected OAuth principal: %+v", res.Principal)
+			}
+			if tc.wantTouchCalls > 0 {
+				deadline := time.Now().Add(500 * time.Millisecond)
+				for len(og.TouchLastUsedCalls()) < tc.wantTouchCalls && time.Now().Before(deadline) {
+					time.Sleep(10 * time.Millisecond)
+				}
+				if len(og.TouchLastUsedCalls()) != tc.wantTouchCalls {
+					t.Errorf("TouchLastUsedCalls = %d, want %d", len(og.TouchLastUsedCalls()), tc.wantTouchCalls)
+				}
+			}
+		})
+	}
+}
+
 func TestAuthenticator_ResolveSpace(t *testing.T) {
 	spc1, _ := space.NewSpaceID()
 	spc2, _ := space.NewSpaceID()

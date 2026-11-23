@@ -80,5 +80,19 @@ export const routes: RouteObject[] = [
       </AdminGuard>
     ),
   },
+  {
+    path: "/admin/oauth-clients",
+    element: (
+      <AdminGuard>
+        {createElement(
+          lazy(() =>
+            import("./oauth-clients-view").then((m) => ({
+              default: m.AdminOAuthClientsView,
+            }))
+          )
+        )}
+      </AdminGuard>
+    ),
+  },
 ]
 export default routes

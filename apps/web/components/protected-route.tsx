@@ -1,8 +1,9 @@
-import { Navigate, Outlet } from "react-router-dom"
+import { Navigate, Outlet, useLocation } from "react-router-dom"
 import { useAuth } from "@/features/auth/use-auth"
 
 export function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuth()
+  const location = useLocation()
 
   if (isLoading) {
     return (
@@ -15,5 +16,15 @@ export function ProtectedRoute() {
     )
   }
 
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />
+  if (isAuthenticated) {
+    return <Outlet />
+  }
+
+  const returnTo = `${location.pathname}${location.search}${location.hash}`
+  const loginTarget =
+    returnTo && returnTo !== "/"
+      ? `/login?return_to=${encodeURIComponent(returnTo)}`
+      : "/login"
+
+  return <Navigate to={loginTarget} replace />
 }

@@ -187,10 +187,50 @@ func (m *mockSpaceService) RevokeSpaceAPIKeyGrant(ctx context.Context, session s
 	return nil
 }
 
+func (m *mockSpaceService) AuthorizeSpaceAdmin(ctx context.Context, session space.Session) (*space.Member, error) {
+	return &space.Member{SpaceID: session.SpaceID, UserID: session.UserID, Role: space.RoleOwner}, nil
+}
+
 type mockIdentityService struct {
 	getUserByIDFunc      func(ctx context.Context, id identity.UserID) (*identity.User, error)
 	getUsersByIDsFunc    func(ctx context.Context, ids []identity.UserID) ([]*identity.User, error)
 	listAPIKeysByIDsFunc func(ctx context.Context, ids []identity.APIKeyID) ([]*identity.APIKey, error)
+}
+
+func (m *mockIdentityService) CreateOAuthClient(_ context.Context, _ identity.CreateOAuthClientParams) (*identity.OAuthClient, error) {
+	return &identity.OAuthClient{}, nil
+}
+
+func (m *mockIdentityService) UpdateOAuthClient(_ context.Context, _ identity.UpdateOAuthClientParams) (*identity.OAuthClient, error) {
+	return &identity.OAuthClient{}, nil
+}
+
+func (m *mockIdentityService) RotateOAuthClientSecret(_ context.Context, _ identity.OAuthClientID, _ *string, _ bool) (*identity.OAuthClient, error) {
+	return &identity.OAuthClient{}, nil
+}
+
+func (m *mockIdentityService) DeleteOAuthClient(_ context.Context, _ identity.OAuthClientID, _ *string, _ bool, _ *identity.UserID, _, _ string) error {
+	return nil
+}
+
+func (m *mockIdentityService) RevokeSpaceOAuthGrant(_ context.Context, _ string, _ identity.OAuthGrantID) error {
+	return nil
+}
+
+func (m *mockIdentityService) GetOAuthClient(_ context.Context, _ identity.OAuthClientID) (*identity.OAuthClient, error) {
+	return &identity.OAuthClient{}, nil
+}
+
+func (m *mockIdentityService) ListSpaceOAuthClients(_ context.Context, _ string) ([]*identity.OAuthClient, error) {
+	return nil, nil
+}
+
+func (m *mockIdentityService) ListOAuthClientsByIDs(_ context.Context, _ []identity.OAuthClientID) ([]*identity.OAuthClient, error) {
+	return nil, nil
+}
+
+func (m *mockIdentityService) ListSpaceOAuthGrants(_ context.Context, _ string) ([]*identity.OAuthGrant, error) {
+	return nil, nil
 }
 
 func (m *mockIdentityService) ListAPIKeysByIDs(ctx context.Context, ids []identity.APIKeyID) ([]*identity.APIKey, error) {

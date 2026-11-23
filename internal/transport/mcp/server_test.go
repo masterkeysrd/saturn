@@ -407,3 +407,52 @@ func TestCallerHasScope_APIKeyInheritanceAndViewerCap(t *testing.T) {
 		})
 	}
 }
+
+func TestServer_InstructionsAndOAuthPrincipalScoping(t *testing.T) {
+	srv := NewServer(ServerConfig{})
+	srv.Registry().RegisterTool(ToolSpec{
+		Name:          "finance_list_accounts",
+		Domain:        "finance",
+		Title:         "List Accounts",
+		Description:   "Lists workspace accounts",
+		RequiredScope: identity.ScopeFinanceRead,
+		ReadOnly:      true,
+	}, func(_ context.Context, _ sampleInput) (sampleOutput, error) {
+		return sampleOutput{Count: 1, Echo: "ok"}, nil
+	})
+	srv.Registry().RegisterTool(ToolSpec{
+		Name:          "finance_create_tx",
+		Domain:        "finance",
+		Title:         "Create Tx",
+		Description:   "Creates tx",
+		RequiredScope: identity.ScopeFinanceWrite,
+	}, func(_ context.Context, _ sampleInput) (sampleOutput, error) {
+		return sampleOutput{Count: 1, Echo: "created"}, nil
+	})
+
+	ctx := auth.WithPrincipal(context.Background(), auth.Principal{
+		Subject:         "usr_1",
+		OAuthGrantID:    "oag_1",
+		Scopes:          []string{"finance:read"},
+		GrantedSpaceIDs: []string{"spc_1"},
+	})
+	ctx = auth.WithSpaceScope(ctx, "spc_1", string(space.RoleOwner))
+
+	session, err := srv.ConnectInMemory(ctx)
+	if err != nil {
+		t.Fatalf("ConnectInMemory failed: %v", err)
+	}
+	defer func() { _ = session.Close() }()
+
+	if session.InitializeResult() == nil || session.InitializeResult().Instructions == "" {
+		t.Fatal("expected non-empty MCP InitializeResult.Instructions")
+	}
+
+	tools, err := session.ListTools(context.Background(), &sdkmcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("ListTools failed: %v", err)
+	}
+	if len(tools.Tools) != 1 || tools.Tools[0].Name != "finance_list_accounts" {
+		t.Errorf("expected only finance_list_accounts for OAuth read grant, got %+v", tools.Tools)
+	}
+}

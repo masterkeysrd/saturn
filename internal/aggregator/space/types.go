@@ -33,3 +33,17 @@ type APIKeyGrant struct {
 	LastUsedAt      *time.Time
 	GrantCreateTime time.Time
 }
+
+// SpaceOAuthGrant represents an active OAuth 2.1 grant in a workspace hydrated with client metadata and user profile.
+type SpaceOAuthGrant struct {
+	GrantID    string
+	ClientID   string
+	ClientName string
+	SpaceID    space.SpaceID
+	UserID     space.UserID
+	UserName   string
+	UserEmail  string
+	Scopes     []string
+	LastUsedAt *time.Time
+	CreateTime time.Time
+}

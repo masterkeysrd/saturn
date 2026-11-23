@@ -8,6 +8,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -226,4 +227,148 @@ func (h *AdminHandler) UnlockUser(ctx context.Context, req *adminidentityv1.Unlo
 	}
 
 	return toAdminUser(resp.User), nil
+}
+
+// CreateOAuthClient registers a new instance-wide OAuth 2.1 client.
+func (h *AdminHandler) CreateOAuthClient(ctx context.Context, req *adminidentityv1.CreateOAuthClientRequest) (*adminidentityv1.OAuthClient, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "unauthenticated")
+	}
+	ua, ip := extractClientInfo(ctx)
+	pb := req.GetOauthClient()
+
+	client, err := h.Coordinator.AdminCreateOAuthClient(ctx, &iam.AdminCreateOAuthClientRequest{
+		ActorUserID:             identity.UserID(principal.Subject),
+		Name:                    pb.GetName(),
+		Description:             pb.GetDescription(),
+		RedirectURIs:            pb.GetRedirectUris(),
+		AllowedScopes:           pb.GetAllowedScopes(),
+		TokenEndpointAuthMethod: identity.TokenEndpointAuthMethod(pb.GetTokenEndpointAuthMethod()),
+		RefreshTokenPolicy:      identity.RefreshTokenPolicy(pb.GetRefreshTokenPolicy()),
+		IPAddress:               ip,
+		UserAgent:               ua,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toAdminProtoOAuthClient(client, true), nil
+}
+
+// GetOAuthClient retrieves an instance-wide, DCR, or CIMD OAuth 2.1 client.
+func (h *AdminHandler) GetOAuthClient(ctx context.Context, req *adminidentityv1.GetOAuthClientRequest) (*adminidentityv1.OAuthClient, error) {
+	clientID, err := identity.ParseOAuthClientID(req.GetId())
+	if err != nil {
+		return nil, err
+	}
+	client, err := h.Coordinator.AdminGetOAuthClient(ctx, &iam.AdminGetOAuthClientRequest{
+		ID: clientID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toAdminProtoOAuthClient(client, false), nil
+}
+
+// ListOAuthClients lists instance-wide, DCR, and CIMD OAuth 2.1 clients.
+func (h *AdminHandler) ListOAuthClients(ctx context.Context, _ *adminidentityv1.ListOAuthClientsRequest) (*adminidentityv1.ListOAuthClientsResponse, error) {
+	clients, err := h.Coordinator.AdminListOAuthClients(ctx)
+	if err != nil {
+		return nil, err
+	}
+	pbClients := make([]*adminidentityv1.OAuthClient, len(clients))
+	for i, cl := range clients {
+		pbClients[i] = toAdminProtoOAuthClient(cl, false)
+	}
+	return &adminidentityv1.ListOAuthClientsResponse{
+		OauthClients: pbClients,
+	}, nil
+}
+
+// UpdateOAuthClient updates an instance-wide OAuth 2.1 client.
+func (h *AdminHandler) UpdateOAuthClient(ctx context.Context, req *adminidentityv1.UpdateOAuthClientRequest) (*adminidentityv1.OAuthClient, error) {
+	clientID, err := identity.ParseOAuthClientID(req.GetId())
+	if err != nil {
+		return nil, err
+	}
+	pb := req.GetOauthClient()
+	client, err := h.Coordinator.AdminUpdateOAuthClient(ctx, &iam.AdminUpdateOAuthClientRequest{
+		ID:                      clientID,
+		Name:                    pb.GetName(),
+		Description:             pb.GetDescription(),
+		RedirectURIs:            pb.GetRedirectUris(),
+		AllowedScopes:           pb.GetAllowedScopes(),
+		TokenEndpointAuthMethod: identity.TokenEndpointAuthMethod(pb.GetTokenEndpointAuthMethod()),
+		RefreshTokenPolicy:      identity.RefreshTokenPolicy(pb.GetRefreshTokenPolicy()),
+		UpdateMask:              req.GetUpdateMask().GetPaths(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toAdminProtoOAuthClient(client, client.RawSecret != ""), nil
+}
+
+// RotateOAuthClientSecret rotates an instance OAuth client's secret and returns the new secret once.
+func (h *AdminHandler) RotateOAuthClientSecret(ctx context.Context, req *adminidentityv1.RotateOAuthClientSecretRequest) (*adminidentityv1.OAuthClient, error) {
+	clientID, err := identity.ParseOAuthClientID(req.GetId())
+	if err != nil {
+		return nil, err
+	}
+	client, err := h.Coordinator.AdminRotateOAuthClientSecret(ctx, &iam.AdminRotateOAuthClientSecretRequest{
+		ID: clientID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toAdminProtoOAuthClient(client, true), nil
+}
+
+// DeleteOAuthClient deletes an instance-wide, DCR, or CIMD OAuth 2.1 client.
+func (h *AdminHandler) DeleteOAuthClient(ctx context.Context, req *adminidentityv1.DeleteOAuthClientRequest) (*emptypb.Empty, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "unauthenticated")
+	}
+	clientID, err := identity.ParseOAuthClientID(req.GetId())
+	if err != nil {
+		return nil, err
+	}
+	ua, ip := extractClientInfo(ctx)
+	if err := h.Coordinator.AdminDeleteOAuthClient(ctx, &iam.AdminDeleteOAuthClientRequest{
+		ActorUserID: identity.UserID(principal.Subject),
+		ID:          clientID,
+		IPAddress:   ip,
+		UserAgent:   ua,
+	}); err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func toAdminProtoOAuthClient(c *identity.OAuthClient, includeRawSecret bool) *adminidentityv1.OAuthClient {
+	if c == nil {
+		return nil
+	}
+	var spaceID string
+	if c.SpaceID != nil {
+		spaceID = *c.SpaceID
+	}
+	pb := &adminidentityv1.OAuthClient{
+		Id:                      string(c.ID),
+		SpaceId:                 spaceID,
+		Name:                    c.Name,
+		Description:             c.Description,
+		SecretPrefix:            c.SecretPrefix,
+		RedirectUris:            c.RedirectURIs,
+		AllowedScopes:           c.AllowedScopes,
+		TokenEndpointAuthMethod: string(c.TokenEndpointAuthMethod),
+		RefreshTokenPolicy:      string(c.RefreshTokenPolicy),
+		RegistrationSource:      string(c.RegistrationSource),
+		CreateTime:              timestamppb.New(c.CreateTime),
+		UpdateTime:              timestamppb.New(c.UpdateTime),
+	}
+	if includeRawSecret {
+		pb.RawSecret = c.RawSecret
+	}
+	return pb
 }

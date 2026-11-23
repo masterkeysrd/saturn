@@ -43,6 +43,16 @@ type Coordinator interface {
 	UpdateDashboardPreferences(ctx context.Context, req *UpdateDashboardPreferencesRequest) (*settings.Entry[space.DashboardPreferences], error)
 	// @transactional
 	RevokeSpaceAPIKeyGrant(ctx context.Context, req *RevokeSpaceAPIKeyGrantRequest) error
+	// @transactional
+	CreateSpaceOAuthClient(ctx context.Context, req *CreateSpaceOAuthClientRequest) (*identity.OAuthClient, error)
+	// @transactional
+	UpdateSpaceOAuthClient(ctx context.Context, req *UpdateSpaceOAuthClientRequest) (*identity.OAuthClient, error)
+	// @transactional
+	RotateSpaceOAuthClientSecret(ctx context.Context, req *RotateSpaceOAuthClientSecretRequest) (*identity.OAuthClient, error)
+	// @transactional
+	DeleteSpaceOAuthClient(ctx context.Context, req *DeleteSpaceOAuthClientRequest) error
+	// @transactional
+	RevokeSpaceOAuthGrant(ctx context.Context, req *RevokeSpaceOAuthGrantRequest) error
 }
 
 // Dependencies defines the inputs for creating a new Coordinator.
@@ -247,8 +257,8 @@ func (c *coordinator) UpdateSpaceMember(ctx context.Context, req *UpdateSpaceMem
 // GetSettings orchestrates workspace settings retrieval.
 func (c *coordinator) GetSettings(ctx context.Context, req *GetSettingsRequest) (*settings.Entry[space.Settings], error) {
 	const op errors.Op = "application/space.GetSettings"
-	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsAPIKey() && !principal.HasSpaceGrant(req.SpaceID) {
-		return nil, errors.E(op, errors.Permission, "API key does not have access to this space")
+	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsScopedGrant() && !principal.HasSpaceGrant(req.SpaceID) {
+		return nil, errors.E(op, errors.Permission, "credential does not have access to this space")
 	}
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
@@ -281,8 +291,8 @@ func (c *coordinator) GetDashboardPreferences(ctx context.Context, req *GetDashb
 	if req == nil {
 		return nil, errors.E(op, errors.Invalid, "request is required")
 	}
-	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsAPIKey() && !principal.HasSpaceGrant(req.SpaceID) {
-		return nil, errors.E(op, errors.Permission, "API key does not have access to this space")
+	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsScopedGrant() && !principal.HasSpaceGrant(req.SpaceID) {
+		return nil, errors.E(op, errors.Permission, "credential does not have access to this space")
 	}
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
@@ -301,8 +311,8 @@ func (c *coordinator) UpdateDashboardPreferences(ctx context.Context, req *Updat
 	if req == nil {
 		return nil, errors.E(op, errors.Invalid, "request is required")
 	}
-	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsAPIKey() && !principal.HasSpaceGrant(req.SpaceID) {
-		return nil, errors.E(op, errors.Permission, "API key does not have access to this space")
+	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsScopedGrant() && !principal.HasSpaceGrant(req.SpaceID) {
+		return nil, errors.E(op, errors.Permission, "credential does not have access to this space")
 	}
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
@@ -345,10 +355,16 @@ type SpaceService interface {
 	GetDashboardPreferences(ctx context.Context, session space.Session) (*settings.Entry[space.DashboardPreferences], error)
 	UpdateDashboardPreferences(ctx context.Context, session space.Session, incoming *space.DashboardPreferences, mask []string, expectedVersion *int64) (*settings.Entry[space.DashboardPreferences], error)
 	RevokeSpaceAPIKeyGrant(ctx context.Context, session space.Session, apiKeyID string) error
+	AuthorizeSpaceAdmin(ctx context.Context, session space.Session) (*space.Member, error)
 }
 
 // IdentityService defines the interface for required identity operations.
 // @Mock
 type IdentityService interface {
 	GetUserByID(ctx context.Context, id identity.UserID) (*identity.User, error)
+	CreateOAuthClient(ctx context.Context, params identity.CreateOAuthClientParams) (*identity.OAuthClient, error)
+	UpdateOAuthClient(ctx context.Context, params identity.UpdateOAuthClientParams) (*identity.OAuthClient, error)
+	RotateOAuthClientSecret(ctx context.Context, id identity.OAuthClientID, expectedSpaceID *string, allowGlobal bool) (*identity.OAuthClient, error)
+	DeleteOAuthClient(ctx context.Context, id identity.OAuthClientID, expectedSpaceID *string, allowGlobal bool, actorUserID *identity.UserID, ipAddress, userAgent string) error
+	RevokeSpaceOAuthGrant(ctx context.Context, spaceID string, grantID identity.OAuthGrantID) error
 }

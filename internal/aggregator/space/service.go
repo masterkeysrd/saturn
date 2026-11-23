@@ -21,6 +21,7 @@ type SpaceService interface {
 	ListSpaces(ctx context.Context, userID space.UserID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error)
 	ListSpaceMembers(ctx context.Context, session space.Session, filter *space.ListMembersFilter) (*paging.Page[*space.Member], error)
 	ListSpaceAPIKeyGrants(ctx context.Context, session space.Session) ([]*space.APIKeyGrant, error)
+	AuthorizeSpaceAdmin(ctx context.Context, session space.Session) (*space.Member, error)
 }
 
 // IdentityService defines the IAM operations required by the aggregator.
@@ -29,6 +30,10 @@ type IdentityService interface {
 	GetUserByID(ctx context.Context, id identity.UserID) (*identity.User, error)
 	GetUsersByIDs(ctx context.Context, ids []identity.UserID) ([]*identity.User, error)
 	ListAPIKeysByIDs(ctx context.Context, ids []identity.APIKeyID) ([]*identity.APIKey, error)
+	GetOAuthClient(ctx context.Context, id identity.OAuthClientID) (*identity.OAuthClient, error)
+	ListSpaceOAuthClients(ctx context.Context, spaceID string) ([]*identity.OAuthClient, error)
+	ListOAuthClientsByIDs(ctx context.Context, ids []identity.OAuthClientID) ([]*identity.OAuthClient, error)
+	ListSpaceOAuthGrants(ctx context.Context, spaceID string) ([]*identity.OAuthGrant, error)
 }
 
 // Service coordinates data fetching across multiple domains for aggregated space queries.
@@ -48,8 +53,8 @@ func NewService(spaceService SpaceService, identityService IdentityService) *Ser
 // GetSpace retrieves a single space by its ID.
 func (s *Service) GetSpace(ctx context.Context, spaceID space.SpaceID, userID space.UserID) (*space.Space, error) {
 	const op errors.Op = "aggregator/space.GetSpace"
-	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsAPIKey() && !principal.HasSpaceGrant(string(spaceID)) {
-		return nil, errors.E(op, errors.Permission, "API key does not have access to this space")
+	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsScopedGrant() && !principal.HasSpaceGrant(string(spaceID)) {
+		return nil, errors.E(op, errors.Permission, "credential does not have access to this space")
 	}
 	session := space.Session{
 		SpaceID: spaceID,
@@ -68,7 +73,7 @@ func (s *Service) ListSpaces(ctx context.Context, userID space.UserID, filter *s
 	const op errors.Op = "aggregator/space.ListSpaces"
 
 	principal, hasPrincipal := auth.PrincipalFromContext(ctx)
-	if !hasPrincipal || !principal.IsAPIKey() {
+	if !hasPrincipal || !principal.IsScopedGrant() {
 		page, err := s.spaceService.ListSpaces(ctx, userID, filter)
 		if err != nil {
 			return nil, errors.E(op, err)
@@ -105,8 +110,8 @@ func (s *Service) ListSpaces(ctx context.Context, userID space.UserID, filter *s
 // ListSpaceMembers retrieves workspace members and enriches each member with their user profile.
 func (s *Service) ListSpaceMembers(ctx context.Context, spaceID space.SpaceID, userID space.UserID, filter *space.ListMembersFilter) (*paging.Page[*SpaceMember], error) {
 	const op errors.Op = "aggregator/space.ListSpaceMembers"
-	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsAPIKey() && !principal.HasSpaceGrant(string(spaceID)) {
-		return nil, errors.E(op, errors.Permission, "API key does not have access to this space")
+	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsScopedGrant() && !principal.HasSpaceGrant(string(spaceID)) {
+		return nil, errors.E(op, errors.Permission, "credential does not have access to this space")
 	}
 	session := space.Session{
 		SpaceID: spaceID,
@@ -250,6 +255,142 @@ func (s *Service) ListSpaceAPIKeyGrants(ctx context.Context, spaceID space.Space
 			hydrated.LastUsedAt = k.LastUsedAt
 		}
 		if u, ok := userMap[identity.UserID(g.UserID)]; ok && u != nil {
+			hydrated.UserName = u.Name
+			hydrated.UserEmail = u.Email
+		}
+		out = append(out, hydrated)
+	}
+
+	return out, nil
+}
+
+// GetSpaceOAuthClient retrieves a Workspace-scoped OAuth client (Space admin/owner only).
+func (s *Service) GetSpaceOAuthClient(ctx context.Context, spaceID space.SpaceID, userID space.UserID, clientID identity.OAuthClientID) (*identity.OAuthClient, error) {
+	const op errors.Op = "aggregator/space.GetSpaceOAuthClient"
+
+	session := space.Session{
+		SpaceID: spaceID,
+		UserID:  userID,
+	}
+	if _, err := s.spaceService.AuthorizeSpaceAdmin(ctx, session); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	client, err := s.identityService.GetOAuthClient(ctx, clientID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	if client.SpaceID == nil || *client.SpaceID != string(spaceID) {
+		return nil, errors.E(op, errors.NotExist, identity.OAuthClientNotFound, "oauth client not found")
+	}
+	return client, nil
+}
+
+// ListSpaceOAuthClients lists all OAuth clients registered for the workspace (Space admin/owner only).
+func (s *Service) ListSpaceOAuthClients(ctx context.Context, spaceID space.SpaceID, userID space.UserID) ([]*identity.OAuthClient, error) {
+	const op errors.Op = "aggregator/space.ListSpaceOAuthClients"
+
+	session := space.Session{
+		SpaceID: spaceID,
+		UserID:  userID,
+	}
+	if _, err := s.spaceService.AuthorizeSpaceAdmin(ctx, session); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	clients, err := s.identityService.ListSpaceOAuthClients(ctx, string(spaceID))
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return clients, nil
+}
+
+// ListSpaceOAuthGrants retrieves all active OAuth grants targeting a workspace and hydrates each with
+// client metadata and owner profile in parallel (Space admin/owner only).
+func (s *Service) ListSpaceOAuthGrants(ctx context.Context, spaceID space.SpaceID, userID space.UserID) ([]*SpaceOAuthGrant, error) {
+	const op errors.Op = "aggregator/space.ListSpaceOAuthGrants"
+
+	session := space.Session{
+		SpaceID: spaceID,
+		UserID:  userID,
+	}
+	if _, err := s.spaceService.AuthorizeSpaceAdmin(ctx, session); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	grants, err := s.identityService.ListSpaceOAuthGrants(ctx, string(spaceID))
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	if len(grants) == 0 {
+		return []*SpaceOAuthGrant{}, nil
+	}
+
+	clientIDSet := make(map[identity.OAuthClientID]struct{}, len(grants))
+	clientIDs := make([]identity.OAuthClientID, 0, len(grants))
+	userIDSet := make(map[identity.UserID]struct{}, len(grants))
+	userIDs := make([]identity.UserID, 0, len(grants))
+
+	for _, g := range grants {
+		if _, ok := clientIDSet[g.ClientID]; !ok {
+			clientIDSet[g.ClientID] = struct{}{}
+			clientIDs = append(clientIDs, g.ClientID)
+		}
+		if _, ok := userIDSet[g.UserID]; !ok {
+			userIDSet[g.UserID] = struct{}{}
+			userIDs = append(userIDs, g.UserID)
+		}
+	}
+
+	clientMap := make(map[identity.OAuthClientID]*identity.OAuthClient, len(clientIDs))
+	userMap := make(map[identity.UserID]*identity.User, len(userIDs))
+
+	eg, egCtx := errgroup.WithContext(ctx)
+
+	eg.Go(func() error {
+		clients, err := s.identityService.ListOAuthClientsByIDs(egCtx, clientIDs)
+		if err != nil {
+			return err
+		}
+		for _, cl := range clients {
+			clientMap[cl.ID] = cl
+		}
+		return nil
+	})
+
+	eg.Go(func() error {
+		users, err := s.identityService.GetUsersByIDs(egCtx, userIDs)
+		if err != nil {
+			log.Warn(egCtx, "failed to batch hydrate OAuth grant user profiles", log.Err(err))
+			return nil
+		}
+		for _, u := range users {
+			if u != nil {
+				userMap[u.ID] = u
+			}
+		}
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	out := make([]*SpaceOAuthGrant, 0, len(grants))
+	for _, g := range grants {
+		hydrated := &SpaceOAuthGrant{
+			GrantID:    string(g.ID),
+			ClientID:   string(g.ClientID),
+			SpaceID:    space.SpaceID(g.SpaceID),
+			UserID:     space.UserID(g.UserID),
+			Scopes:     g.Scopes,
+			LastUsedAt: g.LastUsedAt,
+			CreateTime: g.CreateTime,
+		}
+		if cl, ok := clientMap[g.ClientID]; ok && cl != nil {
+			hydrated.ClientName = cl.Name
+		}
+		if u, ok := userMap[g.UserID]; ok && u != nil {
 			hydrated.UserName = u.Name
 			hydrated.UserEmail = u.Email
 		}

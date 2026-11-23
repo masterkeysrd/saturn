@@ -1,56 +1,42 @@
-import { translate } from "@saturn/i18n"
+import { translate, type TranslationKey } from "@saturn/i18n"
 
 export interface BreadcrumbSegment {
   label: string
   to?: string
 }
 
-const SETTINGS_LABELS: Record<string, string> = {
-  account: "Account",
-  security: "Security",
-  credentials: "Logins & MFA",
-  spaces: "Workspaces",
-  finance: "Finance",
-  preferences: "Preferences",
-  "connected-accounts": "Connected Accounts",
-  "api-keys": "API Keys",
+const SETTINGS_ROUTE_KEYS: Record<string, TranslationKey> = {
+  account: "settings.hub.navProfile",
+  security: "settings.hub.navAccessSecurity",
+  "security/credentials": "settings.hub.navCredentials",
+  credentials: "settings.hub.navCredentials",
+  "security/devices": "settings.hub.navSessions",
+  devices: "settings.hub.navSessions",
+  "security/activity": "settings.hub.navActivityLog",
+  activity: "settings.hub.navActivityLog",
+  "security/api-keys": "settings.hub.navPersonalKeys",
+  "api-keys": "settings.hub.navWorkspaceKeys",
+  "security/oauth-apps": "settings.hub.navPersonalOAuthApps",
+  "oauth-apps": "settings.hub.navWorkspaceOAuthApps",
+  spaces: "settings.hub.navWorkspaces",
+  preferences: "settings.hub.navPreferences",
+  finance: "settings.hub.navFinance",
+  "connected-accounts": "settings.hub.navConnectedAccounts",
 }
 
-const SETTINGS_LABELS_ES: Record<string, string> = {
-  account: "Cuenta",
-  security: "Seguridad",
-  credentials: "Accesos y 2FA",
-  spaces: "Espacios de trabajo",
-  finance: "Finanzas",
-  preferences: "Preferencias",
-  "connected-accounts": "Cuentas conectadas",
-  "api-keys": "Claves API",
-}
-
-const ADMIN_LABELS: Record<string, string> = {
-  users: "Users",
-  scheduler: "Scheduler",
-  messages: "Message Queue",
-  backups: "Database Backups",
-  security: "Security Audit",
-}
-
-const ADMIN_LABELS_ES: Record<string, string> = {
-  users: "Usuarios",
-  scheduler: "Planificador",
-  messages: "Cola de mensajes",
-  backups: "Copias de seguridad",
-  security: "Auditoría de seguridad",
+const ADMIN_ROUTE_KEYS: Record<string, TranslationKey> = {
+  users: "nav.adminUsers",
+  scheduler: "nav.adminScheduler",
+  messages: "nav.adminMessages",
+  backups: "nav.adminBackups",
+  security: "nav.adminSecurity",
+  "oauth-clients": "nav.oauthClients",
 }
 
 export function resolveBreadcrumbs(
   pathname: string,
   locale = "en-US"
 ): BreadcrumbSegment[] {
-  const isEs = locale.toLowerCase().startsWith("es")
-  const settingsMap = isEs ? SETTINGS_LABELS_ES : SETTINGS_LABELS
-  const adminMap = isEs ? ADMIN_LABELS_ES : ADMIN_LABELS
-
   if (pathname === "/" || pathname === "") {
     return [{ label: translate(locale, "nav.overview") }]
   }
@@ -61,19 +47,21 @@ export function resolveBreadcrumbs(
       return [{ label: translate(locale, "nav.settings") }]
     }
     const parts = rest.split("/").filter(Boolean)
-    const leaf = settingsMap[parts[parts.length - 1]] || parts[parts.length - 1]
+    const leaf = parts[parts.length - 1]
+    const key = SETTINGS_ROUTE_KEYS[rest] ?? SETTINGS_ROUTE_KEYS[leaf]
     return [
       { label: translate(locale, "nav.settings"), to: "/settings/account" },
-      { label: leaf },
+      { label: key ? translate(locale, key) : leaf },
     ]
   }
 
   if (pathname.startsWith("/admin")) {
     const parts = pathname.slice("/admin".length).split("/").filter(Boolean)
-    const leaf = parts[0] ? adminMap[parts[0]] || parts[0] : adminMap.users
+    const section = parts[0] || "users"
+    const key = ADMIN_ROUTE_KEYS[section]
     return [
       { label: translate(locale, "nav.group.admin"), to: "/admin/users" },
-      { label: leaf },
+      { label: key ? translate(locale, key) : section },
     ]
   }
 
@@ -121,22 +109,19 @@ export function resolveBreadcrumbs(
         label: translate(locale, "nav.workflows"),
         to: `/space/${spaceId}/workflows`,
       }
-      if (!sub) return [wfRoot, { label: isEs ? "Estudio" : "Studio" }]
+      if (!sub) return [wfRoot, { label: translate(locale, "nav.studio") }]
       if (sub === "new")
-        return [wfRoot, { label: isEs ? "Nuevo flujo" : "New Flow" }]
+        return [wfRoot, { label: translate(locale, "workflows.newWorkflow") }]
       if (sub.startsWith("runs"))
-        return [
-          wfRoot,
-          { label: isEs ? "Historial de ejecuciones" : "Run History" },
-        ]
-      return [wfRoot, { label: isEs ? "Editor" : "Editor" }]
+        return [wfRoot, { label: translate(locale, "workflows.runHistory") }]
+      return [wfRoot, { label: translate(locale, "nav.editor") }]
     }
     if (rest.startsWith("/ai")) {
       const sub = rest.slice("/ai".length).replace(/^\/+/, "")
       if (sub.startsWith("chat"))
         return [{ label: translate(locale, "nav.ai") }]
       const aiRoot: BreadcrumbSegment = {
-        label: isEs ? "Estudio IA" : "AI Studio",
+        label: translate(locale, "nav.aiStudio"),
         to: `/space/${spaceId}/ai/agents`,
       }
       if (sub.startsWith("agents"))
@@ -146,7 +131,7 @@ export function resolveBreadcrumbs(
       if (sub.startsWith("mcp"))
         return [aiRoot, { label: translate(locale, "nav.mcp") }]
       if (sub.startsWith("runs"))
-        return [aiRoot, { label: isEs ? "Ejecuciones" : "Execution Runs" }]
+        return [aiRoot, { label: translate(locale, "ai.runs.title") }]
       return [aiRoot]
     }
 

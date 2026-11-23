@@ -49,6 +49,9 @@ type SpaceServiceMock struct {
 	// RevokeSpaceAPIKeyGrantFunc mocks the RevokeSpaceAPIKeyGrant method.
 	RevokeSpaceAPIKeyGrantFunc func(ctx context.Context, session space.Session, apiKeyID string) error
 
+	// AuthorizeSpaceAdminFunc mocks the AuthorizeSpaceAdmin method.
+	AuthorizeSpaceAdminFunc func(ctx context.Context, session space.Session) (*space.Member, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		CreateSpace []struct {
@@ -108,6 +111,10 @@ type SpaceServiceMock struct {
 			Session  space.Session
 			ApiKeyID string
 		}
+		AuthorizeSpaceAdmin []struct {
+			Ctx     context.Context
+			Session space.Session
+		}
 	}
 	lockCreateSpace                sync.RWMutex
 	lockUpdateSpace                sync.RWMutex
@@ -120,6 +127,7 @@ type SpaceServiceMock struct {
 	lockGetDashboardPreferences    sync.RWMutex
 	lockUpdateDashboardPreferences sync.RWMutex
 	lockRevokeSpaceAPIKeyGrant     sync.RWMutex
+	lockAuthorizeSpaceAdmin        sync.RWMutex
 }
 
 // CreateSpace calls CreateSpaceFunc.
@@ -458,6 +466,33 @@ func (mock *SpaceServiceMock) RevokeSpaceAPIKeyGrantCalls() []struct {
 	return mock.calls.RevokeSpaceAPIKeyGrant
 }
 
+// AuthorizeSpaceAdmin calls AuthorizeSpaceAdminFunc.
+func (mock *SpaceServiceMock) AuthorizeSpaceAdmin(ctx context.Context, session space.Session) (*space.Member, error) {
+	if mock.AuthorizeSpaceAdminFunc == nil {
+		panic("SpaceServiceMock.AuthorizeSpaceAdminFunc: method is nil but SpaceService.AuthorizeSpaceAdmin was just called")
+	}
+	mock.lockAuthorizeSpaceAdmin.Lock()
+	mock.calls.AuthorizeSpaceAdmin = append(mock.calls.AuthorizeSpaceAdmin, struct {
+		Ctx     context.Context
+		Session space.Session
+	}{
+		Ctx:     ctx,
+		Session: session,
+	})
+	mock.lockAuthorizeSpaceAdmin.Unlock()
+	return mock.AuthorizeSpaceAdminFunc(ctx, session)
+}
+
+// AuthorizeSpaceAdminCalls returns all calls made to AuthorizeSpaceAdmin.
+func (mock *SpaceServiceMock) AuthorizeSpaceAdminCalls() []struct {
+	Ctx     context.Context
+	Session space.Session
+} {
+	mock.lockAuthorizeSpaceAdmin.RLock()
+	defer mock.lockAuthorizeSpaceAdmin.RUnlock()
+	return mock.calls.AuthorizeSpaceAdmin
+}
+
 // Compile-time interface assertion.
 var _ IdentityService = (*IdentityServiceMock)(nil)
 
@@ -466,14 +501,62 @@ type IdentityServiceMock struct {
 	// GetUserByIDFunc mocks the GetUserByID method.
 	GetUserByIDFunc func(ctx context.Context, id identity.UserID) (*identity.User, error)
 
+	// CreateOAuthClientFunc mocks the CreateOAuthClient method.
+	CreateOAuthClientFunc func(ctx context.Context, params identity.CreateOAuthClientParams) (*identity.OAuthClient, error)
+
+	// UpdateOAuthClientFunc mocks the UpdateOAuthClient method.
+	UpdateOAuthClientFunc func(ctx context.Context, params identity.UpdateOAuthClientParams) (*identity.OAuthClient, error)
+
+	// RotateOAuthClientSecretFunc mocks the RotateOAuthClientSecret method.
+	RotateOAuthClientSecretFunc func(ctx context.Context, id identity.OAuthClientID, expectedSpaceID *string, allowGlobal bool) (*identity.OAuthClient, error)
+
+	// DeleteOAuthClientFunc mocks the DeleteOAuthClient method.
+	DeleteOAuthClientFunc func(ctx context.Context, id identity.OAuthClientID, expectedSpaceID *string, allowGlobal bool, actorUserID *identity.UserID, ipAddress string, userAgent string) error
+
+	// RevokeSpaceOAuthGrantFunc mocks the RevokeSpaceOAuthGrant method.
+	RevokeSpaceOAuthGrantFunc func(ctx context.Context, spaceID string, grantID identity.OAuthGrantID) error
+
 	// calls tracks calls to the methods.
 	calls struct {
 		GetUserByID []struct {
 			Ctx context.Context
 			Id  identity.UserID
 		}
+		CreateOAuthClient []struct {
+			Ctx    context.Context
+			Params identity.CreateOAuthClientParams
+		}
+		UpdateOAuthClient []struct {
+			Ctx    context.Context
+			Params identity.UpdateOAuthClientParams
+		}
+		RotateOAuthClientSecret []struct {
+			Ctx             context.Context
+			Id              identity.OAuthClientID
+			ExpectedSpaceID *string
+			AllowGlobal     bool
+		}
+		DeleteOAuthClient []struct {
+			Ctx             context.Context
+			Id              identity.OAuthClientID
+			ExpectedSpaceID *string
+			AllowGlobal     bool
+			ActorUserID     *identity.UserID
+			IpAddress       string
+			UserAgent       string
+		}
+		RevokeSpaceOAuthGrant []struct {
+			Ctx     context.Context
+			SpaceID string
+			GrantID identity.OAuthGrantID
+		}
 	}
-	lockGetUserByID sync.RWMutex
+	lockGetUserByID             sync.RWMutex
+	lockCreateOAuthClient       sync.RWMutex
+	lockUpdateOAuthClient       sync.RWMutex
+	lockRotateOAuthClientSecret sync.RWMutex
+	lockDeleteOAuthClient       sync.RWMutex
+	lockRevokeSpaceOAuthGrant   sync.RWMutex
 }
 
 // GetUserByID calls GetUserByIDFunc.
@@ -501,4 +584,163 @@ func (mock *IdentityServiceMock) GetUserByIDCalls() []struct {
 	mock.lockGetUserByID.RLock()
 	defer mock.lockGetUserByID.RUnlock()
 	return mock.calls.GetUserByID
+}
+
+// CreateOAuthClient calls CreateOAuthClientFunc.
+func (mock *IdentityServiceMock) CreateOAuthClient(ctx context.Context, params identity.CreateOAuthClientParams) (*identity.OAuthClient, error) {
+	if mock.CreateOAuthClientFunc == nil {
+		panic("IdentityServiceMock.CreateOAuthClientFunc: method is nil but IdentityService.CreateOAuthClient was just called")
+	}
+	mock.lockCreateOAuthClient.Lock()
+	mock.calls.CreateOAuthClient = append(mock.calls.CreateOAuthClient, struct {
+		Ctx    context.Context
+		Params identity.CreateOAuthClientParams
+	}{
+		Ctx:    ctx,
+		Params: params,
+	})
+	mock.lockCreateOAuthClient.Unlock()
+	return mock.CreateOAuthClientFunc(ctx, params)
+}
+
+// CreateOAuthClientCalls returns all calls made to CreateOAuthClient.
+func (mock *IdentityServiceMock) CreateOAuthClientCalls() []struct {
+	Ctx    context.Context
+	Params identity.CreateOAuthClientParams
+} {
+	mock.lockCreateOAuthClient.RLock()
+	defer mock.lockCreateOAuthClient.RUnlock()
+	return mock.calls.CreateOAuthClient
+}
+
+// UpdateOAuthClient calls UpdateOAuthClientFunc.
+func (mock *IdentityServiceMock) UpdateOAuthClient(ctx context.Context, params identity.UpdateOAuthClientParams) (*identity.OAuthClient, error) {
+	if mock.UpdateOAuthClientFunc == nil {
+		panic("IdentityServiceMock.UpdateOAuthClientFunc: method is nil but IdentityService.UpdateOAuthClient was just called")
+	}
+	mock.lockUpdateOAuthClient.Lock()
+	mock.calls.UpdateOAuthClient = append(mock.calls.UpdateOAuthClient, struct {
+		Ctx    context.Context
+		Params identity.UpdateOAuthClientParams
+	}{
+		Ctx:    ctx,
+		Params: params,
+	})
+	mock.lockUpdateOAuthClient.Unlock()
+	return mock.UpdateOAuthClientFunc(ctx, params)
+}
+
+// UpdateOAuthClientCalls returns all calls made to UpdateOAuthClient.
+func (mock *IdentityServiceMock) UpdateOAuthClientCalls() []struct {
+	Ctx    context.Context
+	Params identity.UpdateOAuthClientParams
+} {
+	mock.lockUpdateOAuthClient.RLock()
+	defer mock.lockUpdateOAuthClient.RUnlock()
+	return mock.calls.UpdateOAuthClient
+}
+
+// RotateOAuthClientSecret calls RotateOAuthClientSecretFunc.
+func (mock *IdentityServiceMock) RotateOAuthClientSecret(ctx context.Context, id identity.OAuthClientID, expectedSpaceID *string, allowGlobal bool) (*identity.OAuthClient, error) {
+	if mock.RotateOAuthClientSecretFunc == nil {
+		panic("IdentityServiceMock.RotateOAuthClientSecretFunc: method is nil but IdentityService.RotateOAuthClientSecret was just called")
+	}
+	mock.lockRotateOAuthClientSecret.Lock()
+	mock.calls.RotateOAuthClientSecret = append(mock.calls.RotateOAuthClientSecret, struct {
+		Ctx             context.Context
+		Id              identity.OAuthClientID
+		ExpectedSpaceID *string
+		AllowGlobal     bool
+	}{
+		Ctx:             ctx,
+		Id:              id,
+		ExpectedSpaceID: expectedSpaceID,
+		AllowGlobal:     allowGlobal,
+	})
+	mock.lockRotateOAuthClientSecret.Unlock()
+	return mock.RotateOAuthClientSecretFunc(ctx, id, expectedSpaceID, allowGlobal)
+}
+
+// RotateOAuthClientSecretCalls returns all calls made to RotateOAuthClientSecret.
+func (mock *IdentityServiceMock) RotateOAuthClientSecretCalls() []struct {
+	Ctx             context.Context
+	Id              identity.OAuthClientID
+	ExpectedSpaceID *string
+	AllowGlobal     bool
+} {
+	mock.lockRotateOAuthClientSecret.RLock()
+	defer mock.lockRotateOAuthClientSecret.RUnlock()
+	return mock.calls.RotateOAuthClientSecret
+}
+
+// DeleteOAuthClient calls DeleteOAuthClientFunc.
+func (mock *IdentityServiceMock) DeleteOAuthClient(ctx context.Context, id identity.OAuthClientID, expectedSpaceID *string, allowGlobal bool, actorUserID *identity.UserID, ipAddress string, userAgent string) error {
+	if mock.DeleteOAuthClientFunc == nil {
+		panic("IdentityServiceMock.DeleteOAuthClientFunc: method is nil but IdentityService.DeleteOAuthClient was just called")
+	}
+	mock.lockDeleteOAuthClient.Lock()
+	mock.calls.DeleteOAuthClient = append(mock.calls.DeleteOAuthClient, struct {
+		Ctx             context.Context
+		Id              identity.OAuthClientID
+		ExpectedSpaceID *string
+		AllowGlobal     bool
+		ActorUserID     *identity.UserID
+		IpAddress       string
+		UserAgent       string
+	}{
+		Ctx:             ctx,
+		Id:              id,
+		ExpectedSpaceID: expectedSpaceID,
+		AllowGlobal:     allowGlobal,
+		ActorUserID:     actorUserID,
+		IpAddress:       ipAddress,
+		UserAgent:       userAgent,
+	})
+	mock.lockDeleteOAuthClient.Unlock()
+	return mock.DeleteOAuthClientFunc(ctx, id, expectedSpaceID, allowGlobal, actorUserID, ipAddress, userAgent)
+}
+
+// DeleteOAuthClientCalls returns all calls made to DeleteOAuthClient.
+func (mock *IdentityServiceMock) DeleteOAuthClientCalls() []struct {
+	Ctx             context.Context
+	Id              identity.OAuthClientID
+	ExpectedSpaceID *string
+	AllowGlobal     bool
+	ActorUserID     *identity.UserID
+	IpAddress       string
+	UserAgent       string
+} {
+	mock.lockDeleteOAuthClient.RLock()
+	defer mock.lockDeleteOAuthClient.RUnlock()
+	return mock.calls.DeleteOAuthClient
+}
+
+// RevokeSpaceOAuthGrant calls RevokeSpaceOAuthGrantFunc.
+func (mock *IdentityServiceMock) RevokeSpaceOAuthGrant(ctx context.Context, spaceID string, grantID identity.OAuthGrantID) error {
+	if mock.RevokeSpaceOAuthGrantFunc == nil {
+		panic("IdentityServiceMock.RevokeSpaceOAuthGrantFunc: method is nil but IdentityService.RevokeSpaceOAuthGrant was just called")
+	}
+	mock.lockRevokeSpaceOAuthGrant.Lock()
+	mock.calls.RevokeSpaceOAuthGrant = append(mock.calls.RevokeSpaceOAuthGrant, struct {
+		Ctx     context.Context
+		SpaceID string
+		GrantID identity.OAuthGrantID
+	}{
+		Ctx:     ctx,
+		SpaceID: spaceID,
+		GrantID: grantID,
+	})
+	mock.lockRevokeSpaceOAuthGrant.Unlock()
+	return mock.RevokeSpaceOAuthGrantFunc(ctx, spaceID, grantID)
+}
+
+// RevokeSpaceOAuthGrantCalls returns all calls made to RevokeSpaceOAuthGrant.
+func (mock *IdentityServiceMock) RevokeSpaceOAuthGrantCalls() []struct {
+	Ctx     context.Context
+	SpaceID string
+	GrantID identity.OAuthGrantID
+} {
+	mock.lockRevokeSpaceOAuthGrant.RLock()
+	defer mock.lockRevokeSpaceOAuthGrant.RUnlock()
+	return mock.calls.RevokeSpaceOAuthGrant
 }

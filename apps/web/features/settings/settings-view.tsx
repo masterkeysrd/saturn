@@ -18,6 +18,8 @@ import {
   Sliders,
   Landmark,
   Link2,
+  AppWindowIcon,
+  ShieldCheckIcon,
 } from "lucide-react"
 import { useI18n } from "@saturn/hooks"
 import { PageLayout } from "@/components/ui/page-layout"
@@ -34,6 +36,8 @@ import { FinanceSettings } from "./components/finance-settings"
 import { ConnectedAccountsView } from "./connected-accounts-view"
 import { APIKeysSettings } from "./components/api-keys-settings"
 import { SpaceAPIKeysSettings } from "./components/space-api-keys-settings"
+import { PersonalOAuthAppsSettings } from "./components/personal-oauth-apps-settings"
+import { SpaceOAuthAppsSettings } from "./components/space-oauth-apps-settings"
 
 interface NavItem {
   to: string
@@ -93,6 +97,11 @@ export function SettingsView() {
             label: t("settings.hub.navPersonalKeys"),
             icon: KeyIcon,
           },
+          {
+            to: "/settings/security/oauth-apps",
+            label: t("settings.hub.navPersonalOAuthApps"),
+            icon: AppWindowIcon,
+          },
         ],
       },
       {
@@ -119,6 +128,11 @@ export function SettingsView() {
                   to: "/settings/api-keys",
                   label: t("settings.hub.navWorkspaceKeys"),
                   icon: KeyIcon,
+                },
+                {
+                  to: "/settings/oauth-apps",
+                  label: t("settings.hub.navWorkspaceOAuthApps"),
+                  icon: ShieldCheckIcon,
                 },
               ]
             : []),
@@ -262,6 +276,10 @@ export function SettingsView() {
               element={<ActivityLogSettingsView />}
             />
             <Route path="security/api-keys" element={<APIKeysSettings />} />
+            <Route
+              path="security/oauth-apps"
+              element={<PersonalOAuthAppsSettings />}
+            />
 
             {/* Backwards-compatibility aliases */}
             <Route
@@ -282,6 +300,7 @@ export function SettingsView() {
             <Route path="preferences" element={<SpacePreferences />} />
             <Route path="finance" element={<FinanceSettings />} />
             <Route path="api-keys" element={<SpaceAPIKeysSettings />} />
+            <Route path="oauth-apps" element={<SpaceOAuthAppsSettings />} />
             <Route
               path="connected-accounts"
               element={<ConnectedAccountsView />}

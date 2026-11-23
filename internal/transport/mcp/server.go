@@ -250,10 +250,17 @@ func (r *Registry) Resources() []ResourceSpec {
 	return out
 }
 
+// DefaultInstructions provides vendor-neutral guidance for MCP clients connecting to Saturn.
+const DefaultInstructions = `Saturn is a private, Space-isolated personal operating system covering Finance, Calendar, Mail, Workflows, and Spaces.
+- Workspace Isolation: Every tool call executes within a single active Space (spc_...). Use space tools to inspect workspace metadata and members.
+- Read Before Mutating: Always inspect existing accounts, budgets, periods, categories, calendars, and workflows using read tools before creating or modifying records.
+- Monetary Amounts & Dates: Monetary amounts are represented in integer minor units (cents) paired with ISO 4217 currency codes; dates use YYYY-MM-DD or RFC 3339 timestamps formatted in the workspace timezone.`
+
 // ServerConfig configures the Saturn MCP Server.
 type ServerConfig struct {
 	Name           string
 	Version        string
+	Instructions   string
 	Registry       *Registry
 	AuthMiddleware func(http.Handler) http.Handler
 	Logger         *slog.Logger
@@ -262,6 +269,7 @@ type ServerConfig struct {
 // Server serves registered Saturn MCP tools and resources over Streamable HTTP and In-Memory loopback.
 type Server struct {
 	impl           *sdkmcp.Implementation
+	instructions   string
 	registry       *Registry
 	authMiddleware func(http.Handler) http.Handler
 	logger         *slog.Logger
@@ -285,9 +293,14 @@ func NewServer(cfg ServerConfig) *Server {
 	if logger == nil {
 		logger = slog.Default()
 	}
+	instructions := strings.TrimSpace(cfg.Instructions)
+	if instructions == "" {
+		instructions = DefaultInstructions
+	}
 
 	return &Server{
 		impl:           &sdkmcp.Implementation{Name: name, Version: version},
+		instructions:   instructions,
 		registry:       reg,
 		authMiddleware: cfg.AuthMiddleware,
 		logger:         logger,
@@ -346,8 +359,9 @@ func (s *Server) ConnectInMemory(ctx context.Context) (*sdkmcp.ClientSession, er
 
 func (s *Server) buildServerForContext(ctx context.Context, includeExternal bool) *sdkmcp.Server {
 	sdkServer := sdkmcp.NewServer(s.impl, &sdkmcp.ServerOptions{
-		Logger:      s.logger,
-		SchemaCache: s.registry.schemaCache,
+		Instructions: s.instructions,
+		Logger:       s.logger,
+		SchemaCache:  s.registry.schemaCache,
 	})
 
 	sdkServer.AddReceivingMiddleware(
@@ -435,7 +449,7 @@ func callerHasScope(ctx context.Context, required identity.APIKeyScope) bool {
 		return false
 	}
 
-	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsAPIKey() {
+	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsScopedGrant() {
 		return apiKeyHasScope(principal, required)
 	}
 

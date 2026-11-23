@@ -48,19 +48,34 @@ type MemberStoreProvider interface {
 	GetByID(ctx context.Context, spaceID space.SpaceID, userID space.UserID) (*space.Member, error)
 }
 
+// OAuthAccessTokenProvider provides OAuth access token lookup by hash.
+// @Mock
+type OAuthAccessTokenProvider interface {
+	GetByHash(ctx context.Context, tokenHash string) (*identity.OAuthAccessToken, error)
+}
+
+// OAuthGrantProvider provides OAuth grant lookup and last-used updates.
+// @Mock
+type OAuthGrantProvider interface {
+	GetByID(ctx context.Context, id identity.OAuthGrantID) (*identity.OAuthGrant, error)
+	TouchLastUsed(ctx context.Context, id identity.OAuthGrantID, lastUsedAt time.Time) error
+}
+
 const defaultCacheTTL = 5 * time.Second
 
 // Config configures a transport-agnostic Authenticator.
 type Config struct {
-	TokenValidator TokenValidator
-	UserStore      UserStoreProvider
-	APIKeyStore    APIKeyStoreProvider
-	GrantStore     APIKeyGrantProvider
-	MemberStore    MemberStoreProvider
-	AuthCacheTTL   time.Duration
-	MemberCacheTTL time.Duration
-	DisableCache   bool
-	NowFunc        func() time.Time
+	TokenValidator  TokenValidator
+	UserStore       UserStoreProvider
+	APIKeyStore     APIKeyStoreProvider
+	GrantStore      APIKeyGrantProvider
+	OAuthTokenStore OAuthAccessTokenProvider
+	OAuthGrantStore OAuthGrantProvider
+	MemberStore     MemberStoreProvider
+	AuthCacheTTL    time.Duration
+	MemberCacheTTL  time.Duration
+	DisableCache    bool
+	NowFunc         func() time.Time
 }
 
 // AuthResult holds the authenticated Principal and token expiration timestamp.
@@ -117,7 +132,7 @@ func NewAuthenticator(cfg Config) *Authenticator {
 	}
 }
 
-// AuthenticateToken validates either a `sat_...` API key or an Ed25519 JWT access token.
+// AuthenticateToken validates a `sat_oat_...` OAuth access token, a `sat_...` API key, or an Ed25519 JWT access token.
 func (a *Authenticator) AuthenticateToken(ctx context.Context, rawToken string) (AuthResult, error) {
 	const op errors.Op = "transport/auth.AuthenticateToken"
 
@@ -126,10 +141,58 @@ func (a *Authenticator) AuthenticateToken(ctx context.Context, rawToken string) 
 		return AuthResult{}, errors.E(op, errors.Unauthenticated, "missing or invalid authorization credentials")
 	}
 
+	if strings.HasPrefix(tokenStr, identity.OAuthAccessTokenPrefix) {
+		return a.authenticateOAuthToken(ctx, op, tokenStr)
+	}
 	if strings.HasPrefix(tokenStr, identity.APIKeyTokenPrefix) {
 		return a.authenticateAPIKey(ctx, op, tokenStr)
 	}
 	return a.authenticateJWT(ctx, op, tokenStr)
+}
+
+func (a *Authenticator) authenticateOAuthToken(ctx context.Context, op errors.Op, tokenStr string) (AuthResult, error) {
+	if a.cfg.OAuthTokenStore == nil || a.cfg.OAuthGrantStore == nil || a.cfg.UserStore == nil {
+		return AuthResult{}, errors.E(op, errors.Unauthenticated, "OAuth token authentication unavailable")
+	}
+
+	now := a.nowFn()
+	tokenHash := identity.HashOAuthToken(tokenStr)
+	tok, err := a.cfg.OAuthTokenStore.GetByHash(ctx, tokenHash)
+	if err != nil || tok == nil {
+		return AuthResult{}, errors.E(op, errors.Unauthenticated, "invalid OAuth access token")
+	}
+	if !tok.IsActive(now) {
+		return AuthResult{}, errors.E(op, errors.Unauthenticated, "OAuth access token expired or revoked")
+	}
+
+	grant, err := a.cfg.OAuthGrantStore.GetByID(ctx, tok.GrantID)
+	if err != nil || grant == nil || grant.IsRevoked() {
+		return AuthResult{}, errors.E(op, errors.Unauthenticated, "OAuth grant has been revoked")
+	}
+
+	user, err := a.cfg.UserStore.GetByID(ctx, grant.UserID)
+	if err != nil || user == nil || user.Status != identity.UserStatusActive || user.IsLocked(now) {
+		return AuthResult{}, errors.E(op, errors.Unauthenticated, "account is inactive or locked")
+	}
+
+	if grant.LastUsedAt == nil || now.Sub(*grant.LastUsedAt) >= time.Minute {
+		go func(id identity.OAuthGrantID, ts time.Time) {
+			touchCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = a.cfg.OAuthGrantStore.TouchLastUsed(touchCtx, id, ts)
+		}(grant.ID, now)
+	}
+
+	return AuthResult{
+		Principal: auth.Principal{
+			Subject:         string(grant.UserID),
+			AccessLevel:     string(user.AccessLevel),
+			OAuthGrantID:    string(grant.ID),
+			Scopes:          slices.Clone(grant.Scopes),
+			GrantedSpaceIDs: []string{grant.SpaceID},
+		},
+		Expiration: tok.ExpiresAt,
+	}, nil
 }
 
 func (a *Authenticator) authenticateAPIKey(ctx context.Context, op errors.Op, tokenStr string) (AuthResult, error) {
@@ -232,18 +295,18 @@ func (a *Authenticator) ResolveSpace(ctx context.Context, principal auth.Princip
 
 	spaceIDStr := strings.TrimSpace(explicitSpaceID)
 
-	if principal.IsAPIKey() {
+	if principal.IsScopedGrant() {
 		if spaceIDStr == "" {
 			switch len(principal.GrantedSpaceIDs) {
 			case 0:
-				return auth.SpaceContext{}, errors.E(op, errors.Permission, "API key has no active space grants")
+				return auth.SpaceContext{}, errors.E(op, errors.Permission, "credential has no active space grants")
 			case 1:
 				spaceIDStr = principal.GrantedSpaceIDs[0]
 			default:
-				return auth.SpaceContext{}, errors.E(op, errors.Invalid, "multiple spaces granted to this API key; provide the space-id header")
+				return auth.SpaceContext{}, errors.E(op, errors.Invalid, "multiple spaces granted to this credential; provide the space-id header")
 			}
 		} else if !principal.HasSpaceGrant(spaceIDStr) {
-			return auth.SpaceContext{}, errors.E(op, errors.Permission, "API key does not have access to this space")
+			return auth.SpaceContext{}, errors.E(op, errors.Permission, "credential does not have access to this space")
 		}
 	} else if spaceIDStr == "" {
 		return auth.SpaceContext{}, errors.E(op, errors.Invalid, "missing space-id header")

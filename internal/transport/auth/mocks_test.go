@@ -314,3 +314,132 @@ func (mock *MemberStoreProviderMock) GetByIDCalls() []struct {
 	defer mock.lockGetByID.RUnlock()
 	return mock.calls.GetByID
 }
+
+// Compile-time interface assertion.
+var _ OAuthAccessTokenProvider = (*OAuthAccessTokenProviderMock)(nil)
+
+// OAuthAccessTokenProviderMock is a mock implementation of OAuthAccessTokenProvider.
+type OAuthAccessTokenProviderMock struct {
+	// GetByHashFunc mocks the GetByHash method.
+	GetByHashFunc func(ctx context.Context, tokenHash string) (*identity.OAuthAccessToken, error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		GetByHash []struct {
+			Ctx       context.Context
+			TokenHash string
+		}
+	}
+	lockGetByHash sync.RWMutex
+}
+
+// GetByHash calls GetByHashFunc.
+func (mock *OAuthAccessTokenProviderMock) GetByHash(ctx context.Context, tokenHash string) (*identity.OAuthAccessToken, error) {
+	if mock.GetByHashFunc == nil {
+		panic("OAuthAccessTokenProviderMock.GetByHashFunc: method is nil but OAuthAccessTokenProvider.GetByHash was just called")
+	}
+	mock.lockGetByHash.Lock()
+	mock.calls.GetByHash = append(mock.calls.GetByHash, struct {
+		Ctx       context.Context
+		TokenHash string
+	}{
+		Ctx:       ctx,
+		TokenHash: tokenHash,
+	})
+	mock.lockGetByHash.Unlock()
+	return mock.GetByHashFunc(ctx, tokenHash)
+}
+
+// GetByHashCalls returns all calls made to GetByHash.
+func (mock *OAuthAccessTokenProviderMock) GetByHashCalls() []struct {
+	Ctx       context.Context
+	TokenHash string
+} {
+	mock.lockGetByHash.RLock()
+	defer mock.lockGetByHash.RUnlock()
+	return mock.calls.GetByHash
+}
+
+// Compile-time interface assertion.
+var _ OAuthGrantProvider = (*OAuthGrantProviderMock)(nil)
+
+// OAuthGrantProviderMock is a mock implementation of OAuthGrantProvider.
+type OAuthGrantProviderMock struct {
+	// GetByIDFunc mocks the GetByID method.
+	GetByIDFunc func(ctx context.Context, id identity.OAuthGrantID) (*identity.OAuthGrant, error)
+
+	// TouchLastUsedFunc mocks the TouchLastUsed method.
+	TouchLastUsedFunc func(ctx context.Context, id identity.OAuthGrantID, lastUsedAt time.Time) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		GetByID []struct {
+			Ctx context.Context
+			Id  identity.OAuthGrantID
+		}
+		TouchLastUsed []struct {
+			Ctx        context.Context
+			Id         identity.OAuthGrantID
+			LastUsedAt time.Time
+		}
+	}
+	lockGetByID       sync.RWMutex
+	lockTouchLastUsed sync.RWMutex
+}
+
+// GetByID calls GetByIDFunc.
+func (mock *OAuthGrantProviderMock) GetByID(ctx context.Context, id identity.OAuthGrantID) (*identity.OAuthGrant, error) {
+	if mock.GetByIDFunc == nil {
+		panic("OAuthGrantProviderMock.GetByIDFunc: method is nil but OAuthGrantProvider.GetByID was just called")
+	}
+	mock.lockGetByID.Lock()
+	mock.calls.GetByID = append(mock.calls.GetByID, struct {
+		Ctx context.Context
+		Id  identity.OAuthGrantID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockGetByID.Unlock()
+	return mock.GetByIDFunc(ctx, id)
+}
+
+// GetByIDCalls returns all calls made to GetByID.
+func (mock *OAuthGrantProviderMock) GetByIDCalls() []struct {
+	Ctx context.Context
+	Id  identity.OAuthGrantID
+} {
+	mock.lockGetByID.RLock()
+	defer mock.lockGetByID.RUnlock()
+	return mock.calls.GetByID
+}
+
+// TouchLastUsed calls TouchLastUsedFunc.
+func (mock *OAuthGrantProviderMock) TouchLastUsed(ctx context.Context, id identity.OAuthGrantID, lastUsedAt time.Time) error {
+	if mock.TouchLastUsedFunc == nil {
+		panic("OAuthGrantProviderMock.TouchLastUsedFunc: method is nil but OAuthGrantProvider.TouchLastUsed was just called")
+	}
+	mock.lockTouchLastUsed.Lock()
+	mock.calls.TouchLastUsed = append(mock.calls.TouchLastUsed, struct {
+		Ctx        context.Context
+		Id         identity.OAuthGrantID
+		LastUsedAt time.Time
+	}{
+		Ctx:        ctx,
+		Id:         id,
+		LastUsedAt: lastUsedAt,
+	})
+	mock.lockTouchLastUsed.Unlock()
+	return mock.TouchLastUsedFunc(ctx, id, lastUsedAt)
+}
+
+// TouchLastUsedCalls returns all calls made to TouchLastUsed.
+func (mock *OAuthGrantProviderMock) TouchLastUsedCalls() []struct {
+	Ctx        context.Context
+	Id         identity.OAuthGrantID
+	LastUsedAt time.Time
+} {
+	mock.lockTouchLastUsed.RLock()
+	defer mock.lockTouchLastUsed.RUnlock()
+	return mock.calls.TouchLastUsed
+}

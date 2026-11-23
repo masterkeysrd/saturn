@@ -906,6 +906,239 @@ export interface DeleteAPIKeyRequest {
 }
 
 /**
+ * UserOAuthGrant represents an active OAuth 2.1 authorization granted by the caller.
+ */
+export interface UserOAuthGrant {
+  /**
+   * Output only. The unique identifier of the grant (`oag_...`).
+   */
+  id?: string
+  /**
+   * Output only. The OAuth client identifier (`oac_...` or CIMD URL).
+   */
+  clientId?: string
+  /**
+   * Output only. The display name of the OAuth client.
+   */
+  clientName?: string
+  /**
+   * Output only. Whether the OAuth client is workspace-scoped rather than instance-wide.
+   */
+  isWorkspaceClient?: boolean
+  /**
+   * Output only. The authorized workspace identifier (`spc_...`).
+   */
+  spaceId?: string
+  /**
+   * Output only. The display name of the authorized workspace.
+   */
+  spaceName?: string
+  /**
+   * Output only. Scopes authorized for this grant.
+   */
+  scopes?: string[]
+  /**
+   * Output only. Timestamp when the grant was last used.
+   */
+  lastUsedAt?: string
+  /**
+   * Output only. Timestamp when the grant was created.
+   */
+  createTime?: string
+}
+
+/**
+ * Request message for Identity.ListUserOAuthGrants.
+ */
+export type ListUserOAuthGrantsRequest = Record<string, never>
+
+/**
+ * Response message for Identity.ListUserOAuthGrants.
+ */
+export interface ListUserOAuthGrantsResponse {
+  /**
+   * Output only. List of active OAuth 2.1 grants authorized by the user.
+   */
+  grants?: UserOAuthGrant[]
+}
+
+/**
+ * Request message for Identity.RevokeUserOAuthGrant.
+ */
+export interface RevokeUserOAuthGrantRequest {
+  /**
+   * Required. The unique identifier of the OAuth grant (`oag_...`) to revoke.
+   */
+  grantId: string
+}
+
+/**
+ * OAuthConsentSpaceOption represents a workspace selectable during OAuth 2.1 consent.
+ */
+export interface OAuthConsentSpaceOption {
+  /**
+   * Output only. The workspace identifier (`spc_...`).
+   */
+  spaceId?: string
+  /**
+   * Output only. The display name of the workspace.
+   */
+  spaceName?: string
+  /**
+   * Output only. The caller's role in the workspace (`owner`, `admin`, `member`, `viewer`).
+   */
+  role?: string
+  /**
+   * Output only. Permitted scopes for this workspace given the caller's role and client ceiling.
+   */
+  allowedScopes?: string[]
+}
+
+/**
+ * Request message for Identity.InspectOAuthConsent.
+ */
+export interface InspectOAuthConsentRequest {
+  /**
+   * Required. The OAuth 2.1 client_id parameter.
+   */
+  clientId: string
+  /**
+   * Required. The OAuth 2.1 redirect_uri parameter.
+   */
+  redirectUri: string
+  /**
+   * Required. The OAuth 2.1 response_type parameter (must be `code`).
+   */
+  responseType: string
+  /**
+   * Optional. Space-delimited requested scopes from the authorization URL.
+   */
+  scope: string
+  /**
+   * Optional. Opaque client state parameter.
+   */
+  state: string
+  /**
+   * Required. PKCE S256 code_challenge parameter.
+   */
+  codeChallenge: string
+  /**
+   * Required. PKCE code_challenge_method parameter (must be `S256`).
+   */
+  codeChallengeMethod: string
+  /**
+   * Optional. RFC 8707 target resource indicator URI.
+   */
+  resource: string
+}
+
+/**
+ * Response message for Identity.InspectOAuthConsent.
+ */
+export interface InspectOAuthConsentResponse {
+  /**
+   * Output only. Canonical client ID (`oac_...` or CIMD URL).
+   */
+  clientId?: string
+  /**
+   * Output only. Display name of the requesting OAuth application.
+   */
+  clientName?: string
+  /**
+   * Output only. Description or homepage URI of the requesting OAuth application.
+   */
+  clientDescription?: string
+  /**
+   * Output only. Whether the client is bound to a specific workspace (`true`) or instance-wide (`false`).
+   */
+  isWorkspaceClient?: boolean
+  /**
+   * Output only. Validated redirect URI.
+   */
+  redirectUri?: string
+  /**
+   * Output only. Host and port of the redirect URI for user display.
+   */
+  redirectUriHost?: string
+  /**
+   * Output only. RFC 8707 resource indicator when provided.
+   */
+  resource?: string
+  /**
+   * Output only. Pre-locked workspace ID when enforced by a workspace client or resource indicator.
+   */
+  lockedSpaceId?: string
+  /**
+   * Output only. Default effective scopes permitted for the request.
+   */
+  effectiveScopes?: string[]
+  /**
+   * Output only. Workspaces eligible for selection on the consent screen.
+   */
+  spaces?: OAuthConsentSpaceOption[]
+}
+
+/**
+ * Request message for Identity.DecideOAuthConsent.
+ */
+export interface DecideOAuthConsentRequest {
+  /**
+   * Required. The OAuth 2.1 client_id parameter.
+   */
+  clientId: string
+  /**
+   * Required. The OAuth 2.1 redirect_uri parameter.
+   */
+  redirectUri: string
+  /**
+   * Required. The OAuth 2.1 response_type parameter (`code`).
+   */
+  responseType: string
+  /**
+   * Optional. Space-delimited originally requested scopes.
+   */
+  scope: string
+  /**
+   * Optional. Specific scopes approved by the user.
+   */
+  approvedScopes?: string[]
+  /**
+   * Optional. Selected target workspace ID (`spc_...`), required when approved is true.
+   */
+  spaceId: string
+  /**
+   * Optional. Opaque client state parameter.
+   */
+  state: string
+  /**
+   * Required. PKCE S256 code_challenge parameter.
+   */
+  codeChallenge: string
+  /**
+   * Required. PKCE code_challenge_method parameter (`S256`).
+   */
+  codeChallengeMethod: string
+  /**
+   * Optional. RFC 8707 target resource indicator URI.
+   */
+  resource: string
+  /**
+   * Required. Whether the user approved (`true`) or denied (`false`) the request.
+   */
+  approved: boolean
+}
+
+/**
+ * Response message for Identity.DecideOAuthConsent.
+ */
+export interface DecideOAuthConsentResponse {
+  /**
+   * Output only. Short-lived single-use handoff nonce for `/oauth/authorize/callback`.
+   */
+  handoffToken?: string
+}
+
+/**
  * Identity provides user authentication and session management.
  */
 /**
@@ -1737,6 +1970,120 @@ export function useDeleteAPIKeyMutation(
     { id: string; req: DeleteAPIKeyRequest }
   >({
     mutationFn: ({ id, req }) => deleteAPIKey(id, req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Lists all active OAuth 2.1 grants authorized by the caller.
+ */
+export async function listUserOAuthGrants(
+  _req?: ListUserOAuthGrantsRequest
+): Promise<ListUserOAuthGrantsResponse> {
+  return request<ListUserOAuthGrantsResponse>({
+    method: "GET",
+    url: "/api/v1/identity/oauth/grants",
+  })
+}
+
+export function useListUserOAuthGrantsQuery(
+  req: ListUserOAuthGrantsRequest,
+  options?: Omit<
+    UseQueryOptions<ListUserOAuthGrantsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListUserOAuthGrantsResponse, Error>({
+    queryKey: ["/api/v1/identity/oauth/grants", req],
+    queryFn: () => listUserOAuthGrants(req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Revokes an active OAuth 2.1 grant owned by the caller.
+ */
+export async function revokeUserOAuthGrant(
+  grant_id: string,
+  _req: RevokeUserOAuthGrantRequest
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
+    method: "DELETE",
+    url: `/api/v1/identity/oauth/grants/${grant_id}`,
+  })
+}
+
+export function useRevokeUserOAuthGrantMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    { grant_id: string; req: RevokeUserOAuthGrantRequest }
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    { grant_id: string; req: RevokeUserOAuthGrantRequest }
+  >({
+    mutationFn: ({ grant_id, req }) => revokeUserOAuthGrant(grant_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Inspects an OAuth 2.1 authorization request before rendering consent UI.
+ */
+export async function inspectOAuthConsent(
+  req: InspectOAuthConsentRequest
+): Promise<InspectOAuthConsentResponse> {
+  const params = { ...req }
+  return request<InspectOAuthConsentResponse>({
+    method: "GET",
+    url: "/api/v1/identity/oauth/consent",
+    params: params,
+  })
+}
+
+export function useInspectOAuthConsentQuery(
+  req: InspectOAuthConsentRequest,
+  options?: Omit<
+    UseQueryOptions<InspectOAuthConsentResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<InspectOAuthConsentResponse, Error>({
+    queryKey: ["/api/v1/identity/oauth/consent", req],
+    queryFn: () => inspectOAuthConsent(req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Records an approve or deny OAuth 2.1 consent decision and returns a short-lived handoff nonce.
+ */
+export async function decideOAuthConsent(
+  req: DecideOAuthConsentRequest
+): Promise<DecideOAuthConsentResponse> {
+  return request<DecideOAuthConsentResponse>({
+    method: "POST",
+    url: "/api/v1/identity/oauth/consent:decide",
+    data: req,
+  })
+}
+
+export function useDecideOAuthConsentMutation(
+  options?: UseMutationOptions<
+    DecideOAuthConsentResponse,
+    Error,
+    DecideOAuthConsentRequest
+  >
+) {
+  return useMutation<
+    DecideOAuthConsentResponse,
+    Error,
+    DecideOAuthConsentRequest
+  >({
+    mutationFn: (req) => decideOAuthConsent(req),
     ...options,
   })
 }

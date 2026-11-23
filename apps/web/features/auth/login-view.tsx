@@ -1,5 +1,5 @@
 import { useState, useEffect, type SyntheticEvent } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { InputOTP } from "@/components/ui/input-otp"
 import type { MfaFactorDescriptor } from "@saturn/api/gen/saturn/identity/v1/identity"
 import { useI18n } from "@saturn/hooks"
+import { resolveSafeReturnTo } from "@/lib/auth-redirect"
 import { KeyRoundIcon, SmartphoneIcon, ArrowLeftIcon } from "lucide-react"
 
 export function LoginView() {
@@ -23,6 +24,8 @@ export function LoginView() {
 
   const { login, error, setError } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const returnTo = resolveSafeReturnTo(searchParams.get("return_to"))
   const { t, language } = useI18n()
 
   // Step 1: Identifier & Password Form
@@ -74,7 +77,7 @@ export function LoginView() {
         return
       }
 
-      navigate("/")
+      navigate(returnTo, { replace: true })
     } catch {
       // Error handled by AuthContext
     } finally {
@@ -112,7 +115,7 @@ export function LoginView() {
           backupCode: useBackupCode ? code.trim() : undefined,
         },
       })
-      navigate("/")
+      navigate(returnTo, { replace: true })
     } catch {
       // Error handled by AuthContext
     } finally {

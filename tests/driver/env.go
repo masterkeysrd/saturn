@@ -206,6 +206,10 @@ func StartTestEnv() (*TestEnv, error) {
 				AllowPrivateNetworks: true,
 			},
 		},
+		OAuth: app.OAuthConfig{
+			AllowDynamicRegistration: true,
+			AllowPrivateNetworks:     true,
+		},
 		Connector: app.ConnectorConfig{
 			PublicCallbackBaseURL: fmt.Sprintf("http://127.0.0.1:%d/v1/platform/connectors/oauth", port),
 			AllowedReturnOrigins:  []string{"https://app.saturn.local"},
@@ -249,6 +253,7 @@ func StartTestEnv() (*TestEnv, error) {
 	gwSrv.DB = sqlDB
 	gwSrv.AIStreamHandler = grpcSrv.AIStreamHandler
 	gwSrv.MCPServer = grpcSrv.MCPServer
+	gwSrv.OAuthHandler = grpcSrv.OAuthHandler
 	gwSrv.ConnectorStore = grpcSrv.ConnectorStore
 	if err := gwSrv.Start(ctx, cfg); err != nil {
 		if cleanupPGDump != nil {

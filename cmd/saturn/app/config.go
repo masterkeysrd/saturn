@@ -59,6 +59,16 @@ type Config struct {
 	Security  SecurityConfig
 	Connector ConnectorConfig
 	AI        AIConfig
+	OAuth     OAuthConfig
+}
+
+// OAuthConfig holds OAuth 2.1 authorization server settings.
+type OAuthConfig struct {
+	IssuerURL                string        `mapstructure:"issuer_url"`
+	AllowDynamicRegistration bool          `mapstructure:"allow_dynamic_registration"`
+	AccessTokenTTL           time.Duration `mapstructure:"access_token_ttl"`
+	RefreshTokenTTL          time.Duration `mapstructure:"refresh_token_ttl"`
+	AllowPrivateNetworks     bool          `mapstructure:"allow_private_networks"`
 }
 
 // AIConfig holds platform AI provider and MCP client settings.
@@ -312,6 +322,12 @@ func NewViper() *viper.Viper {
 
 	v.SetDefault("ai.providers.allow_private_networks", false)
 	v.SetDefault("ai.mcp.allow_private_networks", false)
+
+	v.SetDefault("oauth.issuer_url", "")
+	v.SetDefault("oauth.allow_dynamic_registration", false)
+	v.SetDefault("oauth.access_token_ttl", time.Hour)
+	v.SetDefault("oauth.refresh_token_ttl", 2160*time.Hour)
+	v.SetDefault("oauth.allow_private_networks", false)
 
 	return v
 }

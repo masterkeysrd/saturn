@@ -67,6 +67,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
+	platformoauth "github.com/masterkeysrd/saturn/internal/platform/oauth"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/platform/requestid"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
@@ -95,6 +96,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/transport/http/gateway"
 	mailhttp "github.com/masterkeysrd/saturn/internal/transport/http/mail"
 	"github.com/masterkeysrd/saturn/internal/transport/http/middleware"
+	oauthhttp "github.com/masterkeysrd/saturn/internal/transport/http/oauth"
 	mcptransport "github.com/masterkeysrd/saturn/internal/transport/mcp"
 	mcpai "github.com/masterkeysrd/saturn/internal/transport/mcp/ai"
 	mcpcalendar "github.com/masterkeysrd/saturn/internal/transport/mcp/calendar"
@@ -120,6 +122,7 @@ type GRPCServer struct {
 	AttachmentHandler    *mailhttp.AttachmentHandler
 	AIStreamHandler      *aihttp.StreamHandler
 	MCPServer            *mcptransport.Server
+	OAuthHandler         *oauthhttp.Handler
 	ConnectorStore       connector.Store
 }
 
@@ -165,23 +168,31 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	ecdsaVerifier := crypto.NewECDSAVerifier()
 	passwordResetStore := identitystorage.NewPasswordResetStore(dbClient)
 	apiKeyStore := identitystorage.NewAPIKeyStore(dbClient)
+	oauthClientStore := identitystorage.NewOAuthClientStore(dbClient)
+	oauthGrantStore := identitystorage.NewOAuthGrantStore(dbClient)
+	oauthAuthCodeStore := identitystorage.NewOAuthAuthCodeStore(dbClient)
+	oauthAccessTokenStore := identitystorage.NewOAuthAccessTokenStore(dbClient)
 	platformSettingsStore := settings.NewPostgresStore(dbClient)
 	identityService := identity.NewService(
 		identity.Dependencies{
-			UserStore:          userStore,
-			CredentialStore:    credentialStore,
-			SessionStore:       sessionStore,
-			SecurityEventStore: securityEventStore,
-			Hasher:             passwordHasher,
-			MFAStore:           mfaFactorStore,
-			Cipher:             mfaCipher,
-			TOTP:               totp.NewProvider(),
-			DeviceStore:        deviceStore,
-			ChallengeStore:     deviceStore,
-			DeviceVerifier:     ecdsaVerifier,
-			PasswordResetStore: passwordResetStore,
-			APIKeyStore:        apiKeyStore,
-			Preferences:        settings.Bind(platformSettingsStore, identity.UserPreferencesKey),
+			UserStore:             userStore,
+			CredentialStore:       credentialStore,
+			SessionStore:          sessionStore,
+			SecurityEventStore:    securityEventStore,
+			Hasher:                passwordHasher,
+			MFAStore:              mfaFactorStore,
+			Cipher:                mfaCipher,
+			TOTP:                  totp.NewProvider(),
+			DeviceStore:           deviceStore,
+			ChallengeStore:        deviceStore,
+			DeviceVerifier:        ecdsaVerifier,
+			PasswordResetStore:    passwordResetStore,
+			APIKeyStore:           apiKeyStore,
+			OAuthClientStore:      oauthClientStore,
+			OAuthGrantStore:       oauthGrantStore,
+			OAuthAuthCodeStore:    oauthAuthCodeStore,
+			OAuthAccessTokenStore: oauthAccessTokenStore,
+			Preferences:           settings.Bind(platformSettingsStore, identity.UserPreferencesKey),
 		},
 	)
 
@@ -232,6 +243,8 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		log.WithMiddleware(requestid.Enricher()),
 	)
 
+	cimdClient := platformoauth.NewCIMDClient(cfg.OAuth.AllowPrivateNetworks, nil)
+
 	coordinator := iam.NewLoggingCoordinator(
 		iam.NewTransactionalCoordinator(
 			iam.NewCoordinator(iam.Dependencies{
@@ -239,11 +252,23 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 				PasswordHasher:  passwordHasher,
 				SpaceService:    spaceService,
 				TokenService:    tokenService,
+				CIMDResolver:    cimdClient,
+				OAuthConfig: iam.OAuthConfig{
+					AllowDynamicRegistration: cfg.OAuth.AllowDynamicRegistration,
+					AccessTokenTTL:           cfg.OAuth.AccessTokenTTL,
+					RefreshTokenTTL:          cfg.OAuth.RefreshTokenTTL,
+				},
 			}),
 			dbClient,
 		),
 		appLogger,
 	)
+
+	s.OAuthHandler = oauthhttp.NewHandler(oauthhttp.Config{
+		Coordinator:              coordinator,
+		IssuerURL:                cfg.OAuth.IssuerURL,
+		AllowDynamicRegistration: cfg.OAuth.AllowDynamicRegistration,
+	})
 
 	iamApp := identitygrpc.NewIAMApplication(coordinator)
 	identityHandler := identitygrpc.NewHandler(iamApp)
@@ -266,8 +291,19 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		TrustedProxies:    cfg.Gateway.TrustedProxies,
 	})
 
+	// Wire shared transport authenticator (JWT, API keys, and OAuth 2.1 tokens)
+	sharedAuthenticator := transportauth.NewAuthenticator(transportauth.Config{
+		TokenValidator:  tokenService,
+		UserStore:       userStore,
+		APIKeyStore:     apiKeyStore,
+		GrantStore:      apiKeyGrantStore,
+		OAuthTokenStore: oauthAccessTokenStore,
+		OAuthGrantStore: oauthGrantStore,
+		MemberStore:     memberStore,
+	})
+
 	// Wire auth interceptor with loaded rules
-	authInterceptor := interceptors.NewAuthInterceptor(tokenService, userStore, apiKeyStore, apiKeyGrantStore, rules)
+	authInterceptor := interceptors.NewAuthInterceptorWithAuthenticator(sharedAuthenticator, rules)
 
 	// Wire space interceptor
 	spaceInterceptor := interceptors.NewSpaceInterceptor(memberStore, spaceRules)
@@ -316,19 +352,14 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	spaceHandler := spacegrpc.NewHandler(spaceCoordinator, spaceAggregator)
 	spacev1.RegisterSpacesServer(s.grpc, spaceHandler)
 
-	// Wire shared transport authenticator & unified Saturn MCP Server
-	sharedAuthenticator := transportauth.NewAuthenticator(transportauth.Config{
-		TokenValidator: tokenService,
-		UserStore:      userStore,
-		APIKeyStore:    apiKeyStore,
-		GrantStore:     apiKeyGrantStore,
-		MemberStore:    memberStore,
-	})
+	// Wire unified Saturn MCP Server
 	mcpServer := mcptransport.NewServer(mcptransport.ServerConfig{
-		Name:    "saturn-mcp",
-		Version: "1.0.0",
+		Name:         "saturn-mcp",
+		Version:      "1.0.0",
+		Instructions: mcptransport.DefaultInstructions,
 		AuthMiddleware: mcpmiddleware.AuthMiddleware(mcpmiddleware.AuthConfig{
 			Authenticator: sharedAuthenticator,
+			IssuerURL:     cfg.OAuth.IssuerURL,
 		}),
 	})
 	s.MCPServer = mcpServer
@@ -838,6 +869,7 @@ type GRPCGatewayServer struct {
 	attachmentHandler    *mailhttp.AttachmentHandler
 	AIStreamHandler      *aihttp.StreamHandler
 	MCPServer            *mcptransport.Server
+	OAuthHandler         *oauthhttp.Handler
 	ConnectorStore       connector.Store
 	DB                   *sql.DB
 }
@@ -939,6 +971,11 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 			s.AIStreamHandler.ServeResolveApprovals(w, r, pathParams["id"])
 		})
 		handler.Handle("POST /v1/platform/ai/threads/", s.AIStreamHandler)
+	}
+
+	// Register OAuth 2.1 discovery, registration, callback, token, and revocation endpoints ahead of SPA fallback
+	if s.OAuthHandler != nil {
+		s.OAuthHandler.RegisterRoutes(handler)
 	}
 
 	// Register unified Streamable HTTP MCP endpoints
@@ -1125,6 +1162,7 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 	gwSrv.DB = db
 	gwSrv.AIStreamHandler = grpcSrv.AIStreamHandler
 	gwSrv.MCPServer = grpcSrv.MCPServer
+	gwSrv.OAuthHandler = grpcSrv.OAuthHandler
 	gwSrv.ConnectorStore = grpcSrv.ConnectorStore
 
 	// Register shutdown callbacks (LIFO order: gateway first, then gRPC).

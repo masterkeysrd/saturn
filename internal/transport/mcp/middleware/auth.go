@@ -4,6 +4,7 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -59,6 +60,7 @@ type AuthConfig struct {
 	GrantStore          APIKeyGrantProvider
 	MemberStore         MemberStoreProvider
 	ResourceMetadataURL string
+	IssuerURL           string
 	AuthCacheTTL        time.Duration
 	MemberCacheTTL      time.Duration
 }
@@ -105,6 +107,8 @@ func AuthMiddleware(cfg AuthConfig) func(http.Handler) http.Handler {
 		AllowMissingExpiration: true,
 	})
 
+	issuerBase := strings.TrimRight(strings.TrimSpace(cfg.IssuerURL), "/")
+
 	return func(next http.Handler) http.Handler {
 		protected := bearer(requireSpaceMembership(authenticator, next))
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -113,9 +117,72 @@ func AuthMiddleware(cfg AuthConfig) func(http.Handler) http.Handler {
 				WriteHTTPError(w, http.StatusBadRequest, "credentials must not be passed in URL query parameters; use Authorization: Bearer")
 				return
 			}
-			protected.ServeHTTP(w, r)
+			rw := w
+			if cfg.ResourceMetadataURL == "" {
+				rw = &wwwAuthenticateWriter{
+					ResponseWriter:      w,
+					resourceMetadataURL: buildResourceMetadataURL(r, issuerBase),
+				}
+			}
+			protected.ServeHTTP(rw, r)
 		})
 	}
+}
+
+type wwwAuthenticateWriter struct {
+	http.ResponseWriter
+	resourceMetadataURL string
+	wroteHeader         bool
+}
+
+func (w *wwwAuthenticateWriter) WriteHeader(statusCode int) {
+	if !w.wroteHeader {
+		w.wroteHeader = true
+		if statusCode == http.StatusUnauthorized && w.resourceMetadataURL != "" {
+			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer resource_metadata="%s"`, w.resourceMetadataURL))
+		}
+	}
+	w.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (w *wwwAuthenticateWriter) Write(p []byte) (int, error) {
+	if !w.wroteHeader {
+		w.WriteHeader(http.StatusOK)
+	}
+	return w.ResponseWriter.Write(p)
+}
+
+func (w *wwwAuthenticateWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
+}
+
+func buildResourceMetadataURL(r *http.Request, issuerBase string) string {
+	base := issuerBase
+	if base == "" {
+		scheme := "http"
+		if r.TLS != nil {
+			scheme = "https"
+		}
+		if xfProto := strings.ToLower(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto"))); xfProto == "https" || xfProto == "http" {
+			scheme = xfProto
+		}
+		host := strings.TrimSpace(r.Header.Get("X-Forwarded-Host"))
+		if host == "" {
+			host = strings.TrimSpace(r.Host)
+		}
+		if first, _, ok := strings.Cut(host, ","); ok {
+			host = strings.TrimSpace(first)
+		}
+		if host == "" {
+			host = "localhost:8080"
+		}
+		base = scheme + "://" + host
+	}
+	path := r.URL.Path
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	return base + "/.well-known/oauth-protected-resource" + path
 }
 
 func requireSpaceMembership(authenticator *transportauth.Authenticator, next http.Handler) http.Handler {

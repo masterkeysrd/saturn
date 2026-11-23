@@ -19,9 +19,11 @@ import {
 import { useQueryClient } from "@tanstack/react-query"
 import { Search } from "lucide-react"
 import { AuthLayout } from "@/layouts/auth-layout"
+import { ConsentLayout } from "@/layouts/consent-layout"
 import { LoginView } from "@/features/auth/login-view"
 import { RegisterView } from "@/features/auth/register-view"
 import { ResetPasswordView } from "@/features/auth/reset-password-view"
+import { OAuthConsentView } from "@/features/auth/oauth-consent-view"
 import { ProtectedRoute } from "@/components/protected-route"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -275,8 +277,13 @@ export function App() {
         <Route path="/reset-password" element={<ResetPasswordView />} />
       </Route>
 
-      {/* Protected Routes with Sidebar Layout */}
+      {/* Protected Routes */}
       <Route element={<ProtectedRoute />}>
+        {/* Standalone OAuth 2.1 Consent Screen */}
+        <Route element={<ConsentLayout />}>
+          <Route path="/oauth/authorize" element={<OAuthConsentView />} />
+        </Route>
+
         <Route element={<ProtectedAppShell />}>
           {/* Calendar top-level space redirect */}
           <Route

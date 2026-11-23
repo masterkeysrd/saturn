@@ -52,6 +52,10 @@ const (
 	Identity_ListAPIKeys_FullMethodName           = "/saturn.identity.v1.Identity/ListAPIKeys"
 	Identity_UpdateAPIKey_FullMethodName          = "/saturn.identity.v1.Identity/UpdateAPIKey"
 	Identity_DeleteAPIKey_FullMethodName          = "/saturn.identity.v1.Identity/DeleteAPIKey"
+	Identity_ListUserOAuthGrants_FullMethodName   = "/saturn.identity.v1.Identity/ListUserOAuthGrants"
+	Identity_RevokeUserOAuthGrant_FullMethodName  = "/saturn.identity.v1.Identity/RevokeUserOAuthGrant"
+	Identity_InspectOAuthConsent_FullMethodName   = "/saturn.identity.v1.Identity/InspectOAuthConsent"
+	Identity_DecideOAuthConsent_FullMethodName    = "/saturn.identity.v1.Identity/DecideOAuthConsent"
 )
 
 // IdentityClient is the client API for Identity service.
@@ -125,6 +129,14 @@ type IdentityClient interface {
 	UpdateAPIKey(ctx context.Context, in *UpdateAPIKeyRequest, opts ...grpc.CallOption) (*APIKey, error)
 	// Authenticated RPC: Permanently deletes a personal API key and revokes all of its space grants.
 	DeleteAPIKey(ctx context.Context, in *DeleteAPIKeyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Authenticated RPC: Lists all active OAuth 2.1 grants authorized by the caller.
+	ListUserOAuthGrants(ctx context.Context, in *ListUserOAuthGrantsRequest, opts ...grpc.CallOption) (*ListUserOAuthGrantsResponse, error)
+	// Authenticated RPC: Revokes an active OAuth 2.1 grant owned by the caller.
+	RevokeUserOAuthGrant(ctx context.Context, in *RevokeUserOAuthGrantRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Authenticated RPC: Inspects an OAuth 2.1 authorization request before rendering consent UI.
+	InspectOAuthConsent(ctx context.Context, in *InspectOAuthConsentRequest, opts ...grpc.CallOption) (*InspectOAuthConsentResponse, error)
+	// Authenticated RPC: Records an approve or deny OAuth 2.1 consent decision and returns a short-lived handoff nonce.
+	DecideOAuthConsent(ctx context.Context, in *DecideOAuthConsentRequest, opts ...grpc.CallOption) (*DecideOAuthConsentResponse, error)
 }
 
 type identityClient struct {
@@ -455,6 +467,46 @@ func (c *identityClient) DeleteAPIKey(ctx context.Context, in *DeleteAPIKeyReque
 	return out, nil
 }
 
+func (c *identityClient) ListUserOAuthGrants(ctx context.Context, in *ListUserOAuthGrantsRequest, opts ...grpc.CallOption) (*ListUserOAuthGrantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListUserOAuthGrantsResponse)
+	err := c.cc.Invoke(ctx, Identity_ListUserOAuthGrants_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) RevokeUserOAuthGrant(ctx context.Context, in *RevokeUserOAuthGrantRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Identity_RevokeUserOAuthGrant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) InspectOAuthConsent(ctx context.Context, in *InspectOAuthConsentRequest, opts ...grpc.CallOption) (*InspectOAuthConsentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InspectOAuthConsentResponse)
+	err := c.cc.Invoke(ctx, Identity_InspectOAuthConsent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) DecideOAuthConsent(ctx context.Context, in *DecideOAuthConsentRequest, opts ...grpc.CallOption) (*DecideOAuthConsentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DecideOAuthConsentResponse)
+	err := c.cc.Invoke(ctx, Identity_DecideOAuthConsent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IdentityServer is the server API for Identity service.
 // All implementations should embed UnimplementedIdentityServer
 // for forward compatibility.
@@ -526,6 +578,14 @@ type IdentityServer interface {
 	UpdateAPIKey(context.Context, *UpdateAPIKeyRequest) (*APIKey, error)
 	// Authenticated RPC: Permanently deletes a personal API key and revokes all of its space grants.
 	DeleteAPIKey(context.Context, *DeleteAPIKeyRequest) (*emptypb.Empty, error)
+	// Authenticated RPC: Lists all active OAuth 2.1 grants authorized by the caller.
+	ListUserOAuthGrants(context.Context, *ListUserOAuthGrantsRequest) (*ListUserOAuthGrantsResponse, error)
+	// Authenticated RPC: Revokes an active OAuth 2.1 grant owned by the caller.
+	RevokeUserOAuthGrant(context.Context, *RevokeUserOAuthGrantRequest) (*emptypb.Empty, error)
+	// Authenticated RPC: Inspects an OAuth 2.1 authorization request before rendering consent UI.
+	InspectOAuthConsent(context.Context, *InspectOAuthConsentRequest) (*InspectOAuthConsentResponse, error)
+	// Authenticated RPC: Records an approve or deny OAuth 2.1 consent decision and returns a short-lived handoff nonce.
+	DecideOAuthConsent(context.Context, *DecideOAuthConsentRequest) (*DecideOAuthConsentResponse, error)
 }
 
 // UnimplementedIdentityServer should be embedded to have
@@ -630,6 +690,18 @@ func (UnimplementedIdentityServer) UpdateAPIKey(context.Context, *UpdateAPIKeyRe
 }
 func (UnimplementedIdentityServer) DeleteAPIKey(context.Context, *DeleteAPIKeyRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteAPIKey not implemented")
+}
+func (UnimplementedIdentityServer) ListUserOAuthGrants(context.Context, *ListUserOAuthGrantsRequest) (*ListUserOAuthGrantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListUserOAuthGrants not implemented")
+}
+func (UnimplementedIdentityServer) RevokeUserOAuthGrant(context.Context, *RevokeUserOAuthGrantRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeUserOAuthGrant not implemented")
+}
+func (UnimplementedIdentityServer) InspectOAuthConsent(context.Context, *InspectOAuthConsentRequest) (*InspectOAuthConsentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method InspectOAuthConsent not implemented")
+}
+func (UnimplementedIdentityServer) DecideOAuthConsent(context.Context, *DecideOAuthConsentRequest) (*DecideOAuthConsentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DecideOAuthConsent not implemented")
 }
 func (UnimplementedIdentityServer) testEmbeddedByValue() {}
 
@@ -1227,6 +1299,78 @@ func _Identity_DeleteAPIKey_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Identity_ListUserOAuthGrants_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListUserOAuthGrantsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).ListUserOAuthGrants(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_ListUserOAuthGrants_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).ListUserOAuthGrants(ctx, req.(*ListUserOAuthGrantsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_RevokeUserOAuthGrant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeUserOAuthGrantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).RevokeUserOAuthGrant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_RevokeUserOAuthGrant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).RevokeUserOAuthGrant(ctx, req.(*RevokeUserOAuthGrantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_InspectOAuthConsent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InspectOAuthConsentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).InspectOAuthConsent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_InspectOAuthConsent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).InspectOAuthConsent(ctx, req.(*InspectOAuthConsentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_DecideOAuthConsent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DecideOAuthConsentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).DecideOAuthConsent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_DecideOAuthConsent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).DecideOAuthConsent(ctx, req.(*DecideOAuthConsentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Identity_ServiceDesc is the grpc.ServiceDesc for Identity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1361,6 +1505,22 @@ var Identity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteAPIKey",
 			Handler:    _Identity_DeleteAPIKey_Handler,
+		},
+		{
+			MethodName: "ListUserOAuthGrants",
+			Handler:    _Identity_ListUserOAuthGrants_Handler,
+		},
+		{
+			MethodName: "RevokeUserOAuthGrant",
+			Handler:    _Identity_RevokeUserOAuthGrant_Handler,
+		},
+		{
+			MethodName: "InspectOAuthConsent",
+			Handler:    _Identity_InspectOAuthConsent_Handler,
+		},
+		{
+			MethodName: "DecideOAuthConsent",
+			Handler:    _Identity_DecideOAuthConsent_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

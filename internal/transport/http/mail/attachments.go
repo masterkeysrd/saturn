@@ -258,7 +258,7 @@ func (h *AttachmentHandler) ServeUpload(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	if authRes.Principal.IsAPIKey() && !authRes.Principal.HasScope(string(identity.ScopeMailWrite)) {
+	if authRes.Principal.IsScopedGrant() && !authRes.Principal.HasScope(string(identity.ScopeMailWrite)) {
 		http.Error(w, "forbidden: missing mail:write scope", http.StatusForbidden)
 		return
 	}

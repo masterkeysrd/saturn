@@ -593,6 +593,45 @@ func (s *Service) ListSpaceAPIKeyGrants(ctx context.Context, session Session) ([
 	return grants, nil
 }
 
+// AuthorizeSpaceAdmin verifies that the session caller is an active admin or owner of the space.
+func (s *Service) AuthorizeSpaceAdmin(ctx context.Context, session Session) (*Member, error) {
+	const op errors.Op = "domain/space.AuthorizeSpaceAdmin"
+
+	member, err := s.authorize(ctx, session, requireManageSettings)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return member, nil
+}
+
+// GetSpaceMember verifies that the session caller is an active member of the space and returns their membership.
+func (s *Service) GetSpaceMember(ctx context.Context, session Session) (*Member, error) {
+	const op errors.Op = "domain/space.GetSpaceMember"
+
+	member, err := s.authorize(ctx, session)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return member, nil
+}
+
+// SpaceExists reports whether a space with the given ID exists.
+func (s *Service) SpaceExists(ctx context.Context, spaceID SpaceID) (bool, error) {
+	const op errors.Op = "domain/space.SpaceExists"
+
+	if err := spaceID.Validate(); err != nil {
+		return false, errors.E(op, errors.Invalid, err)
+	}
+	_, err := s.deps.SpaceStore.GetByID(ctx, spaceID)
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return false, nil
+		}
+		return false, errors.E(op, err)
+	}
+	return true, nil
+}
+
 // RevokeSpaceAPIKeyGrant removes a specific API key's grant to access the workspace.
 // Requires the caller to be a workspace admin or owner.
 func (s *Service) RevokeSpaceAPIKeyGrant(ctx context.Context, session Session, apiKeyID string) error {

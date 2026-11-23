@@ -507,3 +507,83 @@ func (c *Client) DeleteAPIKey(ctx context.Context, req *DeleteAPIKeyRequest) (*e
 	}
 	return &resp, nil
 }
+
+// ListUserOAuthGrants executes GET /api/v1/identity/oauth/grants.
+func (c *Client) ListUserOAuthGrants(ctx context.Context, req *ListUserOAuthGrantsRequest) (*ListUserOAuthGrantsResponse, error) {
+	var resp ListUserOAuthGrantsResponse
+	path := "/api/v1/identity/oauth/grants"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// RevokeUserOAuthGrant executes DELETE /api/v1/identity/oauth/grants/{grant_id}.
+func (c *Client) RevokeUserOAuthGrant(ctx context.Context, req *RevokeUserOAuthGrantRequest) (*emptypb.Empty, error) {
+	var resp emptypb.Empty
+	path := fmt.Sprintf("/api/v1/identity/oauth/grants/%s", req.GetGrantId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// InspectOAuthConsent executes GET /api/v1/identity/oauth/consent.
+func (c *Client) InspectOAuthConsent(ctx context.Context, req *InspectOAuthConsentRequest) (*InspectOAuthConsentResponse, error) {
+	var resp InspectOAuthConsentResponse
+	path := "/api/v1/identity/oauth/consent"
+	var query []string
+	if req.GetClientId() != "" {
+		query = append(query, fmt.Sprintf("client_id=%s", req.GetClientId()))
+	}
+	if req.GetRedirectUri() != "" {
+		query = append(query, fmt.Sprintf("redirect_uri=%s", req.GetRedirectUri()))
+	}
+	if req.GetResponseType() != "" {
+		query = append(query, fmt.Sprintf("response_type=%s", req.GetResponseType()))
+	}
+	if req.GetScope() != "" {
+		query = append(query, fmt.Sprintf("scope=%s", req.GetScope()))
+	}
+	if req.GetState() != "" {
+		query = append(query, fmt.Sprintf("state=%s", req.GetState()))
+	}
+	if req.GetCodeChallenge() != "" {
+		query = append(query, fmt.Sprintf("code_challenge=%s", req.GetCodeChallenge()))
+	}
+	if req.GetCodeChallengeMethod() != "" {
+		query = append(query, fmt.Sprintf("code_challenge_method=%s", req.GetCodeChallengeMethod()))
+	}
+	if req.GetResource() != "" {
+		query = append(query, fmt.Sprintf("resource=%s", req.GetResource()))
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// DecideOAuthConsent executes POST /api/v1/identity/oauth/consent:decide.
+func (c *Client) DecideOAuthConsent(ctx context.Context, req *DecideOAuthConsentRequest) (*DecideOAuthConsentResponse, error) {
+	var resp DecideOAuthConsentResponse
+	path := "/api/v1/identity/oauth/consent:decide"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}

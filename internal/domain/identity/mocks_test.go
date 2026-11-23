@@ -2407,3 +2407,958 @@ func (mock *APIKeyStoreMock) TouchLastUsedCalls() []struct {
 	defer mock.lockTouchLastUsed.RUnlock()
 	return mock.calls.TouchLastUsed
 }
+
+// Compile-time interface assertion.
+var _ OAuthClientStore = (*OAuthClientStoreMock)(nil)
+
+// OAuthClientStoreMock is a mock implementation of OAuthClientStore.
+type OAuthClientStoreMock struct {
+	// CreateFunc mocks the Create method.
+	CreateFunc func(ctx context.Context, client *OAuthClient) error
+
+	// UpsertCIMDFunc mocks the UpsertCIMD method.
+	UpsertCIMDFunc func(ctx context.Context, client *OAuthClient) error
+
+	// GetByIDFunc mocks the GetByID method.
+	GetByIDFunc func(ctx context.Context, id OAuthClientID) (*OAuthClient, error)
+
+	// ListByIDsFunc mocks the ListByIDs method.
+	ListByIDsFunc func(ctx context.Context, ids []OAuthClientID) ([]*OAuthClient, error)
+
+	// ListInstanceClientsFunc mocks the ListInstanceClients method.
+	ListInstanceClientsFunc func(ctx context.Context) ([]*OAuthClient, error)
+
+	// ListBySpaceIDFunc mocks the ListBySpaceID method.
+	ListBySpaceIDFunc func(ctx context.Context, spaceID string) ([]*OAuthClient, error)
+
+	// UpdateFunc mocks the Update method.
+	UpdateFunc func(ctx context.Context, client *OAuthClient) error
+
+	// UpdateSecretFunc mocks the UpdateSecret method.
+	UpdateSecretFunc func(ctx context.Context, id OAuthClientID, secretPrefix string, secretHash string, updateTime time.Time) error
+
+	// DeleteFunc mocks the Delete method.
+	DeleteFunc func(ctx context.Context, id OAuthClientID) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Create []struct {
+			Ctx    context.Context
+			Client *OAuthClient
+		}
+		UpsertCIMD []struct {
+			Ctx    context.Context
+			Client *OAuthClient
+		}
+		GetByID []struct {
+			Ctx context.Context
+			Id  OAuthClientID
+		}
+		ListByIDs []struct {
+			Ctx context.Context
+			Ids []OAuthClientID
+		}
+		ListInstanceClients []struct {
+			Ctx context.Context
+		}
+		ListBySpaceID []struct {
+			Ctx     context.Context
+			SpaceID string
+		}
+		Update []struct {
+			Ctx    context.Context
+			Client *OAuthClient
+		}
+		UpdateSecret []struct {
+			Ctx          context.Context
+			Id           OAuthClientID
+			SecretPrefix string
+			SecretHash   string
+			UpdateTime   time.Time
+		}
+		Delete []struct {
+			Ctx context.Context
+			Id  OAuthClientID
+		}
+	}
+	lockCreate              sync.RWMutex
+	lockUpsertCIMD          sync.RWMutex
+	lockGetByID             sync.RWMutex
+	lockListByIDs           sync.RWMutex
+	lockListInstanceClients sync.RWMutex
+	lockListBySpaceID       sync.RWMutex
+	lockUpdate              sync.RWMutex
+	lockUpdateSecret        sync.RWMutex
+	lockDelete              sync.RWMutex
+}
+
+// Create calls CreateFunc.
+func (mock *OAuthClientStoreMock) Create(ctx context.Context, client *OAuthClient) error {
+	if mock.CreateFunc == nil {
+		panic("OAuthClientStoreMock.CreateFunc: method is nil but OAuthClientStore.Create was just called")
+	}
+	mock.lockCreate.Lock()
+	mock.calls.Create = append(mock.calls.Create, struct {
+		Ctx    context.Context
+		Client *OAuthClient
+	}{
+		Ctx:    ctx,
+		Client: client,
+	})
+	mock.lockCreate.Unlock()
+	return mock.CreateFunc(ctx, client)
+}
+
+// CreateCalls returns all calls made to Create.
+func (mock *OAuthClientStoreMock) CreateCalls() []struct {
+	Ctx    context.Context
+	Client *OAuthClient
+} {
+	mock.lockCreate.RLock()
+	defer mock.lockCreate.RUnlock()
+	return mock.calls.Create
+}
+
+// UpsertCIMD calls UpsertCIMDFunc.
+func (mock *OAuthClientStoreMock) UpsertCIMD(ctx context.Context, client *OAuthClient) error {
+	if mock.UpsertCIMDFunc == nil {
+		panic("OAuthClientStoreMock.UpsertCIMDFunc: method is nil but OAuthClientStore.UpsertCIMD was just called")
+	}
+	mock.lockUpsertCIMD.Lock()
+	mock.calls.UpsertCIMD = append(mock.calls.UpsertCIMD, struct {
+		Ctx    context.Context
+		Client *OAuthClient
+	}{
+		Ctx:    ctx,
+		Client: client,
+	})
+	mock.lockUpsertCIMD.Unlock()
+	return mock.UpsertCIMDFunc(ctx, client)
+}
+
+// UpsertCIMDCalls returns all calls made to UpsertCIMD.
+func (mock *OAuthClientStoreMock) UpsertCIMDCalls() []struct {
+	Ctx    context.Context
+	Client *OAuthClient
+} {
+	mock.lockUpsertCIMD.RLock()
+	defer mock.lockUpsertCIMD.RUnlock()
+	return mock.calls.UpsertCIMD
+}
+
+// GetByID calls GetByIDFunc.
+func (mock *OAuthClientStoreMock) GetByID(ctx context.Context, id OAuthClientID) (*OAuthClient, error) {
+	if mock.GetByIDFunc == nil {
+		panic("OAuthClientStoreMock.GetByIDFunc: method is nil but OAuthClientStore.GetByID was just called")
+	}
+	mock.lockGetByID.Lock()
+	mock.calls.GetByID = append(mock.calls.GetByID, struct {
+		Ctx context.Context
+		Id  OAuthClientID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockGetByID.Unlock()
+	return mock.GetByIDFunc(ctx, id)
+}
+
+// GetByIDCalls returns all calls made to GetByID.
+func (mock *OAuthClientStoreMock) GetByIDCalls() []struct {
+	Ctx context.Context
+	Id  OAuthClientID
+} {
+	mock.lockGetByID.RLock()
+	defer mock.lockGetByID.RUnlock()
+	return mock.calls.GetByID
+}
+
+// ListByIDs calls ListByIDsFunc.
+func (mock *OAuthClientStoreMock) ListByIDs(ctx context.Context, ids []OAuthClientID) ([]*OAuthClient, error) {
+	if mock.ListByIDsFunc == nil {
+		panic("OAuthClientStoreMock.ListByIDsFunc: method is nil but OAuthClientStore.ListByIDs was just called")
+	}
+	mock.lockListByIDs.Lock()
+	mock.calls.ListByIDs = append(mock.calls.ListByIDs, struct {
+		Ctx context.Context
+		Ids []OAuthClientID
+	}{
+		Ctx: ctx,
+		Ids: ids,
+	})
+	mock.lockListByIDs.Unlock()
+	return mock.ListByIDsFunc(ctx, ids)
+}
+
+// ListByIDsCalls returns all calls made to ListByIDs.
+func (mock *OAuthClientStoreMock) ListByIDsCalls() []struct {
+	Ctx context.Context
+	Ids []OAuthClientID
+} {
+	mock.lockListByIDs.RLock()
+	defer mock.lockListByIDs.RUnlock()
+	return mock.calls.ListByIDs
+}
+
+// ListInstanceClients calls ListInstanceClientsFunc.
+func (mock *OAuthClientStoreMock) ListInstanceClients(ctx context.Context) ([]*OAuthClient, error) {
+	if mock.ListInstanceClientsFunc == nil {
+		panic("OAuthClientStoreMock.ListInstanceClientsFunc: method is nil but OAuthClientStore.ListInstanceClients was just called")
+	}
+	mock.lockListInstanceClients.Lock()
+	mock.calls.ListInstanceClients = append(mock.calls.ListInstanceClients, struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	})
+	mock.lockListInstanceClients.Unlock()
+	return mock.ListInstanceClientsFunc(ctx)
+}
+
+// ListInstanceClientsCalls returns all calls made to ListInstanceClients.
+func (mock *OAuthClientStoreMock) ListInstanceClientsCalls() []struct {
+	Ctx context.Context
+} {
+	mock.lockListInstanceClients.RLock()
+	defer mock.lockListInstanceClients.RUnlock()
+	return mock.calls.ListInstanceClients
+}
+
+// ListBySpaceID calls ListBySpaceIDFunc.
+func (mock *OAuthClientStoreMock) ListBySpaceID(ctx context.Context, spaceID string) ([]*OAuthClient, error) {
+	if mock.ListBySpaceIDFunc == nil {
+		panic("OAuthClientStoreMock.ListBySpaceIDFunc: method is nil but OAuthClientStore.ListBySpaceID was just called")
+	}
+	mock.lockListBySpaceID.Lock()
+	mock.calls.ListBySpaceID = append(mock.calls.ListBySpaceID, struct {
+		Ctx     context.Context
+		SpaceID string
+	}{
+		Ctx:     ctx,
+		SpaceID: spaceID,
+	})
+	mock.lockListBySpaceID.Unlock()
+	return mock.ListBySpaceIDFunc(ctx, spaceID)
+}
+
+// ListBySpaceIDCalls returns all calls made to ListBySpaceID.
+func (mock *OAuthClientStoreMock) ListBySpaceIDCalls() []struct {
+	Ctx     context.Context
+	SpaceID string
+} {
+	mock.lockListBySpaceID.RLock()
+	defer mock.lockListBySpaceID.RUnlock()
+	return mock.calls.ListBySpaceID
+}
+
+// Update calls UpdateFunc.
+func (mock *OAuthClientStoreMock) Update(ctx context.Context, client *OAuthClient) error {
+	if mock.UpdateFunc == nil {
+		panic("OAuthClientStoreMock.UpdateFunc: method is nil but OAuthClientStore.Update was just called")
+	}
+	mock.lockUpdate.Lock()
+	mock.calls.Update = append(mock.calls.Update, struct {
+		Ctx    context.Context
+		Client *OAuthClient
+	}{
+		Ctx:    ctx,
+		Client: client,
+	})
+	mock.lockUpdate.Unlock()
+	return mock.UpdateFunc(ctx, client)
+}
+
+// UpdateCalls returns all calls made to Update.
+func (mock *OAuthClientStoreMock) UpdateCalls() []struct {
+	Ctx    context.Context
+	Client *OAuthClient
+} {
+	mock.lockUpdate.RLock()
+	defer mock.lockUpdate.RUnlock()
+	return mock.calls.Update
+}
+
+// UpdateSecret calls UpdateSecretFunc.
+func (mock *OAuthClientStoreMock) UpdateSecret(ctx context.Context, id OAuthClientID, secretPrefix string, secretHash string, updateTime time.Time) error {
+	if mock.UpdateSecretFunc == nil {
+		panic("OAuthClientStoreMock.UpdateSecretFunc: method is nil but OAuthClientStore.UpdateSecret was just called")
+	}
+	mock.lockUpdateSecret.Lock()
+	mock.calls.UpdateSecret = append(mock.calls.UpdateSecret, struct {
+		Ctx          context.Context
+		Id           OAuthClientID
+		SecretPrefix string
+		SecretHash   string
+		UpdateTime   time.Time
+	}{
+		Ctx:          ctx,
+		Id:           id,
+		SecretPrefix: secretPrefix,
+		SecretHash:   secretHash,
+		UpdateTime:   updateTime,
+	})
+	mock.lockUpdateSecret.Unlock()
+	return mock.UpdateSecretFunc(ctx, id, secretPrefix, secretHash, updateTime)
+}
+
+// UpdateSecretCalls returns all calls made to UpdateSecret.
+func (mock *OAuthClientStoreMock) UpdateSecretCalls() []struct {
+	Ctx          context.Context
+	Id           OAuthClientID
+	SecretPrefix string
+	SecretHash   string
+	UpdateTime   time.Time
+} {
+	mock.lockUpdateSecret.RLock()
+	defer mock.lockUpdateSecret.RUnlock()
+	return mock.calls.UpdateSecret
+}
+
+// Delete calls DeleteFunc.
+func (mock *OAuthClientStoreMock) Delete(ctx context.Context, id OAuthClientID) error {
+	if mock.DeleteFunc == nil {
+		panic("OAuthClientStoreMock.DeleteFunc: method is nil but OAuthClientStore.Delete was just called")
+	}
+	mock.lockDelete.Lock()
+	mock.calls.Delete = append(mock.calls.Delete, struct {
+		Ctx context.Context
+		Id  OAuthClientID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockDelete.Unlock()
+	return mock.DeleteFunc(ctx, id)
+}
+
+// DeleteCalls returns all calls made to Delete.
+func (mock *OAuthClientStoreMock) DeleteCalls() []struct {
+	Ctx context.Context
+	Id  OAuthClientID
+} {
+	mock.lockDelete.RLock()
+	defer mock.lockDelete.RUnlock()
+	return mock.calls.Delete
+}
+
+// Compile-time interface assertion.
+var _ OAuthGrantStore = (*OAuthGrantStoreMock)(nil)
+
+// OAuthGrantStoreMock is a mock implementation of OAuthGrantStore.
+type OAuthGrantStoreMock struct {
+	// CreateFunc mocks the Create method.
+	CreateFunc func(ctx context.Context, grant *OAuthGrant) error
+
+	// GetByIDFunc mocks the GetByID method.
+	GetByIDFunc func(ctx context.Context, id OAuthGrantID) (*OAuthGrant, error)
+
+	// GetByRefreshTokenHashFunc mocks the GetByRefreshTokenHash method.
+	GetByRefreshTokenHashFunc func(ctx context.Context, tokenHash string) (*OAuthGrant, error)
+
+	// ListByUserIDFunc mocks the ListByUserID method.
+	ListByUserIDFunc func(ctx context.Context, userID UserID) ([]*OAuthGrant, error)
+
+	// ListBySpaceIDFunc mocks the ListBySpaceID method.
+	ListBySpaceIDFunc func(ctx context.Context, spaceID string) ([]*OAuthGrant, error)
+
+	// UpdateFunc mocks the Update method.
+	UpdateFunc func(ctx context.Context, grant *OAuthGrant) error
+
+	// RevokeFunc mocks the Revoke method.
+	RevokeFunc func(ctx context.Context, id OAuthGrantID, revokedAt time.Time) error
+
+	// TouchLastUsedFunc mocks the TouchLastUsed method.
+	TouchLastUsedFunc func(ctx context.Context, id OAuthGrantID, lastUsedAt time.Time) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Create []struct {
+			Ctx   context.Context
+			Grant *OAuthGrant
+		}
+		GetByID []struct {
+			Ctx context.Context
+			Id  OAuthGrantID
+		}
+		GetByRefreshTokenHash []struct {
+			Ctx       context.Context
+			TokenHash string
+		}
+		ListByUserID []struct {
+			Ctx    context.Context
+			UserID UserID
+		}
+		ListBySpaceID []struct {
+			Ctx     context.Context
+			SpaceID string
+		}
+		Update []struct {
+			Ctx   context.Context
+			Grant *OAuthGrant
+		}
+		Revoke []struct {
+			Ctx       context.Context
+			Id        OAuthGrantID
+			RevokedAt time.Time
+		}
+		TouchLastUsed []struct {
+			Ctx        context.Context
+			Id         OAuthGrantID
+			LastUsedAt time.Time
+		}
+	}
+	lockCreate                sync.RWMutex
+	lockGetByID               sync.RWMutex
+	lockGetByRefreshTokenHash sync.RWMutex
+	lockListByUserID          sync.RWMutex
+	lockListBySpaceID         sync.RWMutex
+	lockUpdate                sync.RWMutex
+	lockRevoke                sync.RWMutex
+	lockTouchLastUsed         sync.RWMutex
+}
+
+// Create calls CreateFunc.
+func (mock *OAuthGrantStoreMock) Create(ctx context.Context, grant *OAuthGrant) error {
+	if mock.CreateFunc == nil {
+		panic("OAuthGrantStoreMock.CreateFunc: method is nil but OAuthGrantStore.Create was just called")
+	}
+	mock.lockCreate.Lock()
+	mock.calls.Create = append(mock.calls.Create, struct {
+		Ctx   context.Context
+		Grant *OAuthGrant
+	}{
+		Ctx:   ctx,
+		Grant: grant,
+	})
+	mock.lockCreate.Unlock()
+	return mock.CreateFunc(ctx, grant)
+}
+
+// CreateCalls returns all calls made to Create.
+func (mock *OAuthGrantStoreMock) CreateCalls() []struct {
+	Ctx   context.Context
+	Grant *OAuthGrant
+} {
+	mock.lockCreate.RLock()
+	defer mock.lockCreate.RUnlock()
+	return mock.calls.Create
+}
+
+// GetByID calls GetByIDFunc.
+func (mock *OAuthGrantStoreMock) GetByID(ctx context.Context, id OAuthGrantID) (*OAuthGrant, error) {
+	if mock.GetByIDFunc == nil {
+		panic("OAuthGrantStoreMock.GetByIDFunc: method is nil but OAuthGrantStore.GetByID was just called")
+	}
+	mock.lockGetByID.Lock()
+	mock.calls.GetByID = append(mock.calls.GetByID, struct {
+		Ctx context.Context
+		Id  OAuthGrantID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockGetByID.Unlock()
+	return mock.GetByIDFunc(ctx, id)
+}
+
+// GetByIDCalls returns all calls made to GetByID.
+func (mock *OAuthGrantStoreMock) GetByIDCalls() []struct {
+	Ctx context.Context
+	Id  OAuthGrantID
+} {
+	mock.lockGetByID.RLock()
+	defer mock.lockGetByID.RUnlock()
+	return mock.calls.GetByID
+}
+
+// GetByRefreshTokenHash calls GetByRefreshTokenHashFunc.
+func (mock *OAuthGrantStoreMock) GetByRefreshTokenHash(ctx context.Context, tokenHash string) (*OAuthGrant, error) {
+	if mock.GetByRefreshTokenHashFunc == nil {
+		panic("OAuthGrantStoreMock.GetByRefreshTokenHashFunc: method is nil but OAuthGrantStore.GetByRefreshTokenHash was just called")
+	}
+	mock.lockGetByRefreshTokenHash.Lock()
+	mock.calls.GetByRefreshTokenHash = append(mock.calls.GetByRefreshTokenHash, struct {
+		Ctx       context.Context
+		TokenHash string
+	}{
+		Ctx:       ctx,
+		TokenHash: tokenHash,
+	})
+	mock.lockGetByRefreshTokenHash.Unlock()
+	return mock.GetByRefreshTokenHashFunc(ctx, tokenHash)
+}
+
+// GetByRefreshTokenHashCalls returns all calls made to GetByRefreshTokenHash.
+func (mock *OAuthGrantStoreMock) GetByRefreshTokenHashCalls() []struct {
+	Ctx       context.Context
+	TokenHash string
+} {
+	mock.lockGetByRefreshTokenHash.RLock()
+	defer mock.lockGetByRefreshTokenHash.RUnlock()
+	return mock.calls.GetByRefreshTokenHash
+}
+
+// ListByUserID calls ListByUserIDFunc.
+func (mock *OAuthGrantStoreMock) ListByUserID(ctx context.Context, userID UserID) ([]*OAuthGrant, error) {
+	if mock.ListByUserIDFunc == nil {
+		panic("OAuthGrantStoreMock.ListByUserIDFunc: method is nil but OAuthGrantStore.ListByUserID was just called")
+	}
+	mock.lockListByUserID.Lock()
+	mock.calls.ListByUserID = append(mock.calls.ListByUserID, struct {
+		Ctx    context.Context
+		UserID UserID
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+	})
+	mock.lockListByUserID.Unlock()
+	return mock.ListByUserIDFunc(ctx, userID)
+}
+
+// ListByUserIDCalls returns all calls made to ListByUserID.
+func (mock *OAuthGrantStoreMock) ListByUserIDCalls() []struct {
+	Ctx    context.Context
+	UserID UserID
+} {
+	mock.lockListByUserID.RLock()
+	defer mock.lockListByUserID.RUnlock()
+	return mock.calls.ListByUserID
+}
+
+// ListBySpaceID calls ListBySpaceIDFunc.
+func (mock *OAuthGrantStoreMock) ListBySpaceID(ctx context.Context, spaceID string) ([]*OAuthGrant, error) {
+	if mock.ListBySpaceIDFunc == nil {
+		panic("OAuthGrantStoreMock.ListBySpaceIDFunc: method is nil but OAuthGrantStore.ListBySpaceID was just called")
+	}
+	mock.lockListBySpaceID.Lock()
+	mock.calls.ListBySpaceID = append(mock.calls.ListBySpaceID, struct {
+		Ctx     context.Context
+		SpaceID string
+	}{
+		Ctx:     ctx,
+		SpaceID: spaceID,
+	})
+	mock.lockListBySpaceID.Unlock()
+	return mock.ListBySpaceIDFunc(ctx, spaceID)
+}
+
+// ListBySpaceIDCalls returns all calls made to ListBySpaceID.
+func (mock *OAuthGrantStoreMock) ListBySpaceIDCalls() []struct {
+	Ctx     context.Context
+	SpaceID string
+} {
+	mock.lockListBySpaceID.RLock()
+	defer mock.lockListBySpaceID.RUnlock()
+	return mock.calls.ListBySpaceID
+}
+
+// Update calls UpdateFunc.
+func (mock *OAuthGrantStoreMock) Update(ctx context.Context, grant *OAuthGrant) error {
+	if mock.UpdateFunc == nil {
+		panic("OAuthGrantStoreMock.UpdateFunc: method is nil but OAuthGrantStore.Update was just called")
+	}
+	mock.lockUpdate.Lock()
+	mock.calls.Update = append(mock.calls.Update, struct {
+		Ctx   context.Context
+		Grant *OAuthGrant
+	}{
+		Ctx:   ctx,
+		Grant: grant,
+	})
+	mock.lockUpdate.Unlock()
+	return mock.UpdateFunc(ctx, grant)
+}
+
+// UpdateCalls returns all calls made to Update.
+func (mock *OAuthGrantStoreMock) UpdateCalls() []struct {
+	Ctx   context.Context
+	Grant *OAuthGrant
+} {
+	mock.lockUpdate.RLock()
+	defer mock.lockUpdate.RUnlock()
+	return mock.calls.Update
+}
+
+// Revoke calls RevokeFunc.
+func (mock *OAuthGrantStoreMock) Revoke(ctx context.Context, id OAuthGrantID, revokedAt time.Time) error {
+	if mock.RevokeFunc == nil {
+		panic("OAuthGrantStoreMock.RevokeFunc: method is nil but OAuthGrantStore.Revoke was just called")
+	}
+	mock.lockRevoke.Lock()
+	mock.calls.Revoke = append(mock.calls.Revoke, struct {
+		Ctx       context.Context
+		Id        OAuthGrantID
+		RevokedAt time.Time
+	}{
+		Ctx:       ctx,
+		Id:        id,
+		RevokedAt: revokedAt,
+	})
+	mock.lockRevoke.Unlock()
+	return mock.RevokeFunc(ctx, id, revokedAt)
+}
+
+// RevokeCalls returns all calls made to Revoke.
+func (mock *OAuthGrantStoreMock) RevokeCalls() []struct {
+	Ctx       context.Context
+	Id        OAuthGrantID
+	RevokedAt time.Time
+} {
+	mock.lockRevoke.RLock()
+	defer mock.lockRevoke.RUnlock()
+	return mock.calls.Revoke
+}
+
+// TouchLastUsed calls TouchLastUsedFunc.
+func (mock *OAuthGrantStoreMock) TouchLastUsed(ctx context.Context, id OAuthGrantID, lastUsedAt time.Time) error {
+	if mock.TouchLastUsedFunc == nil {
+		panic("OAuthGrantStoreMock.TouchLastUsedFunc: method is nil but OAuthGrantStore.TouchLastUsed was just called")
+	}
+	mock.lockTouchLastUsed.Lock()
+	mock.calls.TouchLastUsed = append(mock.calls.TouchLastUsed, struct {
+		Ctx        context.Context
+		Id         OAuthGrantID
+		LastUsedAt time.Time
+	}{
+		Ctx:        ctx,
+		Id:         id,
+		LastUsedAt: lastUsedAt,
+	})
+	mock.lockTouchLastUsed.Unlock()
+	return mock.TouchLastUsedFunc(ctx, id, lastUsedAt)
+}
+
+// TouchLastUsedCalls returns all calls made to TouchLastUsed.
+func (mock *OAuthGrantStoreMock) TouchLastUsedCalls() []struct {
+	Ctx        context.Context
+	Id         OAuthGrantID
+	LastUsedAt time.Time
+} {
+	mock.lockTouchLastUsed.RLock()
+	defer mock.lockTouchLastUsed.RUnlock()
+	return mock.calls.TouchLastUsed
+}
+
+// Compile-time interface assertion.
+var _ OAuthAuthCodeStore = (*OAuthAuthCodeStoreMock)(nil)
+
+// OAuthAuthCodeStoreMock is a mock implementation of OAuthAuthCodeStore.
+type OAuthAuthCodeStoreMock struct {
+	// CreateFunc mocks the Create method.
+	CreateFunc func(ctx context.Context, code *OAuthAuthCode) error
+
+	// ConsumeHandoffFunc mocks the ConsumeHandoff method.
+	ConsumeHandoffFunc func(ctx context.Context, handoffHash string, newCodeHash string, codeExpiresAt time.Time, now time.Time) (*OAuthAuthCode, error)
+
+	// GetByCodeHashFunc mocks the GetByCodeHash method.
+	GetByCodeHashFunc func(ctx context.Context, codeHash string) (*OAuthAuthCode, error)
+
+	// MarkConsumedFunc mocks the MarkConsumed method.
+	MarkConsumedFunc func(ctx context.Context, id OAuthAuthCodeID, consumedAt time.Time) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Create []struct {
+			Ctx  context.Context
+			Code *OAuthAuthCode
+		}
+		ConsumeHandoff []struct {
+			Ctx           context.Context
+			HandoffHash   string
+			NewCodeHash   string
+			CodeExpiresAt time.Time
+			Now           time.Time
+		}
+		GetByCodeHash []struct {
+			Ctx      context.Context
+			CodeHash string
+		}
+		MarkConsumed []struct {
+			Ctx        context.Context
+			Id         OAuthAuthCodeID
+			ConsumedAt time.Time
+		}
+	}
+	lockCreate         sync.RWMutex
+	lockConsumeHandoff sync.RWMutex
+	lockGetByCodeHash  sync.RWMutex
+	lockMarkConsumed   sync.RWMutex
+}
+
+// Create calls CreateFunc.
+func (mock *OAuthAuthCodeStoreMock) Create(ctx context.Context, code *OAuthAuthCode) error {
+	if mock.CreateFunc == nil {
+		panic("OAuthAuthCodeStoreMock.CreateFunc: method is nil but OAuthAuthCodeStore.Create was just called")
+	}
+	mock.lockCreate.Lock()
+	mock.calls.Create = append(mock.calls.Create, struct {
+		Ctx  context.Context
+		Code *OAuthAuthCode
+	}{
+		Ctx:  ctx,
+		Code: code,
+	})
+	mock.lockCreate.Unlock()
+	return mock.CreateFunc(ctx, code)
+}
+
+// CreateCalls returns all calls made to Create.
+func (mock *OAuthAuthCodeStoreMock) CreateCalls() []struct {
+	Ctx  context.Context
+	Code *OAuthAuthCode
+} {
+	mock.lockCreate.RLock()
+	defer mock.lockCreate.RUnlock()
+	return mock.calls.Create
+}
+
+// ConsumeHandoff calls ConsumeHandoffFunc.
+func (mock *OAuthAuthCodeStoreMock) ConsumeHandoff(ctx context.Context, handoffHash string, newCodeHash string, codeExpiresAt time.Time, now time.Time) (*OAuthAuthCode, error) {
+	if mock.ConsumeHandoffFunc == nil {
+		panic("OAuthAuthCodeStoreMock.ConsumeHandoffFunc: method is nil but OAuthAuthCodeStore.ConsumeHandoff was just called")
+	}
+	mock.lockConsumeHandoff.Lock()
+	mock.calls.ConsumeHandoff = append(mock.calls.ConsumeHandoff, struct {
+		Ctx           context.Context
+		HandoffHash   string
+		NewCodeHash   string
+		CodeExpiresAt time.Time
+		Now           time.Time
+	}{
+		Ctx:           ctx,
+		HandoffHash:   handoffHash,
+		NewCodeHash:   newCodeHash,
+		CodeExpiresAt: codeExpiresAt,
+		Now:           now,
+	})
+	mock.lockConsumeHandoff.Unlock()
+	return mock.ConsumeHandoffFunc(ctx, handoffHash, newCodeHash, codeExpiresAt, now)
+}
+
+// ConsumeHandoffCalls returns all calls made to ConsumeHandoff.
+func (mock *OAuthAuthCodeStoreMock) ConsumeHandoffCalls() []struct {
+	Ctx           context.Context
+	HandoffHash   string
+	NewCodeHash   string
+	CodeExpiresAt time.Time
+	Now           time.Time
+} {
+	mock.lockConsumeHandoff.RLock()
+	defer mock.lockConsumeHandoff.RUnlock()
+	return mock.calls.ConsumeHandoff
+}
+
+// GetByCodeHash calls GetByCodeHashFunc.
+func (mock *OAuthAuthCodeStoreMock) GetByCodeHash(ctx context.Context, codeHash string) (*OAuthAuthCode, error) {
+	if mock.GetByCodeHashFunc == nil {
+		panic("OAuthAuthCodeStoreMock.GetByCodeHashFunc: method is nil but OAuthAuthCodeStore.GetByCodeHash was just called")
+	}
+	mock.lockGetByCodeHash.Lock()
+	mock.calls.GetByCodeHash = append(mock.calls.GetByCodeHash, struct {
+		Ctx      context.Context
+		CodeHash string
+	}{
+		Ctx:      ctx,
+		CodeHash: codeHash,
+	})
+	mock.lockGetByCodeHash.Unlock()
+	return mock.GetByCodeHashFunc(ctx, codeHash)
+}
+
+// GetByCodeHashCalls returns all calls made to GetByCodeHash.
+func (mock *OAuthAuthCodeStoreMock) GetByCodeHashCalls() []struct {
+	Ctx      context.Context
+	CodeHash string
+} {
+	mock.lockGetByCodeHash.RLock()
+	defer mock.lockGetByCodeHash.RUnlock()
+	return mock.calls.GetByCodeHash
+}
+
+// MarkConsumed calls MarkConsumedFunc.
+func (mock *OAuthAuthCodeStoreMock) MarkConsumed(ctx context.Context, id OAuthAuthCodeID, consumedAt time.Time) error {
+	if mock.MarkConsumedFunc == nil {
+		panic("OAuthAuthCodeStoreMock.MarkConsumedFunc: method is nil but OAuthAuthCodeStore.MarkConsumed was just called")
+	}
+	mock.lockMarkConsumed.Lock()
+	mock.calls.MarkConsumed = append(mock.calls.MarkConsumed, struct {
+		Ctx        context.Context
+		Id         OAuthAuthCodeID
+		ConsumedAt time.Time
+	}{
+		Ctx:        ctx,
+		Id:         id,
+		ConsumedAt: consumedAt,
+	})
+	mock.lockMarkConsumed.Unlock()
+	return mock.MarkConsumedFunc(ctx, id, consumedAt)
+}
+
+// MarkConsumedCalls returns all calls made to MarkConsumed.
+func (mock *OAuthAuthCodeStoreMock) MarkConsumedCalls() []struct {
+	Ctx        context.Context
+	Id         OAuthAuthCodeID
+	ConsumedAt time.Time
+} {
+	mock.lockMarkConsumed.RLock()
+	defer mock.lockMarkConsumed.RUnlock()
+	return mock.calls.MarkConsumed
+}
+
+// Compile-time interface assertion.
+var _ OAuthAccessTokenStore = (*OAuthAccessTokenStoreMock)(nil)
+
+// OAuthAccessTokenStoreMock is a mock implementation of OAuthAccessTokenStore.
+type OAuthAccessTokenStoreMock struct {
+	// CreateFunc mocks the Create method.
+	CreateFunc func(ctx context.Context, token *OAuthAccessToken) error
+
+	// GetByHashFunc mocks the GetByHash method.
+	GetByHashFunc func(ctx context.Context, tokenHash string) (*OAuthAccessToken, error)
+
+	// RevokeByTokenHashFunc mocks the RevokeByTokenHash method.
+	RevokeByTokenHashFunc func(ctx context.Context, tokenHash string, revokedAt time.Time) error
+
+	// RevokeByGrantIDFunc mocks the RevokeByGrantID method.
+	RevokeByGrantIDFunc func(ctx context.Context, grantID OAuthGrantID, revokedAt time.Time) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Create []struct {
+			Ctx   context.Context
+			Token *OAuthAccessToken
+		}
+		GetByHash []struct {
+			Ctx       context.Context
+			TokenHash string
+		}
+		RevokeByTokenHash []struct {
+			Ctx       context.Context
+			TokenHash string
+			RevokedAt time.Time
+		}
+		RevokeByGrantID []struct {
+			Ctx       context.Context
+			GrantID   OAuthGrantID
+			RevokedAt time.Time
+		}
+	}
+	lockCreate            sync.RWMutex
+	lockGetByHash         sync.RWMutex
+	lockRevokeByTokenHash sync.RWMutex
+	lockRevokeByGrantID   sync.RWMutex
+}
+
+// Create calls CreateFunc.
+func (mock *OAuthAccessTokenStoreMock) Create(ctx context.Context, token *OAuthAccessToken) error {
+	if mock.CreateFunc == nil {
+		panic("OAuthAccessTokenStoreMock.CreateFunc: method is nil but OAuthAccessTokenStore.Create was just called")
+	}
+	mock.lockCreate.Lock()
+	mock.calls.Create = append(mock.calls.Create, struct {
+		Ctx   context.Context
+		Token *OAuthAccessToken
+	}{
+		Ctx:   ctx,
+		Token: token,
+	})
+	mock.lockCreate.Unlock()
+	return mock.CreateFunc(ctx, token)
+}
+
+// CreateCalls returns all calls made to Create.
+func (mock *OAuthAccessTokenStoreMock) CreateCalls() []struct {
+	Ctx   context.Context
+	Token *OAuthAccessToken
+} {
+	mock.lockCreate.RLock()
+	defer mock.lockCreate.RUnlock()
+	return mock.calls.Create
+}
+
+// GetByHash calls GetByHashFunc.
+func (mock *OAuthAccessTokenStoreMock) GetByHash(ctx context.Context, tokenHash string) (*OAuthAccessToken, error) {
+	if mock.GetByHashFunc == nil {
+		panic("OAuthAccessTokenStoreMock.GetByHashFunc: method is nil but OAuthAccessTokenStore.GetByHash was just called")
+	}
+	mock.lockGetByHash.Lock()
+	mock.calls.GetByHash = append(mock.calls.GetByHash, struct {
+		Ctx       context.Context
+		TokenHash string
+	}{
+		Ctx:       ctx,
+		TokenHash: tokenHash,
+	})
+	mock.lockGetByHash.Unlock()
+	return mock.GetByHashFunc(ctx, tokenHash)
+}
+
+// GetByHashCalls returns all calls made to GetByHash.
+func (mock *OAuthAccessTokenStoreMock) GetByHashCalls() []struct {
+	Ctx       context.Context
+	TokenHash string
+} {
+	mock.lockGetByHash.RLock()
+	defer mock.lockGetByHash.RUnlock()
+	return mock.calls.GetByHash
+}
+
+// RevokeByTokenHash calls RevokeByTokenHashFunc.
+func (mock *OAuthAccessTokenStoreMock) RevokeByTokenHash(ctx context.Context, tokenHash string, revokedAt time.Time) error {
+	if mock.RevokeByTokenHashFunc == nil {
+		panic("OAuthAccessTokenStoreMock.RevokeByTokenHashFunc: method is nil but OAuthAccessTokenStore.RevokeByTokenHash was just called")
+	}
+	mock.lockRevokeByTokenHash.Lock()
+	mock.calls.RevokeByTokenHash = append(mock.calls.RevokeByTokenHash, struct {
+		Ctx       context.Context
+		TokenHash string
+		RevokedAt time.Time
+	}{
+		Ctx:       ctx,
+		TokenHash: tokenHash,
+		RevokedAt: revokedAt,
+	})
+	mock.lockRevokeByTokenHash.Unlock()
+	return mock.RevokeByTokenHashFunc(ctx, tokenHash, revokedAt)
+}
+
+// RevokeByTokenHashCalls returns all calls made to RevokeByTokenHash.
+func (mock *OAuthAccessTokenStoreMock) RevokeByTokenHashCalls() []struct {
+	Ctx       context.Context
+	TokenHash string
+	RevokedAt time.Time
+} {
+	mock.lockRevokeByTokenHash.RLock()
+	defer mock.lockRevokeByTokenHash.RUnlock()
+	return mock.calls.RevokeByTokenHash
+}
+
+// RevokeByGrantID calls RevokeByGrantIDFunc.
+func (mock *OAuthAccessTokenStoreMock) RevokeByGrantID(ctx context.Context, grantID OAuthGrantID, revokedAt time.Time) error {
+	if mock.RevokeByGrantIDFunc == nil {
+		panic("OAuthAccessTokenStoreMock.RevokeByGrantIDFunc: method is nil but OAuthAccessTokenStore.RevokeByGrantID was just called")
+	}
+	mock.lockRevokeByGrantID.Lock()
+	mock.calls.RevokeByGrantID = append(mock.calls.RevokeByGrantID, struct {
+		Ctx       context.Context
+		GrantID   OAuthGrantID
+		RevokedAt time.Time
+	}{
+		Ctx:       ctx,
+		GrantID:   grantID,
+		RevokedAt: revokedAt,
+	})
+	mock.lockRevokeByGrantID.Unlock()
+	return mock.RevokeByGrantIDFunc(ctx, grantID, revokedAt)
+}
+
+// RevokeByGrantIDCalls returns all calls made to RevokeByGrantID.
+func (mock *OAuthAccessTokenStoreMock) RevokeByGrantIDCalls() []struct {
+	Ctx       context.Context
+	GrantID   OAuthGrantID
+	RevokedAt time.Time
+} {
+	mock.lockRevokeByGrantID.RLock()
+	defer mock.lockRevokeByGrantID.RUnlock()
+	return mock.calls.RevokeByGrantID
+}

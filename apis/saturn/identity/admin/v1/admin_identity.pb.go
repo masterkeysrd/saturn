@@ -10,6 +10,8 @@ import (
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -1055,11 +1057,496 @@ func (x *UnlockUserRequest) GetUserId() string {
 	return ""
 }
 
+// OAuthClient represents a registered OAuth 2.1 client in the admin context.
+type OAuthClient struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The client's unique identifier (`oac_<ksuid>` or HTTPS CIMD URL).
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Output only. Optional workspace identifier (`spc_<ksuid>`) when workspace-scoped.
+	SpaceId string `protobuf:"bytes,2,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Required. Human-readable application display name.
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional. Description of the OAuth application.
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// Output only. Display prefix of the client secret when confidential.
+	SecretPrefix string `protobuf:"bytes,5,opt,name=secret_prefix,json=secretPrefix,proto3" json:"secret_prefix,omitempty"`
+	// Output only. Full client secret (`sat_ocs_...`). Populated once on create or secret rotation.
+	RawSecret string `protobuf:"bytes,6,opt,name=raw_secret,json=rawSecret,proto3" json:"raw_secret,omitempty"`
+	// Required. Registered redirect URI rules (HTTPS exact, HTTPS /* subpath prefix, or RFC 8252 loopback).
+	RedirectUris []string `protobuf:"bytes,7,rep,name=redirect_uris,json=redirectUris,proto3" json:"redirect_uris,omitempty"`
+	// Required. Maximum scope ceiling permitted for grants issued to this client.
+	AllowedScopes []string `protobuf:"bytes,8,rep,name=allowed_scopes,json=allowedScopes,proto3" json:"allowed_scopes,omitempty"`
+	// Optional. Token endpoint client auth method (`client_secret_basic`, `client_secret_post`, `none`).
+	TokenEndpointAuthMethod string `protobuf:"bytes,9,opt,name=token_endpoint_auth_method,json=tokenEndpointAuthMethod,proto3" json:"token_endpoint_auth_method,omitempty"`
+	// Optional. Refresh token policy (`rotate` or `persistent`).
+	RefreshTokenPolicy string `protobuf:"bytes,10,opt,name=refresh_token_policy,json=refreshTokenPolicy,proto3" json:"refresh_token_policy,omitempty"`
+	// Output only. Client registration source (`admin`, `space`, `dcr`, `cimd`).
+	RegistrationSource string `protobuf:"bytes,11,opt,name=registration_source,json=registrationSource,proto3" json:"registration_source,omitempty"`
+	// Output only. Timestamp when the OAuth client was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Output only. Timestamp when the OAuth client was last updated.
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OAuthClient) Reset() {
+	*x = OAuthClient{}
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OAuthClient) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OAuthClient) ProtoMessage() {}
+
+func (x *OAuthClient) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OAuthClient.ProtoReflect.Descriptor instead.
+func (*OAuthClient) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *OAuthClient) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *OAuthClient) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+func (x *OAuthClient) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *OAuthClient) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *OAuthClient) GetSecretPrefix() string {
+	if x != nil {
+		return x.SecretPrefix
+	}
+	return ""
+}
+
+func (x *OAuthClient) GetRawSecret() string {
+	if x != nil {
+		return x.RawSecret
+	}
+	return ""
+}
+
+func (x *OAuthClient) GetRedirectUris() []string {
+	if x != nil {
+		return x.RedirectUris
+	}
+	return nil
+}
+
+func (x *OAuthClient) GetAllowedScopes() []string {
+	if x != nil {
+		return x.AllowedScopes
+	}
+	return nil
+}
+
+func (x *OAuthClient) GetTokenEndpointAuthMethod() string {
+	if x != nil {
+		return x.TokenEndpointAuthMethod
+	}
+	return ""
+}
+
+func (x *OAuthClient) GetRefreshTokenPolicy() string {
+	if x != nil {
+		return x.RefreshTokenPolicy
+	}
+	return ""
+}
+
+func (x *OAuthClient) GetRegistrationSource() string {
+	if x != nil {
+		return x.RegistrationSource
+	}
+	return ""
+}
+
+func (x *OAuthClient) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *OAuthClient) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+// Request message for AdminIdentity.CreateOAuthClient.
+type CreateOAuthClientRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The OAuth client resource to create.
+	OauthClient   *OAuthClient `protobuf:"bytes,1,opt,name=oauth_client,json=oauthClient,proto3" json:"oauth_client,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateOAuthClientRequest) Reset() {
+	*x = CreateOAuthClientRequest{}
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateOAuthClientRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateOAuthClientRequest) ProtoMessage() {}
+
+func (x *CreateOAuthClientRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateOAuthClientRequest.ProtoReflect.Descriptor instead.
+func (*CreateOAuthClientRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CreateOAuthClientRequest) GetOauthClient() *OAuthClient {
+	if x != nil {
+		return x.OauthClient
+	}
+	return nil
+}
+
+// Request message for AdminIdentity.GetOAuthClient.
+type GetOAuthClientRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the OAuth client.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOAuthClientRequest) Reset() {
+	*x = GetOAuthClientRequest{}
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOAuthClientRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOAuthClientRequest) ProtoMessage() {}
+
+func (x *GetOAuthClientRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOAuthClientRequest.ProtoReflect.Descriptor instead.
+func (*GetOAuthClientRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetOAuthClientRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+// Request message for AdminIdentity.ListOAuthClients.
+type ListOAuthClientsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOAuthClientsRequest) Reset() {
+	*x = ListOAuthClientsRequest{}
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOAuthClientsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOAuthClientsRequest) ProtoMessage() {}
+
+func (x *ListOAuthClientsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOAuthClientsRequest.ProtoReflect.Descriptor instead.
+func (*ListOAuthClientsRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{17}
+}
+
+// Response message for AdminIdentity.ListOAuthClients.
+type ListOAuthClientsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. List of instance-wide, DCR, and CIMD OAuth clients.
+	OauthClients  []*OAuthClient `protobuf:"bytes,1,rep,name=oauth_clients,json=oauthClients,proto3" json:"oauth_clients,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOAuthClientsResponse) Reset() {
+	*x = ListOAuthClientsResponse{}
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOAuthClientsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOAuthClientsResponse) ProtoMessage() {}
+
+func (x *ListOAuthClientsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOAuthClientsResponse.ProtoReflect.Descriptor instead.
+func (*ListOAuthClientsResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ListOAuthClientsResponse) GetOauthClients() []*OAuthClient {
+	if x != nil {
+		return x.OauthClients
+	}
+	return nil
+}
+
+// Request message for AdminIdentity.UpdateOAuthClient.
+type UpdateOAuthClientRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the OAuth client to update.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Required. Updated OAuth client fields.
+	OauthClient *OAuthClient `protobuf:"bytes,2,opt,name=oauth_client,json=oauthClient,proto3" json:"oauth_client,omitempty"`
+	// Required. Field mask specifying which fields to update.
+	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,3,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateOAuthClientRequest) Reset() {
+	*x = UpdateOAuthClientRequest{}
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateOAuthClientRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateOAuthClientRequest) ProtoMessage() {}
+
+func (x *UpdateOAuthClientRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateOAuthClientRequest.ProtoReflect.Descriptor instead.
+func (*UpdateOAuthClientRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *UpdateOAuthClientRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpdateOAuthClientRequest) GetOauthClient() *OAuthClient {
+	if x != nil {
+		return x.OauthClient
+	}
+	return nil
+}
+
+func (x *UpdateOAuthClientRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.UpdateMask
+	}
+	return nil
+}
+
+// Request message for AdminIdentity.RotateOAuthClientSecret.
+type RotateOAuthClientSecretRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the OAuth client whose secret to rotate.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RotateOAuthClientSecretRequest) Reset() {
+	*x = RotateOAuthClientSecretRequest{}
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateOAuthClientSecretRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateOAuthClientSecretRequest) ProtoMessage() {}
+
+func (x *RotateOAuthClientSecretRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateOAuthClientSecretRequest.ProtoReflect.Descriptor instead.
+func (*RotateOAuthClientSecretRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *RotateOAuthClientSecretRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+// Request message for AdminIdentity.DeleteOAuthClient.
+type DeleteOAuthClientRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the OAuth client to delete.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteOAuthClientRequest) Reset() {
+	*x = DeleteOAuthClientRequest{}
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteOAuthClientRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteOAuthClientRequest) ProtoMessage() {}
+
+func (x *DeleteOAuthClientRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteOAuthClientRequest.ProtoReflect.Descriptor instead.
+func (*DeleteOAuthClientRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *DeleteOAuthClientRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
 var File_saturn_identity_admin_v1_admin_identity_proto protoreflect.FileDescriptor
 
 const file_saturn_identity_admin_v1_admin_identity_proto_rawDesc = "" +
 	"\n" +
-	"-saturn/identity/admin/v1/admin_identity.proto\x12\x18saturn.identity.admin.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xda\x02\n" +
+	"-saturn/identity/admin/v1/admin_identity.proto\x12\x18saturn.identity.admin.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xda\x02\n" +
 	"\x10ListUsersRequest\x12 \n" +
 	"\tpage_size\x18\x01 \x01(\x05B\x03\xe0A\x01R\bpageSize\x12+\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x01R\rnextPageToken\x12a\n" +
@@ -1134,12 +1621,45 @@ const file_saturn_identity_admin_v1_admin_identity_proto_rawDesc = "" +
 	"\n" +
 	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"1\n" +
 	"\x11UnlockUserRequest\x12\x1c\n" +
-	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06userId*Z\n" +
+	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06userId\"\xd9\x04\n" +
+	"\vOAuthClient\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
+	"\bspace_id\x18\x02 \x01(\tB\x03\xe0A\x03R\aspaceId\x12\x17\n" +
+	"\x04name\x18\x03 \x01(\tB\x03\xe0A\x02R\x04name\x12%\n" +
+	"\vdescription\x18\x04 \x01(\tB\x03\xe0A\x01R\vdescription\x12(\n" +
+	"\rsecret_prefix\x18\x05 \x01(\tB\x03\xe0A\x03R\fsecretPrefix\x12\"\n" +
+	"\n" +
+	"raw_secret\x18\x06 \x01(\tB\x03\xe0A\x03R\trawSecret\x12(\n" +
+	"\rredirect_uris\x18\a \x03(\tB\x03\xe0A\x02R\fredirectUris\x12*\n" +
+	"\x0eallowed_scopes\x18\b \x03(\tB\x03\xe0A\x02R\rallowedScopes\x12@\n" +
+	"\x1atoken_endpoint_auth_method\x18\t \x01(\tB\x03\xe0A\x01R\x17tokenEndpointAuthMethod\x125\n" +
+	"\x14refresh_token_policy\x18\n" +
+	" \x01(\tB\x03\xe0A\x01R\x12refreshTokenPolicy\x124\n" +
+	"\x13registration_source\x18\v \x01(\tB\x03\xe0A\x03R\x12registrationSource\x12@\n" +
+	"\vcreate_time\x18\f \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\x12@\n" +
+	"\vupdate_time\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"updateTime\"i\n" +
+	"\x18CreateOAuthClientRequest\x12M\n" +
+	"\foauth_client\x18\x01 \x01(\v2%.saturn.identity.admin.v1.OAuthClientB\x03\xe0A\x02R\voauthClient\",\n" +
+	"\x15GetOAuthClientRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\x19\n" +
+	"\x17ListOAuthClientsRequest\"k\n" +
+	"\x18ListOAuthClientsResponse\x12O\n" +
+	"\roauth_clients\x18\x01 \x03(\v2%.saturn.identity.admin.v1.OAuthClientB\x03\xe0A\x03R\foauthClients\"\xc0\x01\n" +
+	"\x18UpdateOAuthClientRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12M\n" +
+	"\foauth_client\x18\x02 \x01(\v2%.saturn.identity.admin.v1.OAuthClientB\x03\xe0A\x02R\voauthClient\x12@\n" +
+	"\vupdate_mask\x18\x03 \x01(\v2\x1a.google.protobuf.FieldMaskB\x03\xe0A\x02R\n" +
+	"updateMask\"5\n" +
+	"\x1eRotateOAuthClientSecretRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"/\n" +
+	"\x18DeleteOAuthClientRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id*Z\n" +
 	"\vAccessLevel\x12\x1c\n" +
 	"\x18ACCESS_LEVEL_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11ACCESS_LEVEL_USER\x10\x01\x12\x16\n" +
-	"\x12ACCESS_LEVEL_ADMIN\x10\x022\xca\n" +
-	"\n" +
+	"\x12ACCESS_LEVEL_ADMIN\x10\x022\x8f\x13\n" +
 	"\rAdminIdentity\x12\x86\x01\n" +
 	"\tListUsers\x12*.saturn.identity.admin.v1.ListUsersRequest\x1a+.saturn.identity.admin.v1.ListUsersResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/admin/identity/users\x12\x9c\x01\n" +
 	"\vApproveUser\x12,.saturn.identity.admin.v1.ApproveUserRequest\x1a\x1e.saturn.identity.admin.v1.User\"?\xdaA\auser_id\x82\xd3\xe4\x93\x02/:\x01*\"*/v1/admin/identity/users/{user_id}:approve\x12\x99\x01\n" +
@@ -1150,7 +1670,13 @@ const file_saturn_identity_admin_v1_admin_identity_proto_rawDesc = "" +
 	"\x12ListSecurityEvents\x123.saturn.identity.admin.v1.ListSecurityEventsRequest\x1a4.saturn.identity.admin.v1.ListSecurityEventsResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/v1/admin/identity/security-events\x12\xb8\x01\n" +
 	"\rResetPassword\x12..saturn.identity.admin.v1.ResetPasswordRequest\x1a/.saturn.identity.admin.v1.ResetPasswordResponse\"F\xdaA\auser_id\x82\xd3\xe4\x93\x026:\x01*\"1/v1/admin/identity/users/{user_id}:reset-password\x12\x99\x01\n" +
 	"\n" +
-	"UnlockUser\x12+.saturn.identity.admin.v1.UnlockUserRequest\x1a\x1e.saturn.identity.admin.v1.User\">\xdaA\auser_id\x82\xd3\xe4\x93\x02.:\x01*\")/v1/admin/identity/users/{user_id}:unlockBNZLgithub.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1;adminidentityv1b\x06proto3"
+	"UnlockUser\x12+.saturn.identity.admin.v1.UnlockUserRequest\x1a\x1e.saturn.identity.admin.v1.User\">\xdaA\auser_id\x82\xd3\xe4\x93\x02.:\x01*\")/v1/admin/identity/users/{user_id}:unlock\x12\xb5\x01\n" +
+	"\x11CreateOAuthClient\x122.saturn.identity.admin.v1.CreateOAuthClientRequest\x1a%.saturn.identity.admin.v1.OAuthClient\"E\xdaA\foauth_client\x82\xd3\xe4\x93\x020:\foauth_client\" /v1/admin/identity/oauth-clients\x12\x9c\x01\n" +
+	"\x0eGetOAuthClient\x12/.saturn.identity.admin.v1.GetOAuthClientRequest\x1a%.saturn.identity.admin.v1.OAuthClient\"2\xdaA\x02id\x82\xd3\xe4\x93\x02'\x12%/v1/admin/identity/oauth-clients/{id}\x12\xa3\x01\n" +
+	"\x10ListOAuthClients\x121.saturn.identity.admin.v1.ListOAuthClientsRequest\x1a2.saturn.identity.admin.v1.ListOAuthClientsResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /v1/admin/identity/oauth-clients\x12\xc9\x01\n" +
+	"\x11UpdateOAuthClient\x122.saturn.identity.admin.v1.UpdateOAuthClientRequest\x1a%.saturn.identity.admin.v1.OAuthClient\"Y\xdaA\x1bid,oauth_client,update_mask\x82\xd3\xe4\x93\x025:\foauth_client2%/v1/admin/identity/oauth-clients/{id}\x12\xbf\x01\n" +
+	"\x17RotateOAuthClientSecret\x128.saturn.identity.admin.v1.RotateOAuthClientSecretRequest\x1a%.saturn.identity.admin.v1.OAuthClient\"C\xdaA\x02id\x82\xd3\xe4\x93\x028:\x01*\"3/v1/admin/identity/oauth-clients/{id}:rotate-secret\x12\xb7\x01\n" +
+	"\x11DeleteOAuthClient\x122.saturn.identity.admin.v1.DeleteOAuthClientRequest\x1a\x16.google.protobuf.Empty\"V\xdaA\x02id\x82\xd3\xe4\x93\x02KZ'*%/v1/admin/identity/oauth-clients/{id}* /v1/admin/identity/oauth-clientsBNZLgithub.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1;adminidentityv1b\x06proto3"
 
 var (
 	file_saturn_identity_admin_v1_admin_identity_proto_rawDescOnce sync.Once
@@ -1165,58 +1691,86 @@ func file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP() []byte {
 }
 
 var file_saturn_identity_admin_v1_admin_identity_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_saturn_identity_admin_v1_admin_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_saturn_identity_admin_v1_admin_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_saturn_identity_admin_v1_admin_identity_proto_goTypes = []any{
-	(AccessLevel)(0),                   // 0: saturn.identity.admin.v1.AccessLevel
-	(ListUsersRequest_StatusFilter)(0), // 1: saturn.identity.admin.v1.ListUsersRequest.StatusFilter
-	(*ListUsersRequest)(nil),           // 2: saturn.identity.admin.v1.ListUsersRequest
-	(*ListUsersResponse)(nil),          // 3: saturn.identity.admin.v1.ListUsersResponse
-	(*ApproveUserRequest)(nil),         // 4: saturn.identity.admin.v1.ApproveUserRequest
-	(*RejectUserRequest)(nil),          // 5: saturn.identity.admin.v1.RejectUserRequest
-	(*UpdateUserRoleRequest)(nil),      // 6: saturn.identity.admin.v1.UpdateUserRoleRequest
-	(*RevokeAllSessionsRequest)(nil),   // 7: saturn.identity.admin.v1.RevokeAllSessionsRequest
-	(*RevokeAllSessionsResponse)(nil),  // 8: saturn.identity.admin.v1.RevokeAllSessionsResponse
-	(*User)(nil),                       // 9: saturn.identity.admin.v1.User
-	(*SecurityEvent)(nil),              // 10: saturn.identity.admin.v1.SecurityEvent
-	(*ListSecurityEventsRequest)(nil),  // 11: saturn.identity.admin.v1.ListSecurityEventsRequest
-	(*ListSecurityEventsResponse)(nil), // 12: saturn.identity.admin.v1.ListSecurityEventsResponse
-	(*ResetPasswordRequest)(nil),       // 13: saturn.identity.admin.v1.ResetPasswordRequest
-	(*ResetPasswordResponse)(nil),      // 14: saturn.identity.admin.v1.ResetPasswordResponse
-	(*UnlockUserRequest)(nil),          // 15: saturn.identity.admin.v1.UnlockUserRequest
-	(*timestamppb.Timestamp)(nil),      // 16: google.protobuf.Timestamp
+	(AccessLevel)(0),                       // 0: saturn.identity.admin.v1.AccessLevel
+	(ListUsersRequest_StatusFilter)(0),     // 1: saturn.identity.admin.v1.ListUsersRequest.StatusFilter
+	(*ListUsersRequest)(nil),               // 2: saturn.identity.admin.v1.ListUsersRequest
+	(*ListUsersResponse)(nil),              // 3: saturn.identity.admin.v1.ListUsersResponse
+	(*ApproveUserRequest)(nil),             // 4: saturn.identity.admin.v1.ApproveUserRequest
+	(*RejectUserRequest)(nil),              // 5: saturn.identity.admin.v1.RejectUserRequest
+	(*UpdateUserRoleRequest)(nil),          // 6: saturn.identity.admin.v1.UpdateUserRoleRequest
+	(*RevokeAllSessionsRequest)(nil),       // 7: saturn.identity.admin.v1.RevokeAllSessionsRequest
+	(*RevokeAllSessionsResponse)(nil),      // 8: saturn.identity.admin.v1.RevokeAllSessionsResponse
+	(*User)(nil),                           // 9: saturn.identity.admin.v1.User
+	(*SecurityEvent)(nil),                  // 10: saturn.identity.admin.v1.SecurityEvent
+	(*ListSecurityEventsRequest)(nil),      // 11: saturn.identity.admin.v1.ListSecurityEventsRequest
+	(*ListSecurityEventsResponse)(nil),     // 12: saturn.identity.admin.v1.ListSecurityEventsResponse
+	(*ResetPasswordRequest)(nil),           // 13: saturn.identity.admin.v1.ResetPasswordRequest
+	(*ResetPasswordResponse)(nil),          // 14: saturn.identity.admin.v1.ResetPasswordResponse
+	(*UnlockUserRequest)(nil),              // 15: saturn.identity.admin.v1.UnlockUserRequest
+	(*OAuthClient)(nil),                    // 16: saturn.identity.admin.v1.OAuthClient
+	(*CreateOAuthClientRequest)(nil),       // 17: saturn.identity.admin.v1.CreateOAuthClientRequest
+	(*GetOAuthClientRequest)(nil),          // 18: saturn.identity.admin.v1.GetOAuthClientRequest
+	(*ListOAuthClientsRequest)(nil),        // 19: saturn.identity.admin.v1.ListOAuthClientsRequest
+	(*ListOAuthClientsResponse)(nil),       // 20: saturn.identity.admin.v1.ListOAuthClientsResponse
+	(*UpdateOAuthClientRequest)(nil),       // 21: saturn.identity.admin.v1.UpdateOAuthClientRequest
+	(*RotateOAuthClientSecretRequest)(nil), // 22: saturn.identity.admin.v1.RotateOAuthClientSecretRequest
+	(*DeleteOAuthClientRequest)(nil),       // 23: saturn.identity.admin.v1.DeleteOAuthClientRequest
+	(*timestamppb.Timestamp)(nil),          // 24: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),          // 25: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),                  // 26: google.protobuf.Empty
 }
 var file_saturn_identity_admin_v1_admin_identity_proto_depIdxs = []int32{
 	1,  // 0: saturn.identity.admin.v1.ListUsersRequest.status_filter:type_name -> saturn.identity.admin.v1.ListUsersRequest.StatusFilter
 	9,  // 1: saturn.identity.admin.v1.ListUsersResponse.users:type_name -> saturn.identity.admin.v1.User
 	0,  // 2: saturn.identity.admin.v1.UpdateUserRoleRequest.access_level:type_name -> saturn.identity.admin.v1.AccessLevel
 	0,  // 3: saturn.identity.admin.v1.User.access_level:type_name -> saturn.identity.admin.v1.AccessLevel
-	16, // 4: saturn.identity.admin.v1.User.create_time:type_name -> google.protobuf.Timestamp
-	16, // 5: saturn.identity.admin.v1.User.update_time:type_name -> google.protobuf.Timestamp
-	16, // 6: saturn.identity.admin.v1.User.locked_until:type_name -> google.protobuf.Timestamp
-	16, // 7: saturn.identity.admin.v1.SecurityEvent.created_at:type_name -> google.protobuf.Timestamp
+	24, // 4: saturn.identity.admin.v1.User.create_time:type_name -> google.protobuf.Timestamp
+	24, // 5: saturn.identity.admin.v1.User.update_time:type_name -> google.protobuf.Timestamp
+	24, // 6: saturn.identity.admin.v1.User.locked_until:type_name -> google.protobuf.Timestamp
+	24, // 7: saturn.identity.admin.v1.SecurityEvent.created_at:type_name -> google.protobuf.Timestamp
 	10, // 8: saturn.identity.admin.v1.ListSecurityEventsResponse.events:type_name -> saturn.identity.admin.v1.SecurityEvent
-	16, // 9: saturn.identity.admin.v1.ResetPasswordResponse.expires_at:type_name -> google.protobuf.Timestamp
-	2,  // 10: saturn.identity.admin.v1.AdminIdentity.ListUsers:input_type -> saturn.identity.admin.v1.ListUsersRequest
-	4,  // 11: saturn.identity.admin.v1.AdminIdentity.ApproveUser:input_type -> saturn.identity.admin.v1.ApproveUserRequest
-	5,  // 12: saturn.identity.admin.v1.AdminIdentity.RejectUser:input_type -> saturn.identity.admin.v1.RejectUserRequest
-	6,  // 13: saturn.identity.admin.v1.AdminIdentity.UpdateUserRole:input_type -> saturn.identity.admin.v1.UpdateUserRoleRequest
-	7,  // 14: saturn.identity.admin.v1.AdminIdentity.RevokeAllSessions:input_type -> saturn.identity.admin.v1.RevokeAllSessionsRequest
-	11, // 15: saturn.identity.admin.v1.AdminIdentity.ListSecurityEvents:input_type -> saturn.identity.admin.v1.ListSecurityEventsRequest
-	13, // 16: saturn.identity.admin.v1.AdminIdentity.ResetPassword:input_type -> saturn.identity.admin.v1.ResetPasswordRequest
-	15, // 17: saturn.identity.admin.v1.AdminIdentity.UnlockUser:input_type -> saturn.identity.admin.v1.UnlockUserRequest
-	3,  // 18: saturn.identity.admin.v1.AdminIdentity.ListUsers:output_type -> saturn.identity.admin.v1.ListUsersResponse
-	9,  // 19: saturn.identity.admin.v1.AdminIdentity.ApproveUser:output_type -> saturn.identity.admin.v1.User
-	9,  // 20: saturn.identity.admin.v1.AdminIdentity.RejectUser:output_type -> saturn.identity.admin.v1.User
-	9,  // 21: saturn.identity.admin.v1.AdminIdentity.UpdateUserRole:output_type -> saturn.identity.admin.v1.User
-	8,  // 22: saturn.identity.admin.v1.AdminIdentity.RevokeAllSessions:output_type -> saturn.identity.admin.v1.RevokeAllSessionsResponse
-	12, // 23: saturn.identity.admin.v1.AdminIdentity.ListSecurityEvents:output_type -> saturn.identity.admin.v1.ListSecurityEventsResponse
-	14, // 24: saturn.identity.admin.v1.AdminIdentity.ResetPassword:output_type -> saturn.identity.admin.v1.ResetPasswordResponse
-	9,  // 25: saturn.identity.admin.v1.AdminIdentity.UnlockUser:output_type -> saturn.identity.admin.v1.User
-	18, // [18:26] is the sub-list for method output_type
-	10, // [10:18] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	24, // 9: saturn.identity.admin.v1.ResetPasswordResponse.expires_at:type_name -> google.protobuf.Timestamp
+	24, // 10: saturn.identity.admin.v1.OAuthClient.create_time:type_name -> google.protobuf.Timestamp
+	24, // 11: saturn.identity.admin.v1.OAuthClient.update_time:type_name -> google.protobuf.Timestamp
+	16, // 12: saturn.identity.admin.v1.CreateOAuthClientRequest.oauth_client:type_name -> saturn.identity.admin.v1.OAuthClient
+	16, // 13: saturn.identity.admin.v1.ListOAuthClientsResponse.oauth_clients:type_name -> saturn.identity.admin.v1.OAuthClient
+	16, // 14: saturn.identity.admin.v1.UpdateOAuthClientRequest.oauth_client:type_name -> saturn.identity.admin.v1.OAuthClient
+	25, // 15: saturn.identity.admin.v1.UpdateOAuthClientRequest.update_mask:type_name -> google.protobuf.FieldMask
+	2,  // 16: saturn.identity.admin.v1.AdminIdentity.ListUsers:input_type -> saturn.identity.admin.v1.ListUsersRequest
+	4,  // 17: saturn.identity.admin.v1.AdminIdentity.ApproveUser:input_type -> saturn.identity.admin.v1.ApproveUserRequest
+	5,  // 18: saturn.identity.admin.v1.AdminIdentity.RejectUser:input_type -> saturn.identity.admin.v1.RejectUserRequest
+	6,  // 19: saturn.identity.admin.v1.AdminIdentity.UpdateUserRole:input_type -> saturn.identity.admin.v1.UpdateUserRoleRequest
+	7,  // 20: saturn.identity.admin.v1.AdminIdentity.RevokeAllSessions:input_type -> saturn.identity.admin.v1.RevokeAllSessionsRequest
+	11, // 21: saturn.identity.admin.v1.AdminIdentity.ListSecurityEvents:input_type -> saturn.identity.admin.v1.ListSecurityEventsRequest
+	13, // 22: saturn.identity.admin.v1.AdminIdentity.ResetPassword:input_type -> saturn.identity.admin.v1.ResetPasswordRequest
+	15, // 23: saturn.identity.admin.v1.AdminIdentity.UnlockUser:input_type -> saturn.identity.admin.v1.UnlockUserRequest
+	17, // 24: saturn.identity.admin.v1.AdminIdentity.CreateOAuthClient:input_type -> saturn.identity.admin.v1.CreateOAuthClientRequest
+	18, // 25: saturn.identity.admin.v1.AdminIdentity.GetOAuthClient:input_type -> saturn.identity.admin.v1.GetOAuthClientRequest
+	19, // 26: saturn.identity.admin.v1.AdminIdentity.ListOAuthClients:input_type -> saturn.identity.admin.v1.ListOAuthClientsRequest
+	21, // 27: saturn.identity.admin.v1.AdminIdentity.UpdateOAuthClient:input_type -> saturn.identity.admin.v1.UpdateOAuthClientRequest
+	22, // 28: saturn.identity.admin.v1.AdminIdentity.RotateOAuthClientSecret:input_type -> saturn.identity.admin.v1.RotateOAuthClientSecretRequest
+	23, // 29: saturn.identity.admin.v1.AdminIdentity.DeleteOAuthClient:input_type -> saturn.identity.admin.v1.DeleteOAuthClientRequest
+	3,  // 30: saturn.identity.admin.v1.AdminIdentity.ListUsers:output_type -> saturn.identity.admin.v1.ListUsersResponse
+	9,  // 31: saturn.identity.admin.v1.AdminIdentity.ApproveUser:output_type -> saturn.identity.admin.v1.User
+	9,  // 32: saturn.identity.admin.v1.AdminIdentity.RejectUser:output_type -> saturn.identity.admin.v1.User
+	9,  // 33: saturn.identity.admin.v1.AdminIdentity.UpdateUserRole:output_type -> saturn.identity.admin.v1.User
+	8,  // 34: saturn.identity.admin.v1.AdminIdentity.RevokeAllSessions:output_type -> saturn.identity.admin.v1.RevokeAllSessionsResponse
+	12, // 35: saturn.identity.admin.v1.AdminIdentity.ListSecurityEvents:output_type -> saturn.identity.admin.v1.ListSecurityEventsResponse
+	14, // 36: saturn.identity.admin.v1.AdminIdentity.ResetPassword:output_type -> saturn.identity.admin.v1.ResetPasswordResponse
+	9,  // 37: saturn.identity.admin.v1.AdminIdentity.UnlockUser:output_type -> saturn.identity.admin.v1.User
+	16, // 38: saturn.identity.admin.v1.AdminIdentity.CreateOAuthClient:output_type -> saturn.identity.admin.v1.OAuthClient
+	16, // 39: saturn.identity.admin.v1.AdminIdentity.GetOAuthClient:output_type -> saturn.identity.admin.v1.OAuthClient
+	20, // 40: saturn.identity.admin.v1.AdminIdentity.ListOAuthClients:output_type -> saturn.identity.admin.v1.ListOAuthClientsResponse
+	16, // 41: saturn.identity.admin.v1.AdminIdentity.UpdateOAuthClient:output_type -> saturn.identity.admin.v1.OAuthClient
+	16, // 42: saturn.identity.admin.v1.AdminIdentity.RotateOAuthClientSecret:output_type -> saturn.identity.admin.v1.OAuthClient
+	26, // 43: saturn.identity.admin.v1.AdminIdentity.DeleteOAuthClient:output_type -> google.protobuf.Empty
+	30, // [30:44] is the sub-list for method output_type
+	16, // [16:30] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_saturn_identity_admin_v1_admin_identity_proto_init() }
@@ -1230,7 +1784,7 @@ func file_saturn_identity_admin_v1_admin_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_identity_admin_v1_admin_identity_proto_rawDesc), len(file_saturn_identity_admin_v1_admin_identity_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   14,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

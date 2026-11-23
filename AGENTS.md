@@ -77,6 +77,13 @@ Detailed guidelines live in `docs/conventions/`. Read the relevant guide before 
     - Keep narrow sidebars/inspectors (`< 520px`) single-column, render schema-driven typed controls (`Switch`, `Select`, numeric inputs) rather than raw code boxes everywhere, and hide technical plumbing behind an **Advanced** collapsible section.
     - See [Frontend Conventions](docs/conventions/frontend.md#4-ui--form-design-rules).
 
+12. **100% Internationalization (`@saturn/i18n`)**:
+    - **Never** hardcode user-facing copy, toast titles/descriptions, validation messages, placeholders, `aria-label` strings, sidebar items, or breadcrumb segments in Web or Mobile code—and never write inline `isEs ? ... : ...` or duplicate `*_ES` dictionaries.
+    - Always add symmetric keys to **both** `packages/i18n/locales/en.json` and `packages/i18n/locales/es.json` (plus `packages/i18n/schemas/{en,es}.json` for Zod errors and `packages/i18n/enums/{en,es}.json` for enum labels), and consume them via `useI18n().t(...)` in React components or `translate(locale, ...)` in pure utilities.
+    - Centralize shared domain metadata and pickers (such as scope labels/descriptions and `<ScopePicker />`) rather than duplicating `TranslationKey` maps across features.
+    - Verify 100% leaf-key parity with `npx vitest run packages/i18n`.
+    - See [Frontend Conventions](docs/conventions/frontend.md#2-date-timezone--internationalization-i18n).
+
 ---
 
 ## Verification Gates
@@ -87,7 +94,7 @@ Always format, lint, typecheck, and test modified subsystems before declaring an
 
 | Subsystem Modified | Format & Modernize | Lint & Typecheck | Tests |
 | :--- | :--- | :--- | :--- |
-| **Frontend & Mobile** (`apps/*`, `packages/*`) | `make web-format` | `make web-typecheck`<br>`make web-lint` | *(typecheck in all 6 packages)* |
+| **Frontend & Mobile** (`apps/*`, `packages/*`) | `make web-format` | `make web-typecheck`<br>`make web-lint` | `make web-test`<br>`npx vitest run packages/i18n` |
 | **Backend** (`internal/`, `cmd/`) | `go fix ./...`<br>`gofmt -w <file>` | `make lint-go` | `make test-unit`<br>`make test-integration` |
 | **Database & Storage** (`internal/domain/*/storage`, `migrations/`) | `go fix ./...`<br>`gofmt -w <file>` | `make lint-go` | `make test-integration` |
 | **Protobuf / API** (`api/**/*.proto`) | `buf format -w` | `make lint-proto`<br>`make web-typecheck` | `make test-unit` |

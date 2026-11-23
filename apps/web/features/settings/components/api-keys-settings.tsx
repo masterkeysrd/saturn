@@ -12,12 +12,12 @@ import { useI18n, useTimezone } from "@saturn/hooks"
 import {
   API_KEY_EXPIRATION_PRESETS,
   API_KEY_SCOPES,
-  API_KEY_SCOPE_GROUPS,
   CreateAPIKeySchema,
   UpdateAPIKeySchema,
   type APIKeyExpirationPreset,
   type APIKeyScope,
 } from "@saturn/schemas"
+import { ScopePicker } from "@/components/scope-picker"
 import { useMySpaces } from "@/features/space/use-space"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,47 +58,6 @@ const PRESET_LABEL_KEYS: Record<APIKeyExpirationPreset, TranslationKey> = {
   "1y": "settings.apiKeys.preset1y",
   custom: "settings.apiKeys.presetCustom",
   none: "settings.apiKeys.presetNone",
-}
-
-const SCOPE_GROUP_LABEL_KEYS: Record<string, TranslationKey> = {
-  spaces: "settings.apiKeys.groupSpaces",
-  finance: "settings.apiKeys.groupFinance",
-  calendar: "settings.apiKeys.groupCalendar",
-  mail: "settings.apiKeys.groupMail",
-  ai: "settings.apiKeys.groupAi",
-  workflows: "settings.apiKeys.groupWorkflows",
-}
-
-const SCOPE_LABEL_KEYS: Record<APIKeyScope, TranslationKey> = {
-  "spaces:read": "settings.apiKeys.scopeSpacesRead",
-  "finance:read": "settings.apiKeys.scopeFinanceRead",
-  "finance:write": "settings.apiKeys.scopeFinanceWrite",
-  "calendar:read": "settings.apiKeys.scopeCalendarRead",
-  "calendar:write": "settings.apiKeys.scopeCalendarWrite",
-  "mail:read": "settings.apiKeys.scopeMailRead",
-  "mail:write": "settings.apiKeys.scopeMailWrite",
-  "ai:read": "settings.apiKeys.scopeAiRead",
-  "ai:execute": "settings.apiKeys.scopeAiExecute",
-  "ai:write": "settings.apiKeys.scopeAiWrite",
-  "workflows:read": "settings.apiKeys.scopeWorkflowsRead",
-  "workflows:execute": "settings.apiKeys.scopeWorkflowsExecute",
-  "workflows:write": "settings.apiKeys.scopeWorkflowsWrite",
-}
-
-const SCOPE_DESC_KEYS: Record<APIKeyScope, TranslationKey> = {
-  "spaces:read": "settings.apiKeys.scopeDescSpacesRead",
-  "finance:read": "settings.apiKeys.scopeDescFinanceRead",
-  "finance:write": "settings.apiKeys.scopeDescFinanceWrite",
-  "calendar:read": "settings.apiKeys.scopeDescCalendarRead",
-  "calendar:write": "settings.apiKeys.scopeDescCalendarWrite",
-  "mail:read": "settings.apiKeys.scopeDescMailRead",
-  "mail:write": "settings.apiKeys.scopeDescMailWrite",
-  "ai:read": "settings.apiKeys.scopeDescAiRead",
-  "ai:execute": "settings.apiKeys.scopeDescAiExecute",
-  "ai:write": "settings.apiKeys.scopeDescAiWrite",
-  "workflows:read": "settings.apiKeys.scopeDescWorkflowsRead",
-  "workflows:execute": "settings.apiKeys.scopeDescWorkflowsExecute",
-  "workflows:write": "settings.apiKeys.scopeDescWorkflowsWrite",
 }
 
 function computeExpirationISO(
@@ -685,47 +644,11 @@ export function APIKeysSettings() {
                       : t("settings.apiKeys.selectAll")}
                   </Button>
                 </div>
-                <div className="space-y-3 pt-1">
-                  {API_KEY_SCOPE_GROUPS.map((group) => (
-                    <div key={group.id} className="space-y-1.5">
-                      <div className="text-xs font-semibold text-foreground">
-                        {t(
-                          SCOPE_GROUP_LABEL_KEYS[group.id] ?? "common.unknown"
-                        )}
-                      </div>
-                      <div className="space-y-1.5 pl-1">
-                        {group.scopes.map((meta) => {
-                          const checked = selectedScopes.includes(meta.scope)
-                          return (
-                            <label
-                              key={meta.scope}
-                              className="flex cursor-pointer items-start gap-2.5"
-                            >
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={() => toggleScope(meta.scope)}
-                                className="mt-0.5"
-                              />
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-medium text-foreground">
-                                    {t(SCOPE_LABEL_KEYS[meta.scope])}
-                                  </span>
-                                  <code className="font-mono text-[10px] text-muted-foreground">
-                                    {meta.scope}
-                                  </code>
-                                </div>
-                                <p className="text-[11px] text-muted-foreground">
-                                  {t(SCOPE_DESC_KEYS[meta.scope])}
-                                </p>
-                              </div>
-                            </label>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <ScopePicker
+                  selectedScopes={selectedScopes}
+                  onToggleScope={(scope) => toggleScope(scope as APIKeyScope)}
+                  className="pt-1"
+                />
               </div>
             </div>
 

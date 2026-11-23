@@ -298,3 +298,128 @@ func (c *Client) RevokeSpaceAPIKeyGrant(ctx context.Context, req *RevokeSpaceAPI
 	}
 	return &resp, nil
 }
+
+// CreateSpaceOAuthClient executes POST /api/v1/spaces/{space_id}/oauth-clients.
+func (c *Client) CreateSpaceOAuthClient(ctx context.Context, req *CreateSpaceOAuthClientRequest) (*SpaceOAuthClient, error) {
+	var resp SpaceOAuthClient
+	path := fmt.Sprintf("/api/v1/spaces/%s/oauth-clients", req.GetSpaceId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetOauthClient()
+	if payload == nil {
+		return nil, fmt.Errorf("oauth_client payload is required")
+	}
+	if err := c.base.Do(ctx, "POST", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// GetSpaceOAuthClient executes GET /api/v1/spaces/{space_id}/oauth-clients/{client_id}.
+func (c *Client) GetSpaceOAuthClient(ctx context.Context, req *GetSpaceOAuthClientRequest) (*SpaceOAuthClient, error) {
+	var resp SpaceOAuthClient
+	path := fmt.Sprintf("/api/v1/spaces/%s/oauth-clients/%s", req.GetSpaceId(), req.GetClientId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ListSpaceOAuthClients executes GET /api/v1/spaces/{space_id}/oauth-clients.
+func (c *Client) ListSpaceOAuthClients(ctx context.Context, req *ListSpaceOAuthClientsRequest) (*ListSpaceOAuthClientsResponse, error) {
+	var resp ListSpaceOAuthClientsResponse
+	path := fmt.Sprintf("/api/v1/spaces/%s/oauth-clients", req.GetSpaceId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// UpdateSpaceOAuthClient executes PATCH /api/v1/spaces/{space_id}/oauth-clients/{client_id}.
+func (c *Client) UpdateSpaceOAuthClient(ctx context.Context, req *UpdateSpaceOAuthClientRequest) (*SpaceOAuthClient, error) {
+	var resp SpaceOAuthClient
+	path := fmt.Sprintf("/api/v1/spaces/%s/oauth-clients/%s", req.GetSpaceId(), req.GetClientId())
+	var query []string
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetOauthClient()
+	if payload == nil {
+		return nil, fmt.Errorf("oauth_client payload is required")
+	}
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// RotateSpaceOAuthClientSecret executes POST /api/v1/spaces/{space_id}/oauth-clients/{client_id}:rotate-secret.
+func (c *Client) RotateSpaceOAuthClientSecret(ctx context.Context, req *RotateSpaceOAuthClientSecretRequest) (*SpaceOAuthClient, error) {
+	var resp SpaceOAuthClient
+	path := fmt.Sprintf("/api/v1/spaces/%s/oauth-clients/%s:rotate-secret", req.GetSpaceId(), req.GetClientId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// DeleteSpaceOAuthClient executes DELETE /api/v1/spaces/{space_id}/oauth-clients/{client_id}.
+func (c *Client) DeleteSpaceOAuthClient(ctx context.Context, req *DeleteSpaceOAuthClientRequest) (*emptypb.Empty, error) {
+	var resp emptypb.Empty
+	path := fmt.Sprintf("/api/v1/spaces/%s/oauth-clients/%s", req.GetSpaceId(), req.GetClientId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ListSpaceOAuthGrants executes GET /api/v1/spaces/{space_id}/oauth-grants.
+func (c *Client) ListSpaceOAuthGrants(ctx context.Context, req *ListSpaceOAuthGrantsRequest) (*ListSpaceOAuthGrantsResponse, error) {
+	var resp ListSpaceOAuthGrantsResponse
+	path := fmt.Sprintf("/api/v1/spaces/%s/oauth-grants", req.GetSpaceId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// RevokeSpaceOAuthGrant executes DELETE /api/v1/spaces/{space_id}/oauth-grants/{grant_id}.
+func (c *Client) RevokeSpaceOAuthGrant(ctx context.Context, req *RevokeSpaceOAuthGrantRequest) (*emptypb.Empty, error) {
+	var resp emptypb.Empty
+	path := fmt.Sprintf("/api/v1/spaces/%s/oauth-grants/%s", req.GetSpaceId(), req.GetGrantId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}

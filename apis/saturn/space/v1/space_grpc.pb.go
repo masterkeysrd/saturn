@@ -20,21 +20,29 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Spaces_CreateSpace_FullMethodName                = "/saturn.space.v1.Spaces/CreateSpace"
-	Spaces_GetSpace_FullMethodName                   = "/saturn.space.v1.Spaces/GetSpace"
-	Spaces_UpdateSpace_FullMethodName                = "/saturn.space.v1.Spaces/UpdateSpace"
-	Spaces_DeleteSpace_FullMethodName                = "/saturn.space.v1.Spaces/DeleteSpace"
-	Spaces_ListSpaces_FullMethodName                 = "/saturn.space.v1.Spaces/ListSpaces"
-	Spaces_CreateSpaceMember_FullMethodName          = "/saturn.space.v1.Spaces/CreateSpaceMember"
-	Spaces_DeleteSpaceMember_FullMethodName          = "/saturn.space.v1.Spaces/DeleteSpaceMember"
-	Spaces_UpdateSpaceMember_FullMethodName          = "/saturn.space.v1.Spaces/UpdateSpaceMember"
-	Spaces_ListSpaceMembers_FullMethodName           = "/saturn.space.v1.Spaces/ListSpaceMembers"
-	Spaces_GetSettings_FullMethodName                = "/saturn.space.v1.Spaces/GetSettings"
-	Spaces_UpdateSettings_FullMethodName             = "/saturn.space.v1.Spaces/UpdateSettings"
-	Spaces_GetDashboardPreferences_FullMethodName    = "/saturn.space.v1.Spaces/GetDashboardPreferences"
-	Spaces_UpdateDashboardPreferences_FullMethodName = "/saturn.space.v1.Spaces/UpdateDashboardPreferences"
-	Spaces_ListSpaceAPIKeyGrants_FullMethodName      = "/saturn.space.v1.Spaces/ListSpaceAPIKeyGrants"
-	Spaces_RevokeSpaceAPIKeyGrant_FullMethodName     = "/saturn.space.v1.Spaces/RevokeSpaceAPIKeyGrant"
+	Spaces_CreateSpace_FullMethodName                  = "/saturn.space.v1.Spaces/CreateSpace"
+	Spaces_GetSpace_FullMethodName                     = "/saturn.space.v1.Spaces/GetSpace"
+	Spaces_UpdateSpace_FullMethodName                  = "/saturn.space.v1.Spaces/UpdateSpace"
+	Spaces_DeleteSpace_FullMethodName                  = "/saturn.space.v1.Spaces/DeleteSpace"
+	Spaces_ListSpaces_FullMethodName                   = "/saturn.space.v1.Spaces/ListSpaces"
+	Spaces_CreateSpaceMember_FullMethodName            = "/saturn.space.v1.Spaces/CreateSpaceMember"
+	Spaces_DeleteSpaceMember_FullMethodName            = "/saturn.space.v1.Spaces/DeleteSpaceMember"
+	Spaces_UpdateSpaceMember_FullMethodName            = "/saturn.space.v1.Spaces/UpdateSpaceMember"
+	Spaces_ListSpaceMembers_FullMethodName             = "/saturn.space.v1.Spaces/ListSpaceMembers"
+	Spaces_GetSettings_FullMethodName                  = "/saturn.space.v1.Spaces/GetSettings"
+	Spaces_UpdateSettings_FullMethodName               = "/saturn.space.v1.Spaces/UpdateSettings"
+	Spaces_GetDashboardPreferences_FullMethodName      = "/saturn.space.v1.Spaces/GetDashboardPreferences"
+	Spaces_UpdateDashboardPreferences_FullMethodName   = "/saturn.space.v1.Spaces/UpdateDashboardPreferences"
+	Spaces_ListSpaceAPIKeyGrants_FullMethodName        = "/saturn.space.v1.Spaces/ListSpaceAPIKeyGrants"
+	Spaces_RevokeSpaceAPIKeyGrant_FullMethodName       = "/saturn.space.v1.Spaces/RevokeSpaceAPIKeyGrant"
+	Spaces_CreateSpaceOAuthClient_FullMethodName       = "/saturn.space.v1.Spaces/CreateSpaceOAuthClient"
+	Spaces_GetSpaceOAuthClient_FullMethodName          = "/saturn.space.v1.Spaces/GetSpaceOAuthClient"
+	Spaces_ListSpaceOAuthClients_FullMethodName        = "/saturn.space.v1.Spaces/ListSpaceOAuthClients"
+	Spaces_UpdateSpaceOAuthClient_FullMethodName       = "/saturn.space.v1.Spaces/UpdateSpaceOAuthClient"
+	Spaces_RotateSpaceOAuthClientSecret_FullMethodName = "/saturn.space.v1.Spaces/RotateSpaceOAuthClientSecret"
+	Spaces_DeleteSpaceOAuthClient_FullMethodName       = "/saturn.space.v1.Spaces/DeleteSpaceOAuthClient"
+	Spaces_ListSpaceOAuthGrants_FullMethodName         = "/saturn.space.v1.Spaces/ListSpaceOAuthGrants"
+	Spaces_RevokeSpaceOAuthGrant_FullMethodName        = "/saturn.space.v1.Spaces/RevokeSpaceOAuthGrant"
 )
 
 // SpacesClient is the client API for Spaces service.
@@ -73,6 +81,22 @@ type SpacesClient interface {
 	ListSpaceAPIKeyGrants(ctx context.Context, in *ListSpaceAPIKeyGrantsRequest, opts ...grpc.CallOption) (*ListSpaceAPIKeyGrantsResponse, error)
 	// Revokes a specific API key's grant to access a workspace (admin/owner only).
 	RevokeSpaceAPIKeyGrant(ctx context.Context, in *RevokeSpaceAPIKeyGrantRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Creates a workspace-scoped OAuth 2.1 client (admin/owner only).
+	CreateSpaceOAuthClient(ctx context.Context, in *CreateSpaceOAuthClientRequest, opts ...grpc.CallOption) (*SpaceOAuthClient, error)
+	// Retrieves a workspace-scoped OAuth 2.1 client (admin/owner only).
+	GetSpaceOAuthClient(ctx context.Context, in *GetSpaceOAuthClientRequest, opts ...grpc.CallOption) (*SpaceOAuthClient, error)
+	// Lists workspace-scoped OAuth 2.1 clients (admin/owner only).
+	ListSpaceOAuthClients(ctx context.Context, in *ListSpaceOAuthClientsRequest, opts ...grpc.CallOption) (*ListSpaceOAuthClientsResponse, error)
+	// Updates a workspace-scoped OAuth 2.1 client (admin/owner only).
+	UpdateSpaceOAuthClient(ctx context.Context, in *UpdateSpaceOAuthClientRequest, opts ...grpc.CallOption) (*SpaceOAuthClient, error)
+	// Rotates the secret for a confidential workspace-scoped OAuth 2.1 client (admin/owner only).
+	RotateSpaceOAuthClientSecret(ctx context.Context, in *RotateSpaceOAuthClientSecretRequest, opts ...grpc.CallOption) (*SpaceOAuthClient, error)
+	// Deletes a workspace-scoped OAuth 2.1 client (admin/owner only).
+	DeleteSpaceOAuthClient(ctx context.Context, in *DeleteSpaceOAuthClientRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Lists all active OAuth 2.1 grants targeting a workspace (admin/owner only).
+	ListSpaceOAuthGrants(ctx context.Context, in *ListSpaceOAuthGrantsRequest, opts ...grpc.CallOption) (*ListSpaceOAuthGrantsResponse, error)
+	// Revokes a user's OAuth 2.1 grant targeting a workspace (admin/owner only).
+	RevokeSpaceOAuthGrant(ctx context.Context, in *RevokeSpaceOAuthGrantRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type spacesClient struct {
@@ -233,6 +257,86 @@ func (c *spacesClient) RevokeSpaceAPIKeyGrant(ctx context.Context, in *RevokeSpa
 	return out, nil
 }
 
+func (c *spacesClient) CreateSpaceOAuthClient(ctx context.Context, in *CreateSpaceOAuthClientRequest, opts ...grpc.CallOption) (*SpaceOAuthClient, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SpaceOAuthClient)
+	err := c.cc.Invoke(ctx, Spaces_CreateSpaceOAuthClient_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *spacesClient) GetSpaceOAuthClient(ctx context.Context, in *GetSpaceOAuthClientRequest, opts ...grpc.CallOption) (*SpaceOAuthClient, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SpaceOAuthClient)
+	err := c.cc.Invoke(ctx, Spaces_GetSpaceOAuthClient_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *spacesClient) ListSpaceOAuthClients(ctx context.Context, in *ListSpaceOAuthClientsRequest, opts ...grpc.CallOption) (*ListSpaceOAuthClientsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSpaceOAuthClientsResponse)
+	err := c.cc.Invoke(ctx, Spaces_ListSpaceOAuthClients_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *spacesClient) UpdateSpaceOAuthClient(ctx context.Context, in *UpdateSpaceOAuthClientRequest, opts ...grpc.CallOption) (*SpaceOAuthClient, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SpaceOAuthClient)
+	err := c.cc.Invoke(ctx, Spaces_UpdateSpaceOAuthClient_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *spacesClient) RotateSpaceOAuthClientSecret(ctx context.Context, in *RotateSpaceOAuthClientSecretRequest, opts ...grpc.CallOption) (*SpaceOAuthClient, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SpaceOAuthClient)
+	err := c.cc.Invoke(ctx, Spaces_RotateSpaceOAuthClientSecret_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *spacesClient) DeleteSpaceOAuthClient(ctx context.Context, in *DeleteSpaceOAuthClientRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Spaces_DeleteSpaceOAuthClient_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *spacesClient) ListSpaceOAuthGrants(ctx context.Context, in *ListSpaceOAuthGrantsRequest, opts ...grpc.CallOption) (*ListSpaceOAuthGrantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSpaceOAuthGrantsResponse)
+	err := c.cc.Invoke(ctx, Spaces_ListSpaceOAuthGrants_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *spacesClient) RevokeSpaceOAuthGrant(ctx context.Context, in *RevokeSpaceOAuthGrantRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Spaces_RevokeSpaceOAuthGrant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SpacesServer is the server API for Spaces service.
 // All implementations should embed UnimplementedSpacesServer
 // for forward compatibility.
@@ -269,6 +373,22 @@ type SpacesServer interface {
 	ListSpaceAPIKeyGrants(context.Context, *ListSpaceAPIKeyGrantsRequest) (*ListSpaceAPIKeyGrantsResponse, error)
 	// Revokes a specific API key's grant to access a workspace (admin/owner only).
 	RevokeSpaceAPIKeyGrant(context.Context, *RevokeSpaceAPIKeyGrantRequest) (*emptypb.Empty, error)
+	// Creates a workspace-scoped OAuth 2.1 client (admin/owner only).
+	CreateSpaceOAuthClient(context.Context, *CreateSpaceOAuthClientRequest) (*SpaceOAuthClient, error)
+	// Retrieves a workspace-scoped OAuth 2.1 client (admin/owner only).
+	GetSpaceOAuthClient(context.Context, *GetSpaceOAuthClientRequest) (*SpaceOAuthClient, error)
+	// Lists workspace-scoped OAuth 2.1 clients (admin/owner only).
+	ListSpaceOAuthClients(context.Context, *ListSpaceOAuthClientsRequest) (*ListSpaceOAuthClientsResponse, error)
+	// Updates a workspace-scoped OAuth 2.1 client (admin/owner only).
+	UpdateSpaceOAuthClient(context.Context, *UpdateSpaceOAuthClientRequest) (*SpaceOAuthClient, error)
+	// Rotates the secret for a confidential workspace-scoped OAuth 2.1 client (admin/owner only).
+	RotateSpaceOAuthClientSecret(context.Context, *RotateSpaceOAuthClientSecretRequest) (*SpaceOAuthClient, error)
+	// Deletes a workspace-scoped OAuth 2.1 client (admin/owner only).
+	DeleteSpaceOAuthClient(context.Context, *DeleteSpaceOAuthClientRequest) (*emptypb.Empty, error)
+	// Lists all active OAuth 2.1 grants targeting a workspace (admin/owner only).
+	ListSpaceOAuthGrants(context.Context, *ListSpaceOAuthGrantsRequest) (*ListSpaceOAuthGrantsResponse, error)
+	// Revokes a user's OAuth 2.1 grant targeting a workspace (admin/owner only).
+	RevokeSpaceOAuthGrant(context.Context, *RevokeSpaceOAuthGrantRequest) (*emptypb.Empty, error)
 }
 
 // UnimplementedSpacesServer should be embedded to have
@@ -322,6 +442,30 @@ func (UnimplementedSpacesServer) ListSpaceAPIKeyGrants(context.Context, *ListSpa
 }
 func (UnimplementedSpacesServer) RevokeSpaceAPIKeyGrant(context.Context, *RevokeSpaceAPIKeyGrantRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeSpaceAPIKeyGrant not implemented")
+}
+func (UnimplementedSpacesServer) CreateSpaceOAuthClient(context.Context, *CreateSpaceOAuthClientRequest) (*SpaceOAuthClient, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateSpaceOAuthClient not implemented")
+}
+func (UnimplementedSpacesServer) GetSpaceOAuthClient(context.Context, *GetSpaceOAuthClientRequest) (*SpaceOAuthClient, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSpaceOAuthClient not implemented")
+}
+func (UnimplementedSpacesServer) ListSpaceOAuthClients(context.Context, *ListSpaceOAuthClientsRequest) (*ListSpaceOAuthClientsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSpaceOAuthClients not implemented")
+}
+func (UnimplementedSpacesServer) UpdateSpaceOAuthClient(context.Context, *UpdateSpaceOAuthClientRequest) (*SpaceOAuthClient, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateSpaceOAuthClient not implemented")
+}
+func (UnimplementedSpacesServer) RotateSpaceOAuthClientSecret(context.Context, *RotateSpaceOAuthClientSecretRequest) (*SpaceOAuthClient, error) {
+	return nil, status.Error(codes.Unimplemented, "method RotateSpaceOAuthClientSecret not implemented")
+}
+func (UnimplementedSpacesServer) DeleteSpaceOAuthClient(context.Context, *DeleteSpaceOAuthClientRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteSpaceOAuthClient not implemented")
+}
+func (UnimplementedSpacesServer) ListSpaceOAuthGrants(context.Context, *ListSpaceOAuthGrantsRequest) (*ListSpaceOAuthGrantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSpaceOAuthGrants not implemented")
+}
+func (UnimplementedSpacesServer) RevokeSpaceOAuthGrant(context.Context, *RevokeSpaceOAuthGrantRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeSpaceOAuthGrant not implemented")
 }
 func (UnimplementedSpacesServer) testEmbeddedByValue() {}
 
@@ -613,6 +757,150 @@ func _Spaces_RevokeSpaceAPIKeyGrant_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Spaces_CreateSpaceOAuthClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSpaceOAuthClientRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SpacesServer).CreateSpaceOAuthClient(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Spaces_CreateSpaceOAuthClient_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SpacesServer).CreateSpaceOAuthClient(ctx, req.(*CreateSpaceOAuthClientRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Spaces_GetSpaceOAuthClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSpaceOAuthClientRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SpacesServer).GetSpaceOAuthClient(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Spaces_GetSpaceOAuthClient_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SpacesServer).GetSpaceOAuthClient(ctx, req.(*GetSpaceOAuthClientRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Spaces_ListSpaceOAuthClients_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSpaceOAuthClientsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SpacesServer).ListSpaceOAuthClients(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Spaces_ListSpaceOAuthClients_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SpacesServer).ListSpaceOAuthClients(ctx, req.(*ListSpaceOAuthClientsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Spaces_UpdateSpaceOAuthClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSpaceOAuthClientRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SpacesServer).UpdateSpaceOAuthClient(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Spaces_UpdateSpaceOAuthClient_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SpacesServer).UpdateSpaceOAuthClient(ctx, req.(*UpdateSpaceOAuthClientRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Spaces_RotateSpaceOAuthClientSecret_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RotateSpaceOAuthClientSecretRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SpacesServer).RotateSpaceOAuthClientSecret(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Spaces_RotateSpaceOAuthClientSecret_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SpacesServer).RotateSpaceOAuthClientSecret(ctx, req.(*RotateSpaceOAuthClientSecretRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Spaces_DeleteSpaceOAuthClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteSpaceOAuthClientRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SpacesServer).DeleteSpaceOAuthClient(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Spaces_DeleteSpaceOAuthClient_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SpacesServer).DeleteSpaceOAuthClient(ctx, req.(*DeleteSpaceOAuthClientRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Spaces_ListSpaceOAuthGrants_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSpaceOAuthGrantsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SpacesServer).ListSpaceOAuthGrants(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Spaces_ListSpaceOAuthGrants_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SpacesServer).ListSpaceOAuthGrants(ctx, req.(*ListSpaceOAuthGrantsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Spaces_RevokeSpaceOAuthGrant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeSpaceOAuthGrantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SpacesServer).RevokeSpaceOAuthGrant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Spaces_RevokeSpaceOAuthGrant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SpacesServer).RevokeSpaceOAuthGrant(ctx, req.(*RevokeSpaceOAuthGrantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Spaces_ServiceDesc is the grpc.ServiceDesc for Spaces service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -679,6 +967,38 @@ var Spaces_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RevokeSpaceAPIKeyGrant",
 			Handler:    _Spaces_RevokeSpaceAPIKeyGrant_Handler,
+		},
+		{
+			MethodName: "CreateSpaceOAuthClient",
+			Handler:    _Spaces_CreateSpaceOAuthClient_Handler,
+		},
+		{
+			MethodName: "GetSpaceOAuthClient",
+			Handler:    _Spaces_GetSpaceOAuthClient_Handler,
+		},
+		{
+			MethodName: "ListSpaceOAuthClients",
+			Handler:    _Spaces_ListSpaceOAuthClients_Handler,
+		},
+		{
+			MethodName: "UpdateSpaceOAuthClient",
+			Handler:    _Spaces_UpdateSpaceOAuthClient_Handler,
+		},
+		{
+			MethodName: "RotateSpaceOAuthClientSecret",
+			Handler:    _Spaces_RotateSpaceOAuthClientSecret_Handler,
+		},
+		{
+			MethodName: "DeleteSpaceOAuthClient",
+			Handler:    _Spaces_DeleteSpaceOAuthClient_Handler,
+		},
+		{
+			MethodName: "ListSpaceOAuthGrants",
+			Handler:    _Spaces_ListSpaceOAuthGrants_Handler,
+		},
+		{
+			MethodName: "RevokeSpaceOAuthGrant",
+			Handler:    _Spaces_RevokeSpaceOAuthGrant_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

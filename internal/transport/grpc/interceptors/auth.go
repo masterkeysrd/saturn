@@ -62,6 +62,14 @@ func NewAuthInterceptor(
 	}
 }
 
+// NewAuthInterceptorWithAuthenticator creates an interceptor using an existing transport Authenticator.
+func NewAuthInterceptorWithAuthenticator(authenticator *transportauth.Authenticator, rules []api.AuthRule) *AuthInterceptor {
+	return &AuthInterceptor{
+		auth:  authenticator,
+		rules: rules,
+	}
+}
+
 // InvalidateAuthVersion evicts a user's cached auth version so subsequent requests re-query storage.
 func (ai *AuthInterceptor) InvalidateAuthVersion(userID identity.UserID) {
 	ai.auth.InvalidateAuthVersion(userID)
@@ -146,8 +154,8 @@ func (ai *AuthInterceptor) authenticate(ctx context.Context, policy *resolvedPol
 	}
 
 	principal := res.Principal
-	if principal.IsAPIKey() && (len(policy.APIKeyScopes) == 0 || !principal.HasScope(policy.APIKeyScopes...)) {
-		return ctx, status.Error(codes.PermissionDenied, "API key lacks required scope")
+	if principal.IsScopedGrant() && (len(policy.APIKeyScopes) == 0 || !principal.HasScope(policy.APIKeyScopes...)) {
+		return ctx, status.Error(codes.PermissionDenied, "credential lacks required scope")
 	}
 
 	if len(policy.AccessLevels) > 0 && !slices.Contains(policy.AccessLevels, principal.AccessLevel) {

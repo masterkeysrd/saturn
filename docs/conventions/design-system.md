@@ -78,8 +78,9 @@ User-assigned entities (budgets, accounts, institutions, calendar labels) use th
 
 ## 5. `i18n`-Ready Layout & Enum Rules
 
-1. **Explicit Enum Lookup Maps**: Never format backend enums by regex-stripping prefixes (e.g., `.replace(/^STATUS_/, "")`). Map enums through explicit dictionaries in `@saturn/core` so UI copy is clean today and cleanly swap-ready for multi-language catalogs later.
+1. **Explicit Enum Lookup Maps**: Never format backend enums by regex-stripping prefixes (e.g., `.replace(/^STATUS_/, "")`). Map enums through explicit dictionaries in `@saturn/core` or `@saturn/i18n` so UI copy is clean and localized.
 2. **Expansion-Safe Containers**: Never assign fixed pixel widths (`w-20`, `w-24`) to text buttons, tabs, or badges. Use intrinsic padding (`px-*`) plus `min-w-0 truncate` so +25–35% longer translations never clip.
+3. **Zero Hardcoded Copy**: All UI labels, placeholders, buttons, toasts, errors, sidebar navigation items, and breadcrumbs must resolve through `@saturn/i18n` (`useI18n().t` / `translate`) with symmetric keys in `packages/i18n/locales/en.json` and `es.json`.
 
 ---
 

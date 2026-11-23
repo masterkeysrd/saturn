@@ -321,6 +321,137 @@ export interface UnlockUserRequest {
 }
 
 /**
+ * OAuthClient represents a registered OAuth 2.1 client in the admin context.
+ */
+export interface OAuthClient {
+  /**
+   * Output only. The client's unique identifier (`oac_<ksuid>` or HTTPS CIMD URL).
+   */
+  id?: string
+  /**
+   * Output only. Optional workspace identifier (`spc_<ksuid>`) when workspace-scoped.
+   */
+  spaceId?: string
+  /**
+   * Required. Human-readable application display name.
+   */
+  name: string
+  /**
+   * Optional. Description of the OAuth application.
+   */
+  description: string
+  /**
+   * Output only. Display prefix of the client secret when confidential.
+   */
+  secretPrefix?: string
+  /**
+   * Output only. Full client secret (`sat_ocs_...`). Populated once on create or secret rotation.
+   */
+  rawSecret?: string
+  /**
+   * Required. Registered redirect URI rules (HTTPS exact, HTTPS /* subpath prefix, or RFC 8252 loopback).
+   */
+  redirectUris: string[]
+  /**
+   * Required. Maximum scope ceiling permitted for grants issued to this client.
+   */
+  allowedScopes: string[]
+  /**
+   * Optional. Token endpoint client auth method (`client_secret_basic`, `client_secret_post`, `none`).
+   */
+  tokenEndpointAuthMethod: string
+  /**
+   * Optional. Refresh token policy (`rotate` or `persistent`).
+   */
+  refreshTokenPolicy: string
+  /**
+   * Output only. Client registration source (`admin`, `space`, `dcr`, `cimd`).
+   */
+  registrationSource?: string
+  /**
+   * Output only. Timestamp when the OAuth client was created.
+   */
+  createTime?: string
+  /**
+   * Output only. Timestamp when the OAuth client was last updated.
+   */
+  updateTime?: string
+}
+
+/**
+ * Request message for AdminIdentity.CreateOAuthClient.
+ */
+export interface CreateOAuthClientRequest {
+  /**
+   * Required. The OAuth client resource to create.
+   */
+  oauthClient: OAuthClient
+}
+
+/**
+ * Request message for AdminIdentity.GetOAuthClient.
+ */
+export interface GetOAuthClientRequest {
+  /**
+   * Required. The unique identifier of the OAuth client.
+   */
+  id: string
+}
+
+/**
+ * Request message for AdminIdentity.ListOAuthClients.
+ */
+export type ListOAuthClientsRequest = Record<string, never>
+
+/**
+ * Response message for AdminIdentity.ListOAuthClients.
+ */
+export interface ListOAuthClientsResponse {
+  /**
+   * Output only. List of instance-wide, DCR, and CIMD OAuth clients.
+   */
+  oauthClients?: OAuthClient[]
+}
+
+/**
+ * Request message for AdminIdentity.UpdateOAuthClient.
+ */
+export interface UpdateOAuthClientRequest {
+  /**
+   * Required. The unique identifier of the OAuth client to update.
+   */
+  id: string
+  /**
+   * Required. Updated OAuth client fields.
+   */
+  oauthClient: OAuthClient
+  /**
+   * Required. Field mask specifying which fields to update.
+   */
+  updateMask: { paths?: string[] }
+}
+
+/**
+ * Request message for AdminIdentity.RotateOAuthClientSecret.
+ */
+export interface RotateOAuthClientSecretRequest {
+  /**
+   * Required. The unique identifier of the OAuth client whose secret to rotate.
+   */
+  id: string
+}
+
+/**
+ * Request message for AdminIdentity.DeleteOAuthClient.
+ */
+export interface DeleteOAuthClientRequest {
+  /**
+   * Required. The unique identifier of the OAuth client to delete.
+   */
+  id: string
+}
+
+/**
  * AdminIdentity provides administrative operations for user and session management.
  */
 /**
@@ -551,6 +682,171 @@ export function useUnlockUserMutation(
 ) {
   return useMutation<User, Error, { user_id: string; req: UnlockUserRequest }>({
     mutationFn: ({ user_id, req }) => unlockUser(user_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Creates a new instance-wide OAuth 2.1 client.
+ */
+export async function createOAuthClient(
+  req: CreateOAuthClientRequest
+): Promise<OAuthClient> {
+  return request<OAuthClient>({
+    method: "POST",
+    url: "/api/v1/admin/identity/oauth-clients",
+    data: req.oauthClient,
+  })
+}
+
+export function useCreateOAuthClientMutation(
+  options?: UseMutationOptions<OAuthClient, Error, CreateOAuthClientRequest>
+) {
+  return useMutation<OAuthClient, Error, CreateOAuthClientRequest>({
+    mutationFn: (req) => createOAuthClient(req),
+    ...options,
+  })
+}
+
+/**
+ * Retrieves an instance-wide, DCR, or CIMD OAuth 2.1 client by ID.
+ */
+export async function getOAuthClient(
+  id: string,
+  _req: GetOAuthClientRequest
+): Promise<OAuthClient> {
+  return request<OAuthClient>({
+    method: "GET",
+    url: `/api/v1/admin/identity/oauth-clients/${id}`,
+  })
+}
+
+export function useGetOAuthClientQuery(
+  req: GetOAuthClientRequest,
+  options?: Omit<UseQueryOptions<OAuthClient, Error>, "queryKey" | "queryFn">
+) {
+  return useQuery<OAuthClient, Error>({
+    queryKey: [`/api/v1/admin/identity/oauth-clients/${req.id}`, req],
+    queryFn: () => getOAuthClient(req.id, req),
+    ...options,
+  })
+}
+
+/**
+ * Lists instance-wide, DCR, and CIMD OAuth 2.1 clients.
+ */
+export async function listOAuthClients(
+  _req?: ListOAuthClientsRequest
+): Promise<ListOAuthClientsResponse> {
+  return request<ListOAuthClientsResponse>({
+    method: "GET",
+    url: "/api/v1/admin/identity/oauth-clients",
+  })
+}
+
+export function useListOAuthClientsQuery(
+  req: ListOAuthClientsRequest,
+  options?: Omit<
+    UseQueryOptions<ListOAuthClientsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListOAuthClientsResponse, Error>({
+    queryKey: ["/api/v1/admin/identity/oauth-clients", req],
+    queryFn: () => listOAuthClients(req),
+    ...options,
+  })
+}
+
+/**
+ * Updates an instance-wide OAuth 2.1 client.
+ */
+export async function updateOAuthClient(
+  id: string,
+  req: UpdateOAuthClientRequest
+): Promise<OAuthClient> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  delete (params as Record<string, unknown>).oauthClient
+  return request<OAuthClient>({
+    method: "PATCH",
+    url: `/api/v1/admin/identity/oauth-clients/${id}`,
+    params: params,
+    data: req.oauthClient,
+  })
+}
+
+export function useUpdateOAuthClientMutation(
+  options?: UseMutationOptions<
+    OAuthClient,
+    Error,
+    { id: string; req: UpdateOAuthClientRequest }
+  >
+) {
+  return useMutation<
+    OAuthClient,
+    Error,
+    { id: string; req: UpdateOAuthClientRequest }
+  >({
+    mutationFn: ({ id, req }) => updateOAuthClient(id, req),
+    ...options,
+  })
+}
+
+/**
+ * Rotates the client secret for a confidential instance-wide OAuth 2.1 client.
+ */
+export async function rotateOAuthClientSecret(
+  id: string,
+  req: RotateOAuthClientSecretRequest
+): Promise<OAuthClient> {
+  return request<OAuthClient>({
+    method: "POST",
+    url: `/api/v1/admin/identity/oauth-clients/${id}:rotate-secret`,
+    data: req,
+  })
+}
+
+export function useRotateOAuthClientSecretMutation(
+  options?: UseMutationOptions<
+    OAuthClient,
+    Error,
+    { id: string; req: RotateOAuthClientSecretRequest }
+  >
+) {
+  return useMutation<
+    OAuthClient,
+    Error,
+    { id: string; req: RotateOAuthClientSecretRequest }
+  >({
+    mutationFn: ({ id, req }) => rotateOAuthClientSecret(id, req),
+    ...options,
+  })
+}
+
+/**
+ * Deletes an instance-wide, DCR, or CIMD OAuth 2.1 client.
+ */
+export async function deleteOAuthClient(
+  req: DeleteOAuthClientRequest
+): Promise<Record<string, never>> {
+  const params = { ...req }
+  return request<Record<string, never>>({
+    method: "DELETE",
+    url: "/api/v1/admin/identity/oauth-clients",
+    params: params,
+  })
+}
+
+export function useDeleteOAuthClientMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    DeleteOAuthClientRequest
+  >
+) {
+  return useMutation<Record<string, never>, Error, DeleteOAuthClientRequest>({
+    mutationFn: (req) => deleteOAuthClient(req),
     ...options,
   })
 }

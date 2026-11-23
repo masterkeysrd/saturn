@@ -529,6 +529,242 @@ export interface RevokeSpaceAPIKeyGrantRequest {
 }
 
 /**
+ * SpaceOAuthClient represents a workspace-scoped OAuth 2.1 client resource.
+ */
+export interface SpaceOAuthClient {
+  /**
+   * Output only. The unique identifier of the OAuth client (`oac_<ksuid>`).
+   */
+  id?: string
+  /**
+   * Output only. The workspace identifier (`spc_<ksuid>`).
+   */
+  spaceId?: string
+  /**
+   * Required. Display name for the OAuth application.
+   */
+  name: string
+  /**
+   * Optional. Description of the OAuth application.
+   */
+  description: string
+  /**
+   * Output only. Display prefix of the client secret when confidential.
+   */
+  secretPrefix?: string
+  /**
+   * Output only. Full client secret (`sat_ocs_...`). Populated once on create or secret rotation.
+   */
+  rawSecret?: string
+  /**
+   * Required. Registered redirect URI rules.
+   */
+  redirectUris: string[]
+  /**
+   * Required. Maximum scope ceiling permitted for grants issued to this client.
+   */
+  allowedScopes: string[]
+  /**
+   * Optional. Token endpoint client auth method (`client_secret_basic`, `client_secret_post`, `none`).
+   */
+  tokenEndpointAuthMethod: string
+  /**
+   * Optional. Refresh token policy (`rotate` or `persistent`).
+   */
+  refreshTokenPolicy: string
+  /**
+   * Output only. Registration source (`space` or `dcr`).
+   */
+  registrationSource?: string
+  /**
+   * Output only. Timestamp when the client was created.
+   */
+  createTime?: string
+  /**
+   * Output only. Timestamp when the client was last updated.
+   */
+  updateTime?: string
+}
+
+/**
+ * Request message for Spaces.CreateSpaceOAuthClient.
+ */
+export interface CreateSpaceOAuthClientRequest {
+  /**
+   * Required. The unique identifier of the workspace (`spc_...`).
+   */
+  spaceId: string
+  /**
+   * Required. The OAuth client resource to create.
+   */
+  oauthClient: SpaceOAuthClient
+}
+
+/**
+ * Request message for Spaces.GetSpaceOAuthClient.
+ */
+export interface GetSpaceOAuthClientRequest {
+  /**
+   * Required. The unique identifier of the workspace (`spc_...`).
+   */
+  spaceId: string
+  /**
+   * Required. The unique identifier of the OAuth client (`oac_...`).
+   */
+  clientId: string
+}
+
+/**
+ * Request message for Spaces.ListSpaceOAuthClients.
+ */
+export interface ListSpaceOAuthClientsRequest {
+  /**
+   * Required. The unique identifier of the workspace (`spc_...`).
+   */
+  spaceId: string
+}
+
+/**
+ * Response message for Spaces.ListSpaceOAuthClients.
+ */
+export interface ListSpaceOAuthClientsResponse {
+  /**
+   * Output only. List of OAuth clients belonging to the workspace.
+   */
+  oauthClients?: SpaceOAuthClient[]
+}
+
+/**
+ * Request message for Spaces.UpdateSpaceOAuthClient.
+ */
+export interface UpdateSpaceOAuthClientRequest {
+  /**
+   * Required. The unique identifier of the workspace (`spc_...`).
+   */
+  spaceId: string
+  /**
+   * Required. The unique identifier of the OAuth client (`oac_...`).
+   */
+  clientId: string
+  /**
+   * Required. Updated OAuth client fields.
+   */
+  oauthClient: SpaceOAuthClient
+  /**
+   * Required. Field mask specifying which fields to update.
+   */
+  updateMask: { paths?: string[] }
+}
+
+/**
+ * Request message for Spaces.RotateSpaceOAuthClientSecret.
+ */
+export interface RotateSpaceOAuthClientSecretRequest {
+  /**
+   * Required. The unique identifier of the workspace (`spc_...`).
+   */
+  spaceId: string
+  /**
+   * Required. The unique identifier of the OAuth client (`oac_...`).
+   */
+  clientId: string
+}
+
+/**
+ * Request message for Spaces.DeleteSpaceOAuthClient.
+ */
+export interface DeleteSpaceOAuthClientRequest {
+  /**
+   * Required. The unique identifier of the workspace (`spc_...`).
+   */
+  spaceId: string
+  /**
+   * Required. The unique identifier of the OAuth client (`oac_...`).
+   */
+  clientId: string
+}
+
+/**
+ * SpaceOAuthGrant represents an active OAuth 2.1 grant targeting a workspace.
+ */
+export interface SpaceOAuthGrant {
+  /**
+   * Output only. The unique identifier of the grant (`oag_...`).
+   */
+  grantId?: string
+  /**
+   * Output only. The OAuth client identifier (`oac_...` or CIMD URL).
+   */
+  clientId?: string
+  /**
+   * Output only. The display name of the OAuth client.
+   */
+  clientName?: string
+  /**
+   * Output only. The workspace identifier (`spc_...`).
+   */
+  spaceId?: string
+  /**
+   * Output only. The user identifier of the grant owner (`usr_...`).
+   */
+  userId?: string
+  /**
+   * Output only. The display name of the grant owner.
+   */
+  userName?: string
+  /**
+   * Output only. The email address of the grant owner.
+   */
+  userEmail?: string
+  /**
+   * Output only. Scopes authorized for this grant.
+   */
+  scopes?: string[]
+  /**
+   * Output only. Timestamp when the grant was last used to authenticate a request.
+   */
+  lastUsedAt?: string
+  /**
+   * Output only. Timestamp when the grant was created.
+   */
+  createTime?: string
+}
+
+/**
+ * Request message for Spaces.ListSpaceOAuthGrants.
+ */
+export interface ListSpaceOAuthGrantsRequest {
+  /**
+   * Required. The unique identifier of the workspace (`spc_...`).
+   */
+  spaceId: string
+}
+
+/**
+ * Response message for Spaces.ListSpaceOAuthGrants.
+ */
+export interface ListSpaceOAuthGrantsResponse {
+  /**
+   * Output only. List of active OAuth 2.1 grants for this workspace.
+   */
+  grants?: SpaceOAuthGrant[]
+}
+
+/**
+ * Request message for Spaces.RevokeSpaceOAuthGrant.
+ */
+export interface RevokeSpaceOAuthGrantRequest {
+  /**
+   * Required. The unique identifier of the workspace (`spc_...`).
+   */
+  spaceId: string
+  /**
+   * Required. The unique identifier of the OAuth grant (`oag_...`) to revoke.
+   */
+  grantId: string
+}
+
+/**
  * Spaces provides workspace management including CRUD operations and member administration.
  */
 /**
@@ -976,6 +1212,265 @@ export function useRevokeSpaceAPIKeyGrantMutation(
   >({
     mutationFn: ({ space_id, api_key_id, req }) =>
       revokeSpaceAPIKeyGrant(space_id, api_key_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Creates a workspace-scoped OAuth 2.1 client (admin/owner only).
+ */
+export async function createSpaceOAuthClient(
+  space_id: string,
+  req: CreateSpaceOAuthClientRequest
+): Promise<SpaceOAuthClient> {
+  return request<SpaceOAuthClient>({
+    method: "POST",
+    url: `/api/v1/spaces/${space_id}/oauth-clients`,
+    data: req.oauthClient,
+  })
+}
+
+export function useCreateSpaceOAuthClientMutation(
+  options?: UseMutationOptions<
+    SpaceOAuthClient,
+    Error,
+    { space_id: string; req: CreateSpaceOAuthClientRequest }
+  >
+) {
+  return useMutation<
+    SpaceOAuthClient,
+    Error,
+    { space_id: string; req: CreateSpaceOAuthClientRequest }
+  >({
+    mutationFn: ({ space_id, req }) => createSpaceOAuthClient(space_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Retrieves a workspace-scoped OAuth 2.1 client (admin/owner only).
+ */
+export async function getSpaceOAuthClient(
+  space_id: string,
+  client_id: string,
+  _req: GetSpaceOAuthClientRequest
+): Promise<SpaceOAuthClient> {
+  return request<SpaceOAuthClient>({
+    method: "GET",
+    url: `/api/v1/spaces/${space_id}/oauth-clients/${client_id}`,
+  })
+}
+
+export function useGetSpaceOAuthClientQuery(
+  req: GetSpaceOAuthClientRequest,
+  options?: Omit<
+    UseQueryOptions<SpaceOAuthClient, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<SpaceOAuthClient, Error>({
+    queryKey: [
+      `/api/v1/spaces/${req.spaceId}/oauth-clients/${req.clientId}`,
+      req,
+    ],
+    queryFn: () => getSpaceOAuthClient(req.spaceId, req.clientId, req),
+    ...options,
+  })
+}
+
+/**
+ * Lists workspace-scoped OAuth 2.1 clients (admin/owner only).
+ */
+export async function listSpaceOAuthClients(
+  space_id: string,
+  _req: ListSpaceOAuthClientsRequest
+): Promise<ListSpaceOAuthClientsResponse> {
+  return request<ListSpaceOAuthClientsResponse>({
+    method: "GET",
+    url: `/api/v1/spaces/${space_id}/oauth-clients`,
+  })
+}
+
+export function useListSpaceOAuthClientsQuery(
+  req: ListSpaceOAuthClientsRequest,
+  options?: Omit<
+    UseQueryOptions<ListSpaceOAuthClientsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListSpaceOAuthClientsResponse, Error>({
+    queryKey: [`/api/v1/spaces/${req.spaceId}/oauth-clients`, req],
+    queryFn: () => listSpaceOAuthClients(req.spaceId, req),
+    ...options,
+  })
+}
+
+/**
+ * Updates a workspace-scoped OAuth 2.1 client (admin/owner only).
+ */
+export async function updateSpaceOAuthClient(
+  space_id: string,
+  client_id: string,
+  req: UpdateSpaceOAuthClientRequest
+): Promise<SpaceOAuthClient> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).spaceId
+  delete (params as Record<string, unknown>).clientId
+  delete (params as Record<string, unknown>).oauthClient
+  return request<SpaceOAuthClient>({
+    method: "PATCH",
+    url: `/api/v1/spaces/${space_id}/oauth-clients/${client_id}`,
+    params: params,
+    data: req.oauthClient,
+  })
+}
+
+export function useUpdateSpaceOAuthClientMutation(
+  options?: UseMutationOptions<
+    SpaceOAuthClient,
+    Error,
+    { space_id: string; client_id: string; req: UpdateSpaceOAuthClientRequest }
+  >
+) {
+  return useMutation<
+    SpaceOAuthClient,
+    Error,
+    { space_id: string; client_id: string; req: UpdateSpaceOAuthClientRequest }
+  >({
+    mutationFn: ({ space_id, client_id, req }) =>
+      updateSpaceOAuthClient(space_id, client_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Rotates the secret for a confidential workspace-scoped OAuth 2.1 client (admin/owner only).
+ */
+export async function rotateSpaceOAuthClientSecret(
+  space_id: string,
+  client_id: string,
+  req: RotateSpaceOAuthClientSecretRequest
+): Promise<SpaceOAuthClient> {
+  return request<SpaceOAuthClient>({
+    method: "POST",
+    url: `/api/v1/spaces/${space_id}/oauth-clients/${client_id}:rotate-secret`,
+    data: req,
+  })
+}
+
+export function useRotateSpaceOAuthClientSecretMutation(
+  options?: UseMutationOptions<
+    SpaceOAuthClient,
+    Error,
+    {
+      space_id: string
+      client_id: string
+      req: RotateSpaceOAuthClientSecretRequest
+    }
+  >
+) {
+  return useMutation<
+    SpaceOAuthClient,
+    Error,
+    {
+      space_id: string
+      client_id: string
+      req: RotateSpaceOAuthClientSecretRequest
+    }
+  >({
+    mutationFn: ({ space_id, client_id, req }) =>
+      rotateSpaceOAuthClientSecret(space_id, client_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Deletes a workspace-scoped OAuth 2.1 client (admin/owner only).
+ */
+export async function deleteSpaceOAuthClient(
+  space_id: string,
+  client_id: string,
+  _req: DeleteSpaceOAuthClientRequest
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
+    method: "DELETE",
+    url: `/api/v1/spaces/${space_id}/oauth-clients/${client_id}`,
+  })
+}
+
+export function useDeleteSpaceOAuthClientMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    { space_id: string; client_id: string; req: DeleteSpaceOAuthClientRequest }
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    { space_id: string; client_id: string; req: DeleteSpaceOAuthClientRequest }
+  >({
+    mutationFn: ({ space_id, client_id, req }) =>
+      deleteSpaceOAuthClient(space_id, client_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Lists all active OAuth 2.1 grants targeting a workspace (admin/owner only).
+ */
+export async function listSpaceOAuthGrants(
+  space_id: string,
+  _req: ListSpaceOAuthGrantsRequest
+): Promise<ListSpaceOAuthGrantsResponse> {
+  return request<ListSpaceOAuthGrantsResponse>({
+    method: "GET",
+    url: `/api/v1/spaces/${space_id}/oauth-grants`,
+  })
+}
+
+export function useListSpaceOAuthGrantsQuery(
+  req: ListSpaceOAuthGrantsRequest,
+  options?: Omit<
+    UseQueryOptions<ListSpaceOAuthGrantsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListSpaceOAuthGrantsResponse, Error>({
+    queryKey: [`/api/v1/spaces/${req.spaceId}/oauth-grants`, req],
+    queryFn: () => listSpaceOAuthGrants(req.spaceId, req),
+    ...options,
+  })
+}
+
+/**
+ * Revokes a user's OAuth 2.1 grant targeting a workspace (admin/owner only).
+ */
+export async function revokeSpaceOAuthGrant(
+  space_id: string,
+  grant_id: string,
+  _req: RevokeSpaceOAuthGrantRequest
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
+    method: "DELETE",
+    url: `/api/v1/spaces/${space_id}/oauth-grants/${grant_id}`,
+  })
+}
+
+export function useRevokeSpaceOAuthGrantMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    { space_id: string; grant_id: string; req: RevokeSpaceOAuthGrantRequest }
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    { space_id: string; grant_id: string; req: RevokeSpaceOAuthGrantRequest }
+  >({
+    mutationFn: ({ space_id, grant_id, req }) =>
+      revokeSpaceOAuthGrant(space_id, grant_id, req),
     ...options,
   })
 }

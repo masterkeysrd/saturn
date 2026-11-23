@@ -20,6 +20,7 @@ type Principal struct {
 	AuthVersion     int64
 	SessionID       string
 	APIKeyID        string
+	OAuthGrantID    string
 	Scopes          []string
 	GrantedSpaceIDs []string
 }
@@ -29,9 +30,19 @@ func (p Principal) IsAPIKey() bool {
 	return p.APIKeyID != ""
 }
 
-// HasScope returns true if the principal is not an API key or possesses at least one of the required scopes.
+// IsOAuth returns true if the request was authenticated via an OAuth 2.1 access token.
+func (p Principal) IsOAuth() bool {
+	return p.OAuthGrantID != ""
+}
+
+// IsScopedGrant returns true if the request was authenticated via a scope-restricted credential (API key or OAuth 2.1 grant).
+func (p Principal) IsScopedGrant() bool {
+	return p.APIKeyID != "" || p.OAuthGrantID != ""
+}
+
+// HasScope returns true if the principal is not a scoped grant or possesses at least one of the required scopes.
 func (p Principal) HasScope(required ...string) bool {
-	if !p.IsAPIKey() {
+	if !p.IsScopedGrant() {
 		return true
 	}
 	for _, r := range required {
@@ -42,9 +53,9 @@ func (p Principal) HasScope(required ...string) bool {
 	return false
 }
 
-// HasSpaceGrant returns true if the principal is not an API key or has an active grant for the given spaceID.
+// HasSpaceGrant returns true if the principal is not a scoped grant or has an active grant for the given spaceID.
 func (p Principal) HasSpaceGrant(spaceID string) bool {
-	if !p.IsAPIKey() {
+	if !p.IsScopedGrant() {
 		return true
 	}
 	return slices.Contains(p.GrantedSpaceIDs, spaceID)

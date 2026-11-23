@@ -126,3 +126,48 @@ type APIKeyStore interface {
 	Delete(ctx context.Context, id APIKeyID) error
 	TouchLastUsed(ctx context.Context, id APIKeyID, lastUsedAt time.Time) error
 }
+
+// OAuthClientStore defines persistence operations for registered OAuth 2.1 clients.
+// @Mock
+type OAuthClientStore interface {
+	Create(ctx context.Context, client *OAuthClient) error
+	UpsertCIMD(ctx context.Context, client *OAuthClient) error
+	GetByID(ctx context.Context, id OAuthClientID) (*OAuthClient, error)
+	ListByIDs(ctx context.Context, ids []OAuthClientID) ([]*OAuthClient, error)
+	ListInstanceClients(ctx context.Context) ([]*OAuthClient, error)
+	ListBySpaceID(ctx context.Context, spaceID string) ([]*OAuthClient, error)
+	Update(ctx context.Context, client *OAuthClient) error
+	UpdateSecret(ctx context.Context, id OAuthClientID, secretPrefix, secretHash string, updateTime time.Time) error
+	Delete(ctx context.Context, id OAuthClientID) error
+}
+
+// OAuthGrantStore defines persistence operations for user OAuth 2.1 workspace grants.
+// @Mock
+type OAuthGrantStore interface {
+	Create(ctx context.Context, grant *OAuthGrant) error
+	GetByID(ctx context.Context, id OAuthGrantID) (*OAuthGrant, error)
+	GetByRefreshTokenHash(ctx context.Context, tokenHash string) (*OAuthGrant, error)
+	ListByUserID(ctx context.Context, userID UserID) ([]*OAuthGrant, error)
+	ListBySpaceID(ctx context.Context, spaceID string) ([]*OAuthGrant, error)
+	Update(ctx context.Context, grant *OAuthGrant) error
+	Revoke(ctx context.Context, id OAuthGrantID, revokedAt time.Time) error
+	TouchLastUsed(ctx context.Context, id OAuthGrantID, lastUsedAt time.Time) error
+}
+
+// OAuthAuthCodeStore defines persistence operations for single-use OAuth 2.1 authorization codes and handoff nonces.
+// @Mock
+type OAuthAuthCodeStore interface {
+	Create(ctx context.Context, code *OAuthAuthCode) error
+	ConsumeHandoff(ctx context.Context, handoffHash, newCodeHash string, codeExpiresAt, now time.Time) (*OAuthAuthCode, error)
+	GetByCodeHash(ctx context.Context, codeHash string) (*OAuthAuthCode, error)
+	MarkConsumed(ctx context.Context, id OAuthAuthCodeID, consumedAt time.Time) error
+}
+
+// OAuthAccessTokenStore defines persistence operations for opaque `sat_oat_...` OAuth access tokens.
+// @Mock
+type OAuthAccessTokenStore interface {
+	Create(ctx context.Context, token *OAuthAccessToken) error
+	GetByHash(ctx context.Context, tokenHash string) (*OAuthAccessToken, error)
+	RevokeByTokenHash(ctx context.Context, tokenHash string, revokedAt time.Time) error
+	RevokeByGrantID(ctx context.Context, grantID OAuthGrantID, revokedAt time.Time) error
+}

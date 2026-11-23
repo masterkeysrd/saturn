@@ -195,8 +195,8 @@ func (h *StreamHandler) authenticateAndScope(r *http.Request) (context.Context, 
 		return nil, errors.E(op, err)
 	}
 
-	if res.Principal.IsAPIKey() && !res.Principal.HasScope(string(identity.ScopeAIExecute), string(identity.ScopeAIWrite)) {
-		return nil, errors.E(op, errors.Permission, "API key lacks required ai:execute or ai:write scope")
+	if res.Principal.IsScopedGrant() && !res.Principal.HasScope(string(identity.ScopeAIExecute), string(identity.ScopeAIWrite)) {
+		return nil, errors.E(op, errors.Permission, "credential lacks required ai:execute or ai:write scope")
 	}
 
 	spaceIDHeader := strings.TrimSpace(r.Header.Get("Space-Id"))
