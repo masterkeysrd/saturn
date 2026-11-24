@@ -32,7 +32,9 @@ export function AuthLayout() {
                 : "en-US"
             }
             onChange={(e) => {
-              setCachedUserPreferences({ locale: e.target.value })
+              setCachedUserPreferences({
+                regional: { locale: e.target.value },
+              })
             }}
             className="cursor-pointer rounded-lg border border-border/60 bg-background px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
           >

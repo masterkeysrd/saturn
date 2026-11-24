@@ -23,8 +23,11 @@ import {
   type WeekStartsOn,
 } from "@saturn/hooks"
 import {
+  getCachedUserPreferences,
+  normalizeCachedUserPreferences,
   setCachedUserPreferences,
   type CachedUserPreferences,
+  type UserPreferencesPatch,
 } from "@/lib/user-preferences"
 import {
   UserIcon,
@@ -48,6 +51,7 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { InputOTP } from "@/components/ui/input-otp"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -77,17 +81,27 @@ export function AccountSettingsView() {
   const factors = mfaData?.factors || []
   const hasActiveMFA = factors.length > 0
 
-  // User Regional Preferences
+  // User Preferences
   const { data: userPrefsData } = useGetUserPreferencesQuery({})
   const updateUserPrefsMutation = useUpdateUserPreferencesMutation()
 
-  const currentLocale = userPrefsData?.locale
-    ? normalizeUserLocale(userPrefsData.locale)
+  const cachedUserPrefs = getCachedUserPreferences()
+  const currentLocale = userPrefsData?.regional?.locale
+    ? normalizeUserLocale(userPrefsData.regional.locale)
     : tz.locale
   const currentHourCycle: HourCycle =
-    (userPrefsData?.hourCycle ?? tz.hourCycle) === "h23" ? "h23" : "h12"
+    (userPrefsData?.regional?.hourCycle ?? tz.hourCycle) === "h23"
+      ? "h23"
+      : "h12"
   const currentWeekStartsOn: WeekStartsOn =
-    (userPrefsData?.weekStartsOn ?? tz.weekStartsOn) === 1 ? 1 : 0
+    (userPrefsData?.regional?.weekStartsOn ?? tz.weekStartsOn) === 1 ? 1 : 0
+  const currentAutoLoadRemoteContent =
+    userPrefsData?.mail?.autoLoadRemoteContent ??
+    cachedUserPrefs.mail.autoLoadRemoteContent
+  const currentCalendarWebView =
+    userPrefsData?.calendar?.webView ?? cachedUserPrefs.calendar.webView
+  const currentCalendarMobileView =
+    userPrefsData?.calendar?.mobileView ?? cachedUserPrefs.calendar.mobileView
 
   // Mutations
   const updateProfileMutation = useUpdateProfileMutation()
@@ -295,19 +309,34 @@ export function AccountSettingsView() {
     }
   }
 
-  const handleUpdateRegionalPrefs = async (
-    patch: Partial<CachedUserPreferences>,
-    paths: string[]
+  const handleUpdateUserPrefs = async (
+    patch: UserPreferencesPatch,
+    paths: string[],
+    getSuccessTitle?: (updated: CachedUserPreferences) => string
   ) => {
-    const next: CachedUserPreferences = {
-      locale: patch.locale ?? currentLocale,
-      hourCycle: patch.hourCycle ?? currentHourCycle,
-      weekStartsOn: patch.weekStartsOn ?? currentWeekStartsOn,
-    }
     const previous = queryClient.getQueryData<UserPreferences>([
       "/api/v1/identity/users/me/preferences",
       {},
     ])
+    const previousCached = getCachedUserPreferences()
+    const next = normalizeCachedUserPreferences(
+      {
+        regional: {
+          locale: patch.regional?.locale ?? currentLocale,
+          hourCycle: patch.regional?.hourCycle ?? currentHourCycle,
+          weekStartsOn: patch.regional?.weekStartsOn ?? currentWeekStartsOn,
+        },
+        mail: {
+          autoLoadRemoteContent:
+            patch.mail?.autoLoadRemoteContent ?? currentAutoLoadRemoteContent,
+        },
+        calendar: {
+          webView: patch.calendar?.webView ?? currentCalendarWebView,
+          mobileView: patch.calendar?.mobileView ?? currentCalendarMobileView,
+        },
+      },
+      currentLocale
+    )
     queryClient.setQueryData(
       ["/api/v1/identity/users/me/preferences", {}],
       next
@@ -316,20 +345,13 @@ export function AccountSettingsView() {
 
     try {
       const updated = await updateUserPrefsMutation.mutateAsync({
-        userPreferences: {
-          locale: next.locale,
-          hourCycle: next.hourCycle,
-          weekStartsOn: next.weekStartsOn,
-        },
+        userPreferences: next,
         updateMask: { paths },
       })
-      const normalizedUpdated: CachedUserPreferences = {
-        locale: normalizeUserLocale(updated?.locale || next.locale),
-        hourCycle:
-          (updated?.hourCycle ?? next.hourCycle) === "h23" ? "h23" : "h12",
-        weekStartsOn:
-          (updated?.weekStartsOn ?? next.weekStartsOn) === 1 ? 1 : 0,
-      }
+      const normalizedUpdated = normalizeCachedUserPreferences(
+        updated,
+        next.regional.locale
+      )
       queryClient.setQueryData(
         ["/api/v1/identity/users/me/preferences", {}],
         normalizedUpdated
@@ -337,19 +359,27 @@ export function AccountSettingsView() {
       setCachedUserPreferences(normalizedUpdated)
       toast.add({
         type: "success",
-        title: translate(normalizedUpdated.locale, "settings.regional.saved"),
+        title: getSuccessTitle
+          ? getSuccessTitle(normalizedUpdated)
+          : translate(
+              normalizedUpdated.regional.locale,
+              "settings.regional.saved"
+            ),
       })
     } catch (err: unknown) {
       if (previous) {
+        const normalizedPrevious = normalizeCachedUserPreferences(previous)
         queryClient.setQueryData(
           ["/api/v1/identity/users/me/preferences", {}],
-          previous
+          normalizedPrevious
         )
-        setCachedUserPreferences({
-          locale: normalizeUserLocale(previous.locale),
-          hourCycle: previous.hourCycle === "h23" ? "h23" : "h12",
-          weekStartsOn: previous.weekStartsOn === 1 ? 1 : 0,
-        })
+        setCachedUserPreferences(normalizedPrevious)
+      } else {
+        queryClient.setQueryData(
+          ["/api/v1/identity/users/me/preferences", {}],
+          previousCached
+        )
+        setCachedUserPreferences(previousCached)
       }
       const msg =
         err instanceof Error
@@ -587,7 +617,9 @@ export function AccountSettingsView() {
               disabled={updateUserPrefsMutation.isPending}
               onValueChange={(val) => {
                 if (val && val !== currentLocale) {
-                  void handleUpdateRegionalPrefs({ locale: val }, ["locale"])
+                  void handleUpdateUserPrefs({ regional: { locale: val } }, [
+                    "regional.locale",
+                  ])
                 }
               }}
             >
@@ -622,8 +654,8 @@ export function AccountSettingsView() {
                   (val === "h12" || val === "h23") &&
                   val !== currentHourCycle
                 ) {
-                  void handleUpdateRegionalPrefs({ hourCycle: val }, [
-                    "hour_cycle",
+                  void handleUpdateUserPrefs({ regional: { hourCycle: val } }, [
+                    "regional.hour_cycle",
                   ])
                 }
               }}
@@ -659,9 +691,10 @@ export function AccountSettingsView() {
                 if (val === "0" || val === "1") {
                   const nextDay: WeekStartsOn = val === "1" ? 1 : 0
                   if (nextDay !== currentWeekStartsOn) {
-                    void handleUpdateRegionalPrefs({ weekStartsOn: nextDay }, [
-                      "week_starts_on",
-                    ])
+                    void handleUpdateUserPrefs(
+                      { regional: { weekStartsOn: nextDay } },
+                      ["regional.week_starts_on"]
+                    )
                   }
                 }
               }}
@@ -682,6 +715,57 @@ export function AccountSettingsView() {
               </SelectContent>
             </Select>
           </div>
+        </div>
+      </Card>
+
+      {/* Mail Preferences */}
+      <Card className="rounded-2xl border border-border/50 bg-card/60 p-6 shadow-xs select-none">
+        <div className="flex items-start gap-3.5 text-left">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <MailIcon className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-foreground">
+              {t("settings.mail.title")}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("settings.mail.description")}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-center justify-between gap-4 border-t border-border/40 pt-5 text-left">
+          <div className="space-y-1">
+            <Label
+              htmlFor="mail-auto-load-remote-switch"
+              className="text-sm font-medium text-foreground"
+            >
+              {t("settings.mail.autoLoadRemoteContentLabel")}
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              {t("settings.mail.autoLoadRemoteContentDesc")}
+            </p>
+          </div>
+          <Switch
+            id="mail-auto-load-remote-switch"
+            data-testid="mail-auto-load-remote-switch"
+            aria-label={t("settings.mail.autoLoadRemoteContentLabel")}
+            checked={currentAutoLoadRemoteContent}
+            disabled={updateUserPrefsMutation.isPending}
+            onCheckedChange={(checked) => {
+              void handleUpdateUserPrefs(
+                { mail: { autoLoadRemoteContent: checked } },
+                ["mail.auto_load_remote_content"],
+                (updated) =>
+                  translate(
+                    updated.regional.locale,
+                    updated.mail.autoLoadRemoteContent
+                      ? "mail.autoLoadEnabledToast"
+                      : "mail.autoLoadDisabledToast"
+                  )
+              )
+            }}
+          />
         </div>
       </Card>
 

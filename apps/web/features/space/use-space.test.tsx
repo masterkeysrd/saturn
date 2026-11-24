@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { renderHook, cleanup } from "@testing-library/react"
+import { act, renderHook, cleanup } from "@testing-library/react"
 import type { ReactNode } from "react"
 import * as spaceApi from "@saturn/api/gen/saturn/space/v1/space"
 import * as identityApi from "@saturn/api/gen/saturn/identity/v1/identity"
@@ -9,6 +9,7 @@ import { USER_PREFS_STORAGE_KEY } from "@/lib/user-preferences"
 import {
   ActiveSpaceProvider,
   useActiveSpaceContext,
+  useMailRemoteContentPreference,
   useSpacePermissions,
 } from "./use-space"
 
@@ -19,6 +20,8 @@ vi.mock("@saturn/api/gen/saturn/space/v1/space", () => ({
 
 vi.mock("@saturn/api/gen/saturn/identity/v1/identity", () => ({
   useGetUserPreferencesQuery: vi.fn(),
+  useUpdateUserPreferencesMutation: vi.fn(),
+  updateUserPreferences: vi.fn(),
 }))
 
 vi.mock("@saturn/hooks", async () => {
@@ -71,6 +74,10 @@ describe("useSpacePermissions & ActiveSpaceProvider", () => {
 
     vi.mocked(identityApi.useGetUserPreferencesQuery).mockReturnValue({
       data: undefined,
+    } as never)
+    vi.mocked(identityApi.useUpdateUserPreferencesMutation).mockReturnValue({
+      mutateAsync: vi.fn(async (req) => req.userPreferences),
+      isPending: false,
     } as never)
   })
 
@@ -174,31 +181,113 @@ describe("useSpacePermissions & ActiveSpaceProvider", () => {
     expect(localStorage.getItem("space_meta")).toBeNull()
   })
 
-  it("syncs UserPreferences to TimezoneProvider, document.lang, and localStorage", () => {
+  it("syncs grouped UserPreferences to TimezoneProvider, document.lang, and localStorage", () => {
     vi.mocked(hooks.useSpaceRole).mockReturnValue({
       role: "owner",
       isLoading: false,
     })
     vi.mocked(identityApi.useGetUserPreferencesQuery).mockReturnValue({
       data: {
-        locale: "es-ES",
-        hourCycle: "h23",
-        weekStartsOn: 1,
+        regional: {
+          locale: "es-ES",
+          hourCycle: "h23",
+          weekStartsOn: 1,
+        },
+        mail: {
+          autoLoadRemoteContent: true,
+        },
+        calendar: {
+          webView: "week",
+          mobileView: "agenda",
+        },
       },
     } as never)
 
-    const { result } = renderHook(() => hooks.useTimezone(), { wrapper })
+    const { result } = renderHook(
+      () => ({
+        tz: hooks.useTimezone(),
+        mail: useMailRemoteContentPreference(),
+      }),
+      { wrapper }
+    )
 
-    expect(result.current.locale).toBe("es-ES")
-    expect(result.current.hourCycle).toBe("h23")
-    expect(result.current.weekStartsOn).toBe(1)
+    expect(result.current.tz.locale).toBe("es-ES")
+    expect(result.current.tz.hourCycle).toBe("h23")
+    expect(result.current.tz.weekStartsOn).toBe(1)
+    expect(result.current.mail.autoLoadRemoteContent).toBe(true)
     expect(document.documentElement.lang).toBe("es-ES")
     expect(
       JSON.parse(localStorage.getItem(USER_PREFS_STORAGE_KEY) || "{}")
     ).toEqual({
-      locale: "es-ES",
-      hourCycle: "h23",
-      weekStartsOn: 1,
+      regional: {
+        locale: "es-ES",
+        hourCycle: "h23",
+        weekStartsOn: 1,
+      },
+      mail: {
+        autoLoadRemoteContent: true,
+      },
+      calendar: {
+        webView: "week",
+        mobileView: "agenda",
+      },
     })
+  })
+
+  it("persists mail.auto_load_remote_content via UpdateUserPreferences mutation", async () => {
+    vi.mocked(hooks.useSpaceRole).mockReturnValue({
+      role: "owner",
+      isLoading: false,
+    })
+    const mutateAsync = vi.fn(async (req) => req.userPreferences)
+    vi.mocked(identityApi.useUpdateUserPreferencesMutation).mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as never)
+    vi.mocked(identityApi.useGetUserPreferencesQuery).mockReturnValue({
+      data: {
+        regional: {
+          locale: "en-US",
+          hourCycle: "h12",
+          weekStartsOn: 0,
+        },
+        mail: {
+          autoLoadRemoteContent: false,
+        },
+        calendar: {
+          webView: "month",
+          mobileView: "agenda",
+        },
+      },
+    } as never)
+
+    const { result } = renderHook(() => useMailRemoteContentPreference(), {
+      wrapper,
+    })
+
+    expect(result.current.autoLoadRemoteContent).toBe(false)
+
+    await act(async () => {
+      await result.current.setAutoLoadRemoteContent(true)
+    })
+
+    expect(mutateAsync).toHaveBeenCalledWith({
+      userPreferences: {
+        regional: {
+          locale: "en-US",
+          hourCycle: "h12",
+          weekStartsOn: 0,
+        },
+        mail: {
+          autoLoadRemoteContent: true,
+        },
+        calendar: {
+          webView: "month",
+          mobileView: "agenda",
+        },
+      },
+      updateMask: { paths: ["mail.auto_load_remote_content"] },
+    })
+    expect(result.current.autoLoadRemoteContent).toBe(true)
   })
 })

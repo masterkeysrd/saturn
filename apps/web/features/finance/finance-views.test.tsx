@@ -128,6 +128,12 @@ describe("Phase 2 Web Finance Views", () => {
       spaceRole: "owner",
       timezone: "UTC",
       activeSpace: null,
+      userPreferences: {
+        regional: { locale: "en-US", hourCycle: "h12", weekStartsOn: 0 },
+        mail: { autoLoadRemoteContent: false },
+        calendar: { webView: "month", mobileView: "agenda" },
+      },
+      updateUserPreferences: vi.fn(),
       switchSpace: vi.fn(),
       clearActiveSpace: vi.fn(),
       isLoading: false,

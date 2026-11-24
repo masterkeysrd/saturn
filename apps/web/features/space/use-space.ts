@@ -8,11 +8,17 @@ import {
   createElement,
   type ReactNode,
 } from "react"
+import { QueryClientContext } from "@tanstack/react-query"
 import {
   useListSpacesQuery,
   useGetSettingsQuery,
 } from "@saturn/api/gen/saturn/space/v1/space"
-import { useGetUserPreferencesQuery } from "@saturn/api/gen/saturn/identity/v1/identity"
+import {
+  updateUserPreferences as updateUserPreferencesRequest,
+  useGetUserPreferencesQuery,
+  useUpdateUserPreferencesMutation,
+  type UserPreferences,
+} from "@saturn/api/gen/saturn/identity/v1/identity"
 import { TimezoneProvider, useSpaceRole } from "@saturn/hooks"
 import { AuthContext } from "@/features/auth/auth-context"
 import { useAuth } from "@/features/auth/use-auth"
@@ -23,10 +29,15 @@ import {
   normalizeCachedUserPreferences,
   setCachedUserPreferences,
   type CachedUserPreferences,
+  type UserPreferencesPatch,
 } from "@/lib/user-preferences"
 
 const ACTIVE_SPACE_KEY = "active_space_id"
 const SPACE_META_KEY = "space_meta"
+export const USER_PREFERENCES_QUERY_KEY = [
+  "/api/v1/identity/users/me/preferences",
+  {},
+] as const
 
 function getBrowserTimezone(): string {
   try {
@@ -88,11 +99,17 @@ interface ActiveSpaceContextType {
   spaceRole: string
   switchSpace: (newMeta: SpaceMeta) => void
   clearActiveSpace: () => void
+  userPreferences: CachedUserPreferences
+  updateUserPreferences: (
+    patch: UserPreferencesPatch,
+    paths: string[]
+  ) => Promise<CachedUserPreferences>
 }
 
 const ActiveSpaceContext = createContext<ActiveSpaceContextType | null>(null)
 
 export function ActiveSpaceProvider({ children }: { children: ReactNode }) {
+  const queryClient = useContext(QueryClientContext)
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth()
   const activeSpaceState = useActiveSpace()
   const { spaceId, clearActiveSpace } = activeSpaceState
@@ -112,10 +129,15 @@ export function ActiveSpaceProvider({ children }: { children: ReactNode }) {
     {},
     { enabled: isAuthenticated, staleTime: 1000 * 60 * 10 }
   )
+  const updateUserPrefsMutation = useUpdateUserPreferencesMutation()
 
   const [cachedPrefs, setCachedPrefsState] = useState<CachedUserPreferences>(
     () => getCachedUserPreferences()
   )
+  const [overridePrefs, setOverridePrefs] = useState<{
+    source: UserPreferences | undefined
+    value: CachedUserPreferences
+  } | null>(null)
 
   useEffect(() => {
     const handlePrefsUpdated = (event: Event) => {
@@ -143,44 +165,269 @@ export function ActiveSpaceProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated || !userPrefs) return
     setCachedUserPreferences(
       {
-        locale: userPrefs.locale,
-        hourCycle: userPrefs.hourCycle,
-        weekStartsOn: userPrefs.weekStartsOn,
+        regional: {
+          locale: userPrefs.regional?.locale,
+          hourCycle: userPrefs.regional?.hourCycle,
+          weekStartsOn: userPrefs.regional?.weekStartsOn,
+        },
+        mail: {
+          autoLoadRemoteContent: userPrefs.mail?.autoLoadRemoteContent,
+        },
+        calendar: {
+          webView: userPrefs.calendar?.webView,
+          mobileView: userPrefs.calendar?.mobileView,
+        },
       },
       { emit: false }
     )
   }, [isAuthenticated, userPrefs])
 
   const resolvedPrefs = useMemo(() => {
+    if (overridePrefs && overridePrefs.source === userPrefs) {
+      return overridePrefs.value
+    }
     if (isAuthenticated && userPrefs) {
-      return normalizeCachedUserPreferences(userPrefs, cachedPrefs.locale)
+      return normalizeCachedUserPreferences(
+        userPrefs,
+        cachedPrefs.regional.locale
+      )
     }
     return cachedPrefs
-  }, [isAuthenticated, userPrefs, cachedPrefs])
+  }, [overridePrefs, isAuthenticated, userPrefs, cachedPrefs])
+
+  const updateUserPreferences = useCallback(
+    async (
+      patch: UserPreferencesPatch,
+      paths: string[]
+    ): Promise<CachedUserPreferences> => {
+      const previous = resolvedPrefs
+      const previousQuery = queryClient?.getQueryData<UserPreferences>(
+        USER_PREFERENCES_QUERY_KEY
+      )
+      const next = normalizeCachedUserPreferences(
+        {
+          regional: {
+            locale: patch.regional?.locale ?? previous.regional.locale,
+            hourCycle: patch.regional?.hourCycle ?? previous.regional.hourCycle,
+            weekStartsOn:
+              patch.regional?.weekStartsOn ?? previous.regional.weekStartsOn,
+          },
+          mail: {
+            autoLoadRemoteContent:
+              patch.mail?.autoLoadRemoteContent ??
+              previous.mail.autoLoadRemoteContent,
+          },
+          calendar: {
+            webView: patch.calendar?.webView ?? previous.calendar.webView,
+            mobileView:
+              patch.calendar?.mobileView ?? previous.calendar.mobileView,
+          },
+        },
+        previous.regional.locale
+      )
+
+      setOverridePrefs({ source: userPrefs, value: next })
+      setCachedPrefsState(next)
+      setCachedUserPreferences(next)
+      queryClient?.setQueryData<UserPreferences>(
+        USER_PREFERENCES_QUERY_KEY,
+        next
+      )
+
+      if (!isAuthenticated || paths.length === 0) {
+        return next
+      }
+
+      try {
+        const updated = await updateUserPrefsMutation.mutateAsync({
+          userPreferences: next,
+          updateMask: { paths },
+        })
+        const normalized = normalizeCachedUserPreferences(
+          updated,
+          next.regional.locale
+        )
+        setOverridePrefs({ source: userPrefs, value: normalized })
+        setCachedPrefsState(normalized)
+        setCachedUserPreferences(normalized)
+        queryClient?.setQueryData<UserPreferences>(
+          USER_PREFERENCES_QUERY_KEY,
+          normalized
+        )
+        return normalized
+      } catch (err) {
+        setOverridePrefs({ source: userPrefs, value: previous })
+        setCachedPrefsState(previous)
+        setCachedUserPreferences(previous)
+        queryClient?.setQueryData<UserPreferences | undefined>(
+          USER_PREFERENCES_QUERY_KEY,
+          previousQuery
+        )
+        throw err
+      }
+    },
+    [
+      isAuthenticated,
+      queryClient,
+      resolvedPrefs,
+      updateUserPrefsMutation,
+      userPrefs,
+    ]
+  )
 
   useEffect(() => {
     if (typeof document !== "undefined") {
-      document.documentElement.lang = resolvedPrefs.locale
+      document.documentElement.lang = resolvedPrefs.regional.locale
     }
-  }, [resolvedPrefs.locale])
+  }, [resolvedPrefs.regional.locale])
 
   const browserTz = useMemo(() => getBrowserTimezone(), [])
   const timezone = settings?.timezone || browserTz
 
+  const contextValue = useMemo<ActiveSpaceContextType>(
+    () => ({
+      ...activeSpaceState,
+      userPreferences: resolvedPrefs,
+      updateUserPreferences,
+    }),
+    [activeSpaceState, resolvedPrefs, updateUserPreferences]
+  )
+
   return createElement(
     ActiveSpaceContext.Provider,
-    { value: activeSpaceState },
+    { value: contextValue },
     createElement(
       TimezoneProvider,
       {
         timezone,
-        locale: resolvedPrefs.locale,
-        hourCycle: resolvedPrefs.hourCycle,
-        weekStartsOn: resolvedPrefs.weekStartsOn,
+        locale: resolvedPrefs.regional.locale,
+        hourCycle: resolvedPrefs.regional.hourCycle,
+        weekStartsOn: resolvedPrefs.regional.weekStartsOn,
       },
       children
     )
   )
+}
+
+export function useMailRemoteContentPreference() {
+  const spaceCtx = useContext(ActiveSpaceContext)
+  const queryClient = useContext(QueryClientContext)
+  const authCtx = useContext(AuthContext)
+
+  const [cachedPrefs, setCachedPrefsState] = useState<CachedUserPreferences>(
+    () => getCachedUserPreferences()
+  )
+  const [queryPrefs, setQueryPrefs] = useState<UserPreferences | undefined>(
+    () => queryClient?.getQueryData<UserPreferences>(USER_PREFERENCES_QUERY_KEY)
+  )
+
+  useEffect(() => {
+    const handlePrefsUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<CachedUserPreferences>).detail
+      if (detail) {
+        setCachedPrefsState(normalizeCachedUserPreferences(detail))
+      } else {
+        setCachedPrefsState(getCachedUserPreferences())
+      }
+    }
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === USER_PREFS_STORAGE_KEY) {
+        setCachedPrefsState(getCachedUserPreferences())
+      }
+    }
+    window.addEventListener(USER_PREFS_UPDATED_EVENT, handlePrefsUpdated)
+    window.addEventListener("storage", handleStorage)
+    return () => {
+      window.removeEventListener(USER_PREFS_UPDATED_EVENT, handlePrefsUpdated)
+      window.removeEventListener("storage", handleStorage)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!queryClient) return
+    const unsubscribe = queryClient.getQueryCache().subscribe(() => {
+      setQueryPrefs(
+        queryClient.getQueryData<UserPreferences>(USER_PREFERENCES_QUERY_KEY)
+      )
+    })
+    return unsubscribe
+  }, [queryClient])
+
+  const autoLoadRemoteContent = spaceCtx
+    ? spaceCtx.userPreferences.mail.autoLoadRemoteContent
+    : (queryPrefs?.mail?.autoLoadRemoteContent ??
+      cachedPrefs.mail.autoLoadRemoteContent)
+
+  const setAutoLoadRemoteContent = useCallback(
+    async (nextValue: boolean): Promise<CachedUserPreferences> => {
+      if (spaceCtx) {
+        return spaceCtx.updateUserPreferences(
+          { mail: { autoLoadRemoteContent: nextValue } },
+          ["mail.auto_load_remote_content"]
+        )
+      }
+
+      const previous = getCachedUserPreferences()
+      const previousQuery = queryClient?.getQueryData<UserPreferences>(
+        USER_PREFERENCES_QUERY_KEY
+      )
+      const base = previousQuery
+        ? normalizeCachedUserPreferences(
+            previousQuery,
+            previous.regional.locale
+          )
+        : previous
+      const next = setCachedUserPreferences({
+        regional: base.regional,
+        mail: { autoLoadRemoteContent: nextValue },
+        calendar: base.calendar,
+      })
+      setCachedPrefsState(next)
+      queryClient?.setQueryData<UserPreferences>(
+        USER_PREFERENCES_QUERY_KEY,
+        next
+      )
+      setQueryPrefs(next)
+
+      if (!authCtx?.isAuthenticated) {
+        return next
+      }
+
+      try {
+        const updated = await updateUserPreferencesRequest({
+          userPreferences: next,
+          updateMask: { paths: ["mail.auto_load_remote_content"] },
+        })
+        const normalized = normalizeCachedUserPreferences(
+          updated,
+          next.regional.locale
+        )
+        setCachedUserPreferences(normalized)
+        setCachedPrefsState(normalized)
+        queryClient?.setQueryData<UserPreferences>(
+          USER_PREFERENCES_QUERY_KEY,
+          normalized
+        )
+        setQueryPrefs(normalized)
+        return normalized
+      } catch (err) {
+        setCachedUserPreferences(previous)
+        setCachedPrefsState(previous)
+        queryClient?.setQueryData<UserPreferences | undefined>(
+          USER_PREFERENCES_QUERY_KEY,
+          previousQuery
+        )
+        setQueryPrefs(previousQuery)
+        throw err
+      }
+    },
+    [authCtx?.isAuthenticated, queryClient, spaceCtx]
+  )
+
+  return {
+    autoLoadRemoteContent,
+    setAutoLoadRemoteContent,
+  }
 }
 
 export function useMySpaces() {
@@ -209,8 +456,15 @@ export function useActiveSpaceContext() {
     )
   }
 
-  const { spaceId, spaceName, spaceRole, switchSpace, clearActiveSpace } =
-    context
+  const {
+    spaceId,
+    spaceName,
+    spaceRole,
+    switchSpace,
+    clearActiveSpace,
+    userPreferences,
+    updateUserPreferences,
+  } = context
   const { spaces, isLoading } = useMySpaces()
   const { user, isAuthenticated } = useAuth()
 
@@ -250,6 +504,8 @@ export function useActiveSpaceContext() {
     spaceName,
     spaceRole: currentRole,
     timezone,
+    userPreferences,
+    updateUserPreferences,
     switchSpace,
     clearActiveSpace,
     isLoading,

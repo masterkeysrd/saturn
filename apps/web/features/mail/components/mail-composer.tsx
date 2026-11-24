@@ -37,6 +37,7 @@ import {
   type EmailEditorActiveFormats,
 } from "./email-rich-editor"
 import { cn } from "@/lib/utils"
+import { useMailRemoteContentPreference } from "@/features/space/use-space"
 
 const INITIAL_ACTIVE_FORMATS: EmailEditorActiveFormats = {
   bold: false,
@@ -226,26 +227,10 @@ export function MailComposer({
   const initialSubject = initialDraft?.subject || defaultSubject || ""
   const initialAttachments = initialDraft?.attachments ?? defaultAttachments
 
-  const [autoLoadImages, setAutoLoadImages] = useState<boolean>(() => {
-    if (typeof localStorage === "undefined") return false
-    return localStorage.getItem("saturn_mail_auto_load_images") === "true"
-  })
+  const { autoLoadRemoteContent: autoLoadImages } =
+    useMailRemoteContentPreference()
   const [loadRemoteImages, setLoadRemoteImages] = useState(false)
   const shouldLoadRemoteImages = loadRemoteImages || autoLoadImages
-
-  useEffect(() => {
-    const handleSync = () => {
-      setAutoLoadImages(
-        localStorage.getItem("saturn_mail_auto_load_images") === "true"
-      )
-    }
-    window.addEventListener("storage", handleSync)
-    window.addEventListener("saturn-mail-auto-load-changed", handleSync)
-    return () => {
-      window.removeEventListener("storage", handleSync)
-      window.removeEventListener("saturn-mail-auto-load-changed", handleSync)
-    }
-  }, [])
 
   const rawBodyHtml = initialDraft?.bodyHtml ?? defaultBodyHtml ?? ""
   const rawBodyText = initialDraft?.bodyText ?? defaultBodyText ?? ""

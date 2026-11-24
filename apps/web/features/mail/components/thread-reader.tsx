@@ -68,6 +68,7 @@ import { MailComposer } from "./mail-composer"
 import { SenderAvatar } from "./sender-avatar"
 import { hasFinancialSignal } from "../mail-utils"
 import { cn } from "@/lib/utils"
+import { useMailRemoteContentPreference } from "@/features/space/use-space"
 
 function translateHumanizedMailTimestamp(
   stamp: HumanizedMailTimestamp,
@@ -171,38 +172,26 @@ export function ThreadReader({
   }, [accounts, thread?.connectedAccountId])
 
   // Global auto-load images preference
-  const [autoLoadImages, setAutoLoadImages] = useState<boolean>(() => {
-    if (typeof localStorage === "undefined") return false
-    return localStorage.getItem("saturn_mail_auto_load_images") === "true"
-  })
-
-  useEffect(() => {
-    const handleSync = () => {
-      setAutoLoadImages(
-        localStorage.getItem("saturn_mail_auto_load_images") === "true"
-      )
-    }
-    window.addEventListener("storage", handleSync)
-    window.addEventListener("saturn-mail-auto-load-changed", handleSync)
-    return () => {
-      window.removeEventListener("storage", handleSync)
-      window.removeEventListener("saturn-mail-auto-load-changed", handleSync)
-    }
-  }, [])
+  const { autoLoadRemoteContent: autoLoadImages, setAutoLoadRemoteContent } =
+    useMailRemoteContentPreference()
 
   const handleToggleGlobalAutoLoadImages = () => {
     const next = !autoLoadImages
-    setAutoLoadImages(next)
-    try {
-      if (next) {
-        localStorage.setItem("saturn_mail_auto_load_images", "true")
-      } else {
-        localStorage.removeItem("saturn_mail_auto_load_images")
-      }
-      window.dispatchEvent(new Event("saturn-mail-auto-load-changed"))
-    } catch {
-      // ignore
-    }
+    void setAutoLoadRemoteContent(next)
+      .then(() => {
+        toast.add({
+          type: "success",
+          title: next
+            ? t("mail.autoLoadEnabledToast")
+            : t("mail.autoLoadDisabledToast"),
+        })
+      })
+      .catch(() => {
+        toast.add({
+          type: "error",
+          title: t("mail.autoLoadUpdateFailed"),
+        })
+      })
   }
 
   // Track user overrides for expanded/collapsed messages (reset automatically via key on threadId change)

@@ -10,7 +10,10 @@ import { MailUnreadBadge } from "./components/mail-unread-badge"
 import * as hooks from "@saturn/hooks"
 import * as aiHooks from "@saturn/hooks/ai"
 import * as financeApi from "@saturn/api/gen/saturn/finance/v1/finance"
+import * as identityApi from "@saturn/api/gen/saturn/identity/v1/identity"
 import type { Thread, Mailbox } from "@saturn/api/saturn/mail/v1/mail"
+import { AuthContext } from "@/features/auth/auth-context"
+import { USER_PREFS_STORAGE_KEY } from "@/lib/user-preferences"
 
 vi.mock("@/features/space/use-space", async () => {
   const actual = await vi.importActual<
@@ -588,15 +591,55 @@ describe("MailView Web Feature", () => {
     fireEvent.click(toggleBtn)
   })
 
-  it("supports always loading images across sessions via localStorage", () => {
-    render(<MailView />, { wrapper: createWrapper() })
+  it("persists mail.auto_load_remote_content via UpdateUserPreferences and grouped UserPreferences cache", async () => {
+    const updatePrefsSpy = vi
+      .spyOn(identityApi, "updateUserPreferences")
+      .mockImplementation(async (req) => req.userPreferences)
+
+    const authWrapper = ({ children }: { children: ReactNode }) =>
+      createElement(
+        AuthContext.Provider,
+        {
+          value: {
+            user: { id: "usr_1", email: "work@company.com", name: "Work" },
+            accessToken: "tok_1",
+            isAuthenticated: true,
+            isLoading: false,
+            login: vi.fn(),
+            register: vi.fn(),
+            logoutUser: vi.fn(),
+            updateAccessToken: vi.fn(),
+            error: null,
+            setError: vi.fn(),
+          },
+        },
+        createElement(
+          QueryClientProvider,
+          { client: queryClient },
+          createElement(Toaster, null, children)
+        )
+      )
+
+    render(<MailView />, { wrapper: authWrapper })
     fireEvent.click(screen.getByTestId("thread-row-mth_101"))
 
     // Click "Always load" button
     const alwaysLoadBtn = screen.getByTestId("always-load-images-btn")
     fireEvent.click(alwaysLoadBtn)
 
-    expect(localStorage.getItem("saturn_mail_auto_load_images")).toBe("true")
+    const stored = JSON.parse(
+      localStorage.getItem(USER_PREFS_STORAGE_KEY) || "{}"
+    )
+    expect(stored.mail?.autoLoadRemoteContent).toBe(true)
+
+    await waitFor(() => {
+      expect(updatePrefsSpy).toHaveBeenCalledWith({
+        userPreferences: expect.objectContaining({
+          mail: { autoLoadRemoteContent: true },
+        }),
+        updateMask: { paths: ["mail.auto_load_remote_content"] },
+      })
+    })
 
     const [iframeAfter] = screen.getAllByTestId(
       "sandboxed-email-frame"
@@ -604,6 +647,24 @@ describe("MailView Web Feature", () => {
     expect(iframeAfter.srcdoc).toContain(
       'src="https://tracker.company.com/pixel.png"'
     )
+
+    // Toggle off via toolbar toggle button
+    const toolbarToggleBtn = screen.getByTestId("toggle-auto-load-images-btn")
+    fireEvent.click(toolbarToggleBtn)
+
+    await waitFor(() => {
+      expect(updatePrefsSpy).toHaveBeenCalledWith({
+        userPreferences: expect.objectContaining({
+          mail: { autoLoadRemoteContent: false },
+        }),
+        updateMask: { paths: ["mail.auto_load_remote_content"] },
+      })
+    })
+
+    const storedAfterDisable = JSON.parse(
+      localStorage.getItem(USER_PREFS_STORAGE_KEY) || "{}"
+    )
+    expect(storedAfterDisable.mail?.autoLoadRemoteContent).toBe(false)
   })
 
   it("renders sender avatar, header quick actions, and 3-dots menu", () => {

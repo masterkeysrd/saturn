@@ -113,7 +113,13 @@ export function CommandPalette({
   }
 
   const handleSwitchLanguage = async (nextLocale: string) => {
-    const next = setCachedUserPreferences({ locale: nextLocale })
+    const next = setCachedUserPreferences({
+      regional: {
+        locale: nextLocale,
+        hourCycle: tz.hourCycle,
+        weekStartsOn: tz.weekStartsOn,
+      },
+    })
     queryClient?.setQueryData(
       ["/api/v1/identity/users/me/preferences", {}],
       next
@@ -121,17 +127,26 @@ export function CommandPalette({
     if (user) {
       try {
         const updated = await updateUserPreferences({
-          userPreferences: {
-            locale: next.locale,
-            hourCycle: tz.hourCycle,
-            weekStartsOn: tz.weekStartsOn,
-          },
-          updateMask: { paths: ["locale"] },
+          userPreferences: next,
+          updateMask: { paths: ["regional.locale"] },
         })
         const normalized = setCachedUserPreferences({
-          locale: updated.locale || next.locale,
-          hourCycle: updated.hourCycle || next.hourCycle,
-          weekStartsOn: updated.weekStartsOn ?? next.weekStartsOn,
+          regional: {
+            locale: updated.regional?.locale || next.regional.locale,
+            hourCycle: updated.regional?.hourCycle || next.regional.hourCycle,
+            weekStartsOn:
+              updated.regional?.weekStartsOn ?? next.regional.weekStartsOn,
+          },
+          mail: {
+            autoLoadRemoteContent:
+              updated.mail?.autoLoadRemoteContent ??
+              next.mail.autoLoadRemoteContent,
+          },
+          calendar: {
+            webView: updated.calendar?.webView || next.calendar.webView,
+            mobileView:
+              updated.calendar?.mobileView || next.calendar.mobileView,
+          },
         })
         queryClient?.setQueryData(
           ["/api/v1/identity/users/me/preferences", {}],

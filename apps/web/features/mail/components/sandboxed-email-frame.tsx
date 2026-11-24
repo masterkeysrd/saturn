@@ -1,9 +1,11 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import { ShieldAlert, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "@/components/ui/toast"
 import { useI18n } from "@saturn/hooks"
 import type { Attachment } from "@saturn/api/saturn/mail/v1/mail"
 import { restoreRemoteImageSrc, sanitizeEmailHtml } from "@saturn/core"
+import { useMailRemoteContentPreference } from "@/features/space/use-space"
 import { cn } from "@/lib/utils"
 
 export interface SandboxedEmailFrameProps {
@@ -28,10 +30,8 @@ export function SandboxedEmailFrame({
   className = "",
 }: SandboxedEmailFrameProps) {
   const { t } = useI18n()
-  const [autoLoadImages, setAutoLoadImages] = useState<boolean>(() => {
-    if (typeof localStorage === "undefined") return false
-    return localStorage.getItem("saturn_mail_auto_load_images") === "true"
-  })
+  const { autoLoadRemoteContent: autoLoadImages, setAutoLoadRemoteContent } =
+    useMailRemoteContentPreference()
   const [loadImages, setLoadImages] = useState(false)
   const [iframeHeight, setIframeHeight] = useState(60)
   const [isAppDark, setIsAppDark] = useState<boolean>(() => {
@@ -53,21 +53,6 @@ export function SandboxedEmailFrame({
     const observer = new MutationObserver(updateTheme)
     observer.observe(root, { attributes: true, attributeFilter: ["class"] })
     return () => observer.disconnect()
-  }, [])
-
-  // Listen to cross-component auto-load images preference changes
-  useEffect(() => {
-    const handleSync = () => {
-      setAutoLoadImages(
-        localStorage.getItem("saturn_mail_auto_load_images") === "true"
-      )
-    }
-    window.addEventListener("storage", handleSync)
-    window.addEventListener("saturn-mail-auto-load-changed", handleSync)
-    return () => {
-      window.removeEventListener("storage", handleSync)
-      window.removeEventListener("saturn-mail-auto-load-changed", handleSync)
-    }
   }, [])
 
   // Detect whether HTML actually contains remote images (external tracking pixels or remote URLs)
@@ -528,7 +513,7 @@ export function SandboxedEmailFrame({
               className="h-6 gap-1 px-2 text-[11px] font-medium"
             >
               <ImageIcon className="h-3 w-3" />
-              <span>{t("mail.loadImages")}</span>
+              <span>{t("mail.loadOnce")}</span>
             </Button>
             <Button
               type="button"
@@ -536,16 +521,20 @@ export function SandboxedEmailFrame({
               size="sm"
               data-testid="always-load-images-btn"
               onClick={() => {
-                setAutoLoadImages(true)
                 setLoadImages(true)
-                try {
-                  localStorage.setItem("saturn_mail_auto_load_images", "true")
-                  window.dispatchEvent(
-                    new Event("saturn-mail-auto-load-changed")
-                  )
-                } catch {
-                  // ignore
-                }
+                void setAutoLoadRemoteContent(true)
+                  .then(() => {
+                    toast.add({
+                      type: "success",
+                      title: t("mail.autoLoadEnabledToast"),
+                    })
+                  })
+                  .catch(() => {
+                    toast.add({
+                      type: "error",
+                      title: t("mail.autoLoadUpdateFailed"),
+                    })
+                  })
               }}
               className="h-6 px-1.5 text-[11px] text-amber-700 hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-100"
               title={t("mail.alwaysLoadTitle")}
@@ -560,14 +549,20 @@ export function SandboxedEmailFrame({
           <button
             type="button"
             onClick={() => {
-              setAutoLoadImages(false)
               setLoadImages(false)
-              try {
-                localStorage.removeItem("saturn_mail_auto_load_images")
-                window.dispatchEvent(new Event("saturn-mail-auto-load-changed"))
-              } catch {
-                // ignore
-              }
+              void setAutoLoadRemoteContent(false)
+                .then(() => {
+                  toast.add({
+                    type: "success",
+                    title: t("mail.autoLoadDisabledToast"),
+                  })
+                })
+                .catch(() => {
+                  toast.add({
+                    type: "error",
+                    title: t("mail.autoLoadUpdateFailed"),
+                  })
+                })
             }}
             className="text-primary hover:underline"
           >

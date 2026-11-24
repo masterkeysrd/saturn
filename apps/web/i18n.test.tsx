@@ -278,7 +278,11 @@ describe("Web i18n & UserPreferences", () => {
       isPending: false,
     } as never)
     vi.mocked(identityApi.useGetUserPreferencesQuery).mockReturnValue({
-      data: { locale: "en-US", hourCycle: "h12", weekStartsOn: 0 },
+      data: {
+        regional: { locale: "en-US", hourCycle: "h12", weekStartsOn: 0 },
+        mail: { autoLoadRemoteContent: false },
+        calendar: { webView: "month", mobileView: "agenda" },
+      },
     } as never)
     mutateUserPrefsAsync.mockImplementation(async (req) => req.userPreferences)
     vi.mocked(identityApi.useUpdateUserPreferencesMutation).mockReturnValue({
@@ -393,12 +397,21 @@ describe("Web i18n & UserPreferences", () => {
     expect(screen.getByText("Quick Actions")).toBeTruthy()
   })
 
-  it("updates Language, Time Format, and Week Starts On in AccountSettingsView and persists to query cache & localStorage", async () => {
+  it("updates Language, Time Format, Week Starts On, and Mail Auto-load in AccountSettingsView and persists to query cache & localStorage", async () => {
     const queryClient = createTestQueryClient()
     const initialPrefs = {
-      locale: "en-US",
-      hourCycle: "h12",
-      weekStartsOn: 0,
+      regional: {
+        locale: "en-US",
+        hourCycle: "h12",
+        weekStartsOn: 0,
+      },
+      mail: {
+        autoLoadRemoteContent: false,
+      },
+      calendar: {
+        webView: "month",
+        mobileView: "agenda",
+      },
     }
     queryClient.setQueryData(
       ["/api/v1/identity/users/me/preferences", {}],
@@ -434,6 +447,7 @@ describe("Web i18n & UserPreferences", () => {
     )
 
     expect(screen.getByText("Language & Regional Format")).toBeTruthy()
+    expect(screen.getByText("Mail Preferences")).toBeTruthy()
 
     // 1. Switch Language -> Español (España)
     await selectOption("Language & Locale", "Español (España)")
@@ -441,27 +455,54 @@ describe("Web i18n & UserPreferences", () => {
     await waitFor(() => {
       expect(mutateUserPrefsAsync).toHaveBeenCalledWith({
         userPreferences: {
-          locale: "es-ES",
-          hourCycle: "h12",
-          weekStartsOn: 0,
+          regional: {
+            locale: "es-ES",
+            hourCycle: "h12",
+            weekStartsOn: 0,
+          },
+          mail: {
+            autoLoadRemoteContent: false,
+          },
+          calendar: {
+            webView: "month",
+            mobileView: "agenda",
+          },
         },
-        updateMask: { paths: ["locale"] },
+        updateMask: { paths: ["regional.locale"] },
       })
     })
 
     expect(
       queryClient.getQueryData(["/api/v1/identity/users/me/preferences", {}])
     ).toEqual({
-      locale: "es-ES",
-      hourCycle: "h12",
-      weekStartsOn: 0,
+      regional: {
+        locale: "es-ES",
+        hourCycle: "h12",
+        weekStartsOn: 0,
+      },
+      mail: {
+        autoLoadRemoteContent: false,
+      },
+      calendar: {
+        webView: "month",
+        mobileView: "agenda",
+      },
     })
     expect(
       JSON.parse(localStorage.getItem(USER_PREFS_STORAGE_KEY) || "{}")
     ).toEqual({
-      locale: "es-ES",
-      hourCycle: "h12",
-      weekStartsOn: 0,
+      regional: {
+        locale: "es-ES",
+        hourCycle: "h12",
+        weekStartsOn: 0,
+      },
+      mail: {
+        autoLoadRemoteContent: false,
+      },
+      calendar: {
+        webView: "month",
+        mobileView: "agenda",
+      },
     })
 
     // 2. Switch Time Format -> 24-hour (13:30)
@@ -470,11 +511,20 @@ describe("Web i18n & UserPreferences", () => {
     await waitFor(() => {
       expect(mutateUserPrefsAsync).toHaveBeenCalledWith({
         userPreferences: {
-          locale: "es-ES",
-          hourCycle: "h23",
-          weekStartsOn: 0,
+          regional: {
+            locale: "es-ES",
+            hourCycle: "h23",
+            weekStartsOn: 0,
+          },
+          mail: {
+            autoLoadRemoteContent: false,
+          },
+          calendar: {
+            webView: "month",
+            mobileView: "agenda",
+          },
         },
-        updateMask: { paths: ["hour_cycle"] },
+        updateMask: { paths: ["regional.hour_cycle"] },
       })
     })
 
@@ -484,27 +534,77 @@ describe("Web i18n & UserPreferences", () => {
     await waitFor(() => {
       expect(mutateUserPrefsAsync).toHaveBeenCalledWith({
         userPreferences: {
-          locale: "es-ES",
-          hourCycle: "h23",
-          weekStartsOn: 1,
+          regional: {
+            locale: "es-ES",
+            hourCycle: "h23",
+            weekStartsOn: 1,
+          },
+          mail: {
+            autoLoadRemoteContent: false,
+          },
+          calendar: {
+            webView: "month",
+            mobileView: "agenda",
+          },
         },
-        updateMask: { paths: ["week_starts_on"] },
+        updateMask: { paths: ["regional.week_starts_on"] },
+      })
+    })
+
+    // 4. Toggle Auto-load remote email images -> true
+    fireEvent.click(screen.getByTestId("mail-auto-load-remote-switch"))
+
+    await waitFor(() => {
+      expect(mutateUserPrefsAsync).toHaveBeenCalledWith({
+        userPreferences: {
+          regional: {
+            locale: "es-ES",
+            hourCycle: "h23",
+            weekStartsOn: 1,
+          },
+          mail: {
+            autoLoadRemoteContent: true,
+          },
+          calendar: {
+            webView: "month",
+            mobileView: "agenda",
+          },
+        },
+        updateMask: { paths: ["mail.auto_load_remote_content"] },
       })
     })
 
     expect(
       queryClient.getQueryData(["/api/v1/identity/users/me/preferences", {}])
     ).toEqual({
-      locale: "es-ES",
-      hourCycle: "h23",
-      weekStartsOn: 1,
+      regional: {
+        locale: "es-ES",
+        hourCycle: "h23",
+        weekStartsOn: 1,
+      },
+      mail: {
+        autoLoadRemoteContent: true,
+      },
+      calendar: {
+        webView: "month",
+        mobileView: "agenda",
+      },
     })
     expect(
       JSON.parse(localStorage.getItem(USER_PREFS_STORAGE_KEY) || "{}")
     ).toEqual({
-      locale: "es-ES",
-      hourCycle: "h23",
-      weekStartsOn: 1,
+      regional: {
+        locale: "es-ES",
+        hourCycle: "h23",
+        weekStartsOn: 1,
+      },
+      mail: {
+        autoLoadRemoteContent: true,
+      },
+      calendar: {
+        webView: "month",
+        mobileView: "agenda",
+      },
     })
   })
 })
