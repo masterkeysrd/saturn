@@ -350,8 +350,8 @@ export function BudgetsView() {
   const now = tz.now()
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-      <div className="min-w-0 flex-1">
+    <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:items-start">
+      <div className="@container min-w-0 flex-1">
         <FinancePageLayout
           title={t("finance.budgets.title")}
           description={t("finance.budgets.description")}
@@ -368,7 +368,7 @@ export function BudgetsView() {
         >
           <div className="space-y-6">
             {/* Period Budget Summary KPIs */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 @xl:grid-cols-3">
               <div className="flex items-center gap-3.5 rounded-xl border border-border bg-card p-5 shadow-2xs">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <PieChart className="size-5" />
@@ -834,7 +834,7 @@ export function BudgetsView() {
                 </table>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 @xl:grid-cols-2 @4xl:grid-cols-3">
                 {budgets.map((b) => (
                   <BudgetCard
                     key={b.id}

@@ -29,15 +29,100 @@ export interface InspectedSegmentInfo {
 
 const CHART_WIDTH = 680
 const CHART_HEIGHT = 240
-const PAD_LEFT = 76
+const PAD_LEFT = 86
 const PAD_RIGHT = 16
-const PAD_TOP = 16
-const PAD_BOTTOM = 30
+const PAD_TOP = 18
+const PAD_BOTTOM = 34
 const PLOT_WIDTH = CHART_WIDTH - PAD_LEFT - PAD_RIGHT
 const PLOT_HEIGHT = CHART_HEIGHT - PAD_TOP - PAD_BOTTOM
+const PLOT_DRAW_HEIGHT = PLOT_HEIGHT - 6
+const MIN_TICK_GAP_PX = 28
+const ZERO_DECIMAL_CURRENCIES = new Set(["JPY", "KRW"])
+const NICE_STEP_FACTORS = [1, 2, 2.5, 5] as const
+
+export interface NiceSignedTicksResult {
+  domainMin: number
+  domainMax: number
+  ticks: number[]
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function computeNiceSignedTicks(
+  minCents: number,
+  maxCents: number,
+  targetTickCount = 5
+): NiceSignedTicksResult {
+  const safeMin = Math.min(0, Number.isFinite(minCents) ? minCents : 0)
+  let safeMax = Math.max(0, Number.isFinite(maxCents) ? maxCents : 0)
+
+  if (safeMin === 0 && safeMax === 0) {
+    safeMax = 10000
+  }
+
+  const rawSpan = safeMax - safeMin
+  const maxIntervalsByPx = Math.max(
+    1,
+    Math.floor(PLOT_DRAW_HEIGHT / MIN_TICK_GAP_PX)
+  )
+  const targetIntervals = Math.max(
+    1,
+    Math.min(Math.max(targetTickCount - 1, 1), maxIntervalsByPx)
+  )
+  const rawStep = rawSpan / targetIntervals
+
+  const minExponent = Math.max(0, Math.floor(Math.log10(Math.max(rawStep, 1))))
+
+  let chosenStep = Math.ceil(rawStep)
+  let chosenMin = 0
+  let chosenMax = 0
+  let found = false
+
+  for (let exp = minExponent; exp <= minExponent + 12 && !found; exp++) {
+    const scale = 10 ** exp
+    for (const factor of NICE_STEP_FACTORS) {
+      const candidate = factor * scale
+      if (!Number.isInteger(candidate) || candidate < 1) continue
+
+      const dMin = Math.floor(safeMin / candidate) * candidate
+      const dMax = Math.ceil(safeMax / candidate) * candidate
+      const intervals = Math.round((dMax - dMin) / candidate)
+
+      if (candidate >= rawStep && intervals <= maxIntervalsByPx) {
+        chosenStep = candidate
+        chosenMin = dMin === 0 ? 0 : dMin
+        chosenMax = dMax === 0 ? 0 : dMax
+        found = true
+        break
+      }
+    }
+  }
+
+  if (!found) {
+    const fallbackStep = Math.max(1, Math.ceil(rawSpan / maxIntervalsByPx))
+    chosenStep = fallbackStep
+    const dMin = Math.floor(safeMin / fallbackStep) * fallbackStep
+    const dMax = Math.ceil(safeMax / fallbackStep) * fallbackStep
+    chosenMin = dMin === 0 ? 0 : dMin
+    chosenMax = dMax === 0 ? 0 : dMax
+  }
+
+  const count = Math.round((chosenMax - chosenMin) / chosenStep)
+  const ticks: number[] = []
+  for (let i = 0; i <= count; i++) {
+    const val = chosenMax - i * chosenStep
+    ticks.push(val === 0 ? 0 : val)
+  }
+
+  return {
+    domainMin: chosenMin,
+    domainMax: chosenMax,
+    ticks,
+  }
+}
 
 function formatCompactAxisCents(
   cents: number,
+  locale: string,
   formatMoney: (
     c: number,
     cur?: string,
@@ -45,6 +130,26 @@ function formatCompactAxisCents(
   ) => string,
   currency: string
 ): string {
+  const upper = currency?.trim().toUpperCase() || ""
+  const major = ZERO_DECIMAL_CURRENCIES.has(upper) ? cents : cents / 100
+  const normalizedMajor = major === 0 ? 0 : major
+
+  if (upper) {
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency: upper,
+        notation: "compact",
+        maximumFractionDigits: 1,
+      }).format(normalizedMajor)
+    } catch {
+      return formatMoney(Math.round(cents), currency, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      })
+    }
+  }
+
   return formatMoney(Math.round(cents), currency, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
@@ -78,24 +183,32 @@ export function CashFlowSvgChart({
     )
   }
 
-  const nets = points.map((pt) => pt.inflowTotal - pt.outflowTotal)
-  const maxVal = Math.max(
-    ...points.map((pt) => Math.max(pt.inflowTotal, pt.outflowTotal)),
-    100
+  const rawMax = Math.max(
+    ...points.map((pt) =>
+      Math.max(pt.inflowTotal, pt.inflowTotal - pt.outflowTotal, 0)
+    ),
+    0
   )
-  const minVal = Math.min(0, ...nets)
-  const span = Math.max(maxVal - minVal, 100)
+  const rawMin = Math.min(
+    ...points.map((pt) =>
+      Math.min(-pt.outflowTotal, pt.inflowTotal - pt.outflowTotal, 0)
+    ),
+    0
+  )
+  const {
+    domainMin,
+    domainMax,
+    ticks: yTicks,
+  } = computeNiceSignedTicks(rawMin, rawMax, 5)
+  const span = Math.max(domainMax - domainMin, 1)
 
   const yForValue = (val: number) =>
-    PAD_TOP + ((maxVal - val) / span) * PLOT_HEIGHT
+    PAD_TOP + ((domainMax - val) / span) * PLOT_DRAW_HEIGHT
 
   const zeroY = yForValue(0)
   const slotWidth = PLOT_WIDTH / points.length
   const barWidth = Math.min(Math.max(slotWidth * 0.28, 8), 22)
   const barGap = 4
-
-  const yTicks =
-    minVal < 0 ? [maxVal, maxVal / 2, 0, minVal] : [maxVal, maxVal / 2, 0]
 
   const netLinePoints = points
     .map((pt, idx) => {
@@ -136,7 +249,12 @@ export function CashFlowSvgChart({
               fontSize={11}
               className="fill-muted-foreground font-mono tabular-nums"
             >
-              {formatCompactAxisCents(tick, tz.formatMoney, baseCurrency)}
+              {formatCompactAxisCents(
+                tick,
+                tz.locale,
+                tz.formatMoney,
+                baseCurrency
+              )}
             </text>
           </g>
         )
@@ -146,13 +264,16 @@ export function CashFlowSvgChart({
       {points.map((pt, idx) => {
         const slotX = PAD_LEFT + idx * slotWidth
         const centerX = slotX + slotWidth / 2
-        const inflowTop = yForValue(pt.inflowTotal)
-        const inflowH = Math.max(zeroY - inflowTop, pt.inflowTotal > 0 ? 3 : 0)
-        const outflowTop = yForValue(pt.outflowTotal)
-        const outflowH = Math.max(
-          zeroY - outflowTop,
-          pt.outflowTotal > 0 ? 3 : 0
-        )
+        const inflowH =
+          pt.inflowTotal > 0
+            ? Math.max(zeroY - yForValue(pt.inflowTotal), 3)
+            : 0
+        const inflowTop = zeroY - inflowH
+        const outflowH =
+          pt.outflowTotal > 0
+            ? Math.max(yForValue(-pt.outflowTotal) - zeroY, 3)
+            : 0
+        const outflowTop = zeroY
         const isActive = activeIndex === idx
         const net = pt.inflowTotal - pt.outflowTotal
 
@@ -203,8 +324,9 @@ export function CashFlowSvgChart({
               fillOpacity={isActive ? 0.55 : 0}
             />
 
-            {/* Inflow Bar */}
+            {/* Inflow Bar (upward from zeroY) */}
             <rect
+              data-series="inflow"
               x={centerX - barWidth - barGap / 2}
               y={inflowTop}
               width={barWidth}
@@ -214,8 +336,9 @@ export function CashFlowSvgChart({
               fillOpacity={isActive ? 1 : 0.85}
             />
 
-            {/* Outflow Bar */}
+            {/* Outflow Bar (downward from zeroY) */}
             <rect
+              data-series="outflow"
               x={centerX + barGap / 2}
               y={outflowTop}
               width={barWidth}
@@ -310,20 +433,55 @@ export function StackedBreakdownSvgChart({
     )
   }
 
-  const maxVal = Math.max(
-    ...points.map((pt) =>
-      mode === "OUTFLOWS" ? pt.outflowTotal : pt.inflowTotal
-    ),
+  const preparedPoints = points.map((pt) => {
+    const ptTotal = mode === "OUTFLOWS" ? pt.outflowTotal : pt.inflowTotal
+    const segments =
+      mode === "OUTFLOWS"
+        ? pt.spentContributions.map((c) => ({
+            key: c.budgetId || c.budgetName,
+            title: c.budgetName,
+            colorHex: getColorHex(c.budgetColor),
+            amountInBase: Number(c.amountInBase),
+            amountInLocal: Number(c.amountInLocal),
+            localCurrency: c.localCurrency,
+            percentage: c.contributionPercentage,
+          }))
+        : pt.incomeContributions.map((c, cIdx) => {
+            const paletteKey = AVAILABLE_COLORS[cIdx % AVAILABLE_COLORS.length]
+            return {
+              key: c.accountId || c.accountName,
+              title: c.accountName,
+              colorHex: getColorHex(paletteKey),
+              amountInBase: Number(c.amountInBase),
+              amountInLocal: Number(c.amountInLocal),
+              localCurrency: c.localCurrency,
+              percentage:
+                ptTotal > 0 ? (Number(c.amountInBase) / ptTotal) * 100 : 0,
+            }
+          })
+    const posSum = segments.reduce(
+      (acc, s) => acc + Math.max(0, s.amountInBase),
+      0
+    )
+    return { pt, ptTotal, segments, posSum }
+  })
+
+  const rawMax = Math.max(
+    ...preparedPoints.map((p) => Math.max(p.ptTotal, p.posSum)),
     100
+  )
+  const { domainMax: maxVal, ticks: yTicks } = computeNiceSignedTicks(
+    0,
+    rawMax,
+    5
   )
 
   const yForValue = (val: number) =>
-    PAD_TOP + ((maxVal - val) / maxVal) * PLOT_HEIGHT
-  const baseY = PAD_TOP + PLOT_HEIGHT
+    PAD_TOP + ((maxVal - val) / maxVal) * PLOT_DRAW_HEIGHT
+  const baseY = PAD_TOP + PLOT_DRAW_HEIGHT
 
   const slotWidth = PLOT_WIDTH / points.length
   const barWidth = Math.min(Math.max(slotWidth * 0.45, 12), 36)
-  const yTicks = [maxVal, maxVal / 2, 0]
   const labelStep = points.length > 12 ? Math.ceil(points.length / 8) : 1
 
   return (
@@ -358,45 +516,23 @@ export function StackedBreakdownSvgChart({
               fontSize={11}
               className="fill-muted-foreground font-mono tabular-nums"
             >
-              {formatCompactAxisCents(tick, tz.formatMoney, baseCurrency)}
+              {formatCompactAxisCents(
+                tick,
+                tz.locale,
+                tz.formatMoney,
+                baseCurrency
+              )}
             </text>
           </g>
         )
       })}
 
       {/* Stacked Period Bars */}
-      {points.map((pt, idx) => {
+      {preparedPoints.map(({ pt, ptTotal, segments }, idx) => {
         const slotX = PAD_LEFT + idx * slotWidth
         const centerX = slotX + slotWidth / 2
         const barX = centerX - barWidth / 2
-        const ptTotal = mode === "OUTFLOWS" ? pt.outflowTotal : pt.inflowTotal
         const isActive = activeIndex === idx
-
-        const segments =
-          mode === "OUTFLOWS"
-            ? pt.spentContributions.map((c) => ({
-                key: c.budgetId || c.budgetName,
-                title: c.budgetName,
-                colorHex: getColorHex(c.budgetColor),
-                amountInBase: Number(c.amountInBase),
-                amountInLocal: Number(c.amountInLocal),
-                localCurrency: c.localCurrency,
-                percentage: c.contributionPercentage,
-              }))
-            : pt.incomeContributions.map((c, cIdx) => {
-                const paletteKey =
-                  AVAILABLE_COLORS[cIdx % AVAILABLE_COLORS.length]
-                return {
-                  key: c.accountId || c.accountName,
-                  title: c.accountName,
-                  colorHex: getColorHex(paletteKey),
-                  amountInBase: Number(c.amountInBase),
-                  amountInLocal: Number(c.amountInLocal),
-                  localCurrency: c.localCurrency,
-                  percentage:
-                    ptTotal > 0 ? (Number(c.amountInBase) / ptTotal) * 100 : 0,
-                }
-              })
 
         let cursorY = baseY
 
@@ -450,7 +586,7 @@ export function StackedBreakdownSvgChart({
             {segments.map((seg) => {
               const segH =
                 seg.amountInBase > 0
-                  ? Math.max((seg.amountInBase / maxVal) * PLOT_HEIGHT, 2)
+                  ? Math.max((seg.amountInBase / maxVal) * PLOT_DRAW_HEIGHT, 2)
                   : 0
               cursorY -= segH
               const segY = cursorY

@@ -292,8 +292,8 @@ export function RecurringView() {
   const isLoading = recurringLoading || scheduledLoading
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-      <div className="min-w-0 flex-1">
+    <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:items-start">
+      <div className="@container min-w-0 flex-1">
         <FinancePageLayout
           title={t("finance.recurring.title")}
           description={t("finance.recurring.description")}
@@ -313,7 +313,7 @@ export function RecurringView() {
         >
           <div className="mt-2 animate-in space-y-8 duration-300 fade-in">
             {/* Metrics Grid */}
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 @xl:grid-cols-3">
               {/* Monthly Incomes Card */}
               <div className="relative flex items-center gap-4 overflow-hidden rounded-3xl border border-border/40 bg-card/30 p-6 shadow-sm backdrop-blur-sm select-none">
                 <div className="rounded-2xl bg-emerald-500/10 p-3.5 text-emerald-500">
@@ -413,9 +413,9 @@ export function RecurringView() {
 
                 {/* Tab 1: Active Templates & Pending Obligations */}
                 <TabsContent value="active" className="mt-0 space-y-8">
-                  <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+                  <div className="grid grid-cols-1 gap-8 @4xl:grid-cols-12">
                     {/* 1. Recurring Templates List (7 cols) */}
-                    <div className="flex flex-col overflow-hidden rounded-3xl border border-border/40 bg-card/30 shadow-sm backdrop-blur-sm lg:col-span-7">
+                    <div className="flex flex-col overflow-hidden rounded-3xl border border-border/40 bg-card/30 shadow-sm backdrop-blur-sm @4xl:col-span-7">
                       <div className="flex items-center justify-between border-b border-border/20 bg-card/10 px-6 py-4">
                         <h2 className="flex items-center gap-2 text-xs font-black tracking-wider text-muted-foreground uppercase">
                           <LayersIcon className="h-4 w-4 text-primary" />
@@ -629,7 +629,7 @@ export function RecurringView() {
                     </div>
 
                     {/* 2. Pending Schedule (Actionable list - 5 cols) */}
-                    <div className="flex flex-col overflow-hidden rounded-3xl border border-border/40 bg-card/30 shadow-sm backdrop-blur-sm lg:col-span-5">
+                    <div className="flex flex-col overflow-hidden rounded-3xl border border-border/40 bg-card/30 shadow-sm backdrop-blur-sm @4xl:col-span-5">
                       <div className="flex items-center justify-between border-b border-border/20 bg-card/10 px-6 py-4">
                         <h2 className="flex items-center gap-2 text-xs font-black tracking-wider text-muted-foreground uppercase">
                           <CalendarIcon className="h-4 w-4 text-primary" />

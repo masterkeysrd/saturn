@@ -225,8 +225,8 @@ export function BorrowingView() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-      <div className="min-w-0 flex-1">
+    <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:items-start">
+      <div className="@container min-w-0 flex-1">
         <FinancePageLayout
           title={t("finance.borrowing.title")}
           description={t("finance.borrowing.description")}
@@ -245,7 +245,7 @@ export function BorrowingView() {
         >
           <div className="mt-2 animate-in space-y-6 duration-300 fade-in">
             {/* KPI Widgets */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 @lg:grid-cols-2">
               <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/45 p-6 shadow-md backdrop-blur-xl transition-all hover:shadow-lg">
                 <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-emerald-500/5 blur-2xl"></div>
                 <div className="flex items-center gap-4">
@@ -351,7 +351,7 @@ export function BorrowingView() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-5 @xl:grid-cols-2 @4xl:grid-cols-3">
                 {filteredBorrowings.map((b) => {
                   const total = parseFloat(b.totalAmount)
                   const remaining = parseFloat(b.remainingAmount || "0")

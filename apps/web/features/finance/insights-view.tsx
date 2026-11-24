@@ -8,7 +8,6 @@ import {
 import { useI18n, useTimezone } from "@saturn/hooks"
 import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import { getLocalizedIntervalLabel } from "@saturn/i18n"
-import { formatCents } from "@saturn/core"
 import {
   useGetInsightsQuery,
   type InsightGranularity,
@@ -398,20 +397,38 @@ export function InsightsView() {
                 />
               </div>
 
-              <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {t("finance.insights.remaining")}
-                  </span>
-                  <PercentIcon className="size-4 text-success" />
-                </div>
-                <MoneyAmount
-                  cents={spentInsights.remainingBudget}
-                  currency={baseCurrency}
-                  size="lg"
-                  className="mt-2 block text-foreground"
-                />
-              </div>
+              {(() => {
+                const isNegativeRemaining =
+                  Number(spentInsights.remainingBudget) < 0
+                return (
+                  <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {t("finance.insights.remaining")}
+                      </span>
+                      <PercentIcon
+                        className={cn(
+                          "size-4",
+                          isNegativeRemaining
+                            ? "text-destructive"
+                            : "text-success"
+                        )}
+                      />
+                    </div>
+                    <MoneyAmount
+                      cents={spentInsights.remainingBudget}
+                      currency={baseCurrency}
+                      colored={isNegativeRemaining}
+                      showSign={isNegativeRemaining}
+                      size="lg"
+                      className={cn(
+                        "mt-2 block",
+                        !isNegativeRemaining && "text-foreground"
+                      )}
+                    />
+                  </div>
+                )
+              })()}
 
               <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
@@ -500,7 +517,8 @@ export function InsightsView() {
                 const totalIn = Number(incomeInsights?.totalIncome || 0)
                 const totalOut = Number(spentInsights.totalSpent || 0)
                 const netCash = totalIn - totalOut
-                const savingsPct = totalIn > 0 ? (netCash / totalIn) * 100 : 0
+                const savingsPct =
+                  totalIn > 0 ? (netCash / totalIn) * 100 : null
 
                 return (
                   <>
@@ -536,10 +554,16 @@ export function InsightsView() {
                       <span
                         className={cn(
                           "mt-2 block font-mono text-lg font-semibold tabular-nums",
-                          savingsPct >= 0 ? "text-success" : "text-destructive"
+                          savingsPct === null
+                            ? "text-muted-foreground"
+                            : savingsPct >= 0
+                              ? "text-success"
+                              : "text-destructive"
                         )}
                       >
-                        {savingsPct.toFixed(1)}%
+                        {savingsPct === null
+                          ? "—"
+                          : `${savingsPct.toFixed(1)}%`}
                       </span>
                     </div>
 
@@ -781,7 +805,7 @@ export function InsightsView() {
                 </div>
               ) : (
                 <ScrollArea className="h-[260px]">
-                  <div className="space-y-2.5 pr-3">
+                  <div className="divide-y divide-border/60 pr-3">
                     {spentInsights.distributions.map((dist) => {
                       const Icon = getBudgetIcon(dist.budgetIcon)
                       const colors = getBudgetColors(dist.budgetColor)
@@ -793,11 +817,17 @@ export function InsightsView() {
                         : isNear
                           ? "bg-warning"
                           : colors.bar
-                      const textColor = isOver
-                        ? "text-destructive"
-                        : isNear
-                          ? "text-warning"
-                          : colors.text
+                      const limitNum = Number(dist.limit || 0)
+                      const spentNum = Number(dist.spent || 0)
+                      const spentInBaseNum = Number(dist.spentInBase || 0)
+                      const limitInBase =
+                        limitNum > 0
+                          ? spentNum > 0 &&
+                            spentInBaseNum > 0 &&
+                            spentNum !== spentInBaseNum
+                            ? Math.round(limitNum * (spentInBaseNum / spentNum))
+                            : limitNum
+                          : 0
 
                       return (
                         <button
@@ -811,57 +841,73 @@ export function InsightsView() {
                               dateTo: periodBounds.ymdTo,
                             })
                           }
-                          className="group block w-full cursor-pointer rounded-xl border border-border/70 bg-muted/20 p-3 text-left transition-colors hover:border-foreground/20 hover:bg-muted/40"
+                          className="group -mx-1.5 block w-full cursor-pointer rounded-lg px-1.5 py-3 text-left transition-colors first:pt-0 last:pb-0 hover:bg-muted/30"
                         >
-                          <div className="mb-1.5 flex items-center justify-between gap-2">
+                          <div className="flex items-center justify-between gap-3">
                             <div className="flex min-w-0 items-center gap-2.5">
                               <div
                                 className={cn(
-                                  "rounded-lg border p-2",
+                                  "flex size-7 shrink-0 items-center justify-center rounded-lg",
                                   colors.bg,
-                                  colors.border,
                                   isOver
-                                    ? "border-destructive/20 text-destructive"
+                                    ? "text-destructive"
                                     : isNear
-                                      ? "border-warning/20 text-warning"
+                                      ? "text-warning"
                                       : colors.text
                                 )}
                               >
                                 <Icon className="size-3.5" />
                               </div>
-                              <div className="min-w-0">
-                                <span className="block truncate text-xs font-semibold text-foreground group-hover:text-primary">
-                                  {dist.budgetName}
-                                </span>
-                                <span className="block text-[11px] text-muted-foreground">
-                                  {t("finance.insights.limit")}:{" "}
-                                  {Number(dist.limit) > 0
-                                    ? formatCents(dist.limit).toLocaleString()
-                                    : t("finance.insights.noLimit")}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="shrink-0 text-right font-mono tabular-nums">
+                              <span className="truncate text-xs font-semibold text-foreground group-hover:text-primary">
+                                {dist.budgetName}
+                              </span>
                               <span
                                 className={cn(
-                                  "block text-xs font-semibold",
+                                  "shrink-0 font-mono text-[11px] font-medium tabular-nums",
+                                  isOver
+                                    ? "text-destructive"
+                                    : isNear
+                                      ? "text-warning"
+                                      : "text-muted-foreground"
+                                )}
+                              >
+                                {dist.usagePercentage.toFixed(1)}%
+                              </span>
+                            </div>
+
+                            <div className="shrink-0 text-right">
+                              <MoneyAmount
+                                cents={dist.spentInBase}
+                                currency={baseCurrency}
+                                size="sm"
+                                className={cn(
+                                  "block font-semibold",
                                   isOver
                                     ? "text-destructive"
                                     : isNear
                                       ? "text-warning"
                                       : "text-foreground"
                                 )}
-                              >
-                                {formatCents(dist.spent).toLocaleString()}
-                              </span>
-                              <span className="block text-[11px] text-muted-foreground">
-                                {tz.formatMoney(dist.spentInBase, baseCurrency)}
-                              </span>
+                              />
+                              {limitNum > 0 ? (
+                                <span className="block text-[11px] text-muted-foreground">
+                                  {t("finance.insights.limit")}:{" "}
+                                  <MoneyAmount
+                                    cents={limitInBase}
+                                    currency={baseCurrency}
+                                    size="sm"
+                                    className="text-[11px] text-muted-foreground"
+                                  />
+                                </span>
+                              ) : (
+                                <span className="block text-[11px] text-muted-foreground">
+                                  {t("finance.insights.noLimit")}
+                                </span>
+                              )}
                             </div>
                           </div>
 
-                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
                             <div
                               className={cn(
                                 "h-full rounded-full transition-all duration-500",
@@ -871,19 +917,6 @@ export function InsightsView() {
                                 width: `${Math.min(dist.usagePercentage, 100)}%`,
                               }}
                             />
-                          </div>
-                          <div className="mt-1.5 flex items-center justify-between text-[11px]">
-                            <span className="text-muted-foreground">
-                              {t("finance.insights.usagePacing")}
-                            </span>
-                            <span
-                              className={cn(
-                                "font-mono font-medium tabular-nums",
-                                textColor
-                              )}
-                            >
-                              {dist.usagePercentage.toFixed(1)}%
-                            </span>
                           </div>
                         </button>
                       )
@@ -982,7 +1015,7 @@ export function InsightsView() {
                 </div>
               ) : (
                 <ScrollArea className="h-[260px]">
-                  <div className="space-y-2.5 pr-3">
+                  <div className="divide-y divide-border/60 pr-3">
                     {incomeInsights.distributions.map((source, idx) => {
                       const color = getAccountColor(idx)
                       return (
@@ -997,13 +1030,13 @@ export function InsightsView() {
                               dateTo: periodBounds.ymdTo,
                             })
                           }
-                          className="group block w-full cursor-pointer rounded-xl border border-border/70 bg-muted/20 p-3 text-left transition-colors hover:border-foreground/20 hover:bg-muted/40"
+                          className="group -mx-1.5 block w-full cursor-pointer rounded-lg px-1.5 py-3 text-left transition-colors first:pt-0 last:pb-0 hover:bg-muted/30"
                         >
-                          <div className="mb-1.5 flex items-center justify-between gap-2">
+                          <div className="flex items-center justify-between gap-3">
                             <div className="flex min-w-0 items-center gap-2.5">
                               <div
                                 className={cn(
-                                  "rounded-lg p-2",
+                                  "flex size-7 shrink-0 items-center justify-center rounded-lg",
                                   color.bg,
                                   color.text
                                 )}
@@ -1013,17 +1046,20 @@ export function InsightsView() {
                               <span className="truncate text-xs font-semibold text-foreground group-hover:text-primary">
                                 {source.name}
                               </span>
+                              <span className="shrink-0 font-mono text-[11px] font-medium text-muted-foreground tabular-nums">
+                                {source.percentage.toFixed(1)}%
+                              </span>
                             </div>
 
                             <MoneyAmount
-                              cents={source.amount}
+                              cents={source.amountInBase || source.amount}
                               currency={baseCurrency}
                               size="sm"
                               className="shrink-0 font-semibold text-success"
                             />
                           </div>
 
-                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
                             <div
                               className={cn(
                                 "h-full rounded-full transition-all duration-500",
@@ -1033,19 +1069,6 @@ export function InsightsView() {
                                 width: `${Math.min(source.percentage, 100)}%`,
                               }}
                             />
-                          </div>
-                          <div className="mt-1.5 flex items-center justify-between text-[11px]">
-                            <span className="text-muted-foreground">
-                              {t("finance.insights.contribution")}
-                            </span>
-                            <span
-                              className={cn(
-                                "font-mono font-medium tabular-nums",
-                                color.text
-                              )}
-                            >
-                              {source.percentage.toFixed(1)}%
-                            </span>
                           </div>
                         </button>
                       )

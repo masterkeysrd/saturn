@@ -13,6 +13,7 @@ import * as financeApi from "@saturn/api/gen/saturn/finance/v1/finance"
 import * as spaceHooks from "@/features/space/use-space"
 import { CurrencyCombobox } from "./components/currency-combobox"
 import { BudgetPeriodProgress } from "./components/budget-period-progress"
+import { AccountsView } from "./accounts-view"
 import { BudgetsView } from "./budgets-view"
 import { TransactionsView } from "./transactions-view"
 import { InsightsView } from "./insights-view"
@@ -39,6 +40,7 @@ vi.mock("@saturn/api/gen/saturn/finance/v1/finance", () => ({
   useListTransactionEventsQuery: vi.fn(),
   useListInboxItemsQuery: vi.fn(),
   useListInstitutionsQuery: vi.fn(),
+  useListTransfersQuery: vi.fn(),
   useGetInsightsQuery: vi.fn(),
   useSetupMutation: vi.fn(),
   useDeleteBudgetMutation: vi.fn(),
@@ -47,6 +49,9 @@ vi.mock("@saturn/api/gen/saturn/finance/v1/finance", () => ({
   useCreateBudgetMutation: vi.fn(),
   useUpdateAccountMutation: vi.fn(),
   useCreateAccountMutation: vi.fn(),
+  useDeleteAccountMutation: vi.fn(),
+  useAdjustAccountBalanceMutation: vi.fn(),
+  useCreateInstitutionMutation: vi.fn(),
   useCreateExpenseMutation: vi.fn(),
   useUpdateExpenseMutation: vi.fn(),
   useCreateIncomeMutation: vi.fn(),
@@ -185,6 +190,11 @@ describe("Phase 2 Web Finance Views", () => {
       data: { institutions: [] },
     } as never)
 
+    vi.mocked(financeApi.useListTransfersQuery).mockReturnValue({
+      data: { transfers: [] },
+      refetch: vi.fn(),
+    } as never)
+
     vi.mocked(financeApi.useListInboxItemsQuery).mockReturnValue({
       data: { inboxItems: [] },
     } as never)
@@ -216,6 +226,32 @@ describe("Phase 2 Web Finance Views", () => {
     } as never)
 
     vi.mocked(financeApi.useCreateBudgetMutation).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as never)
+
+    vi.mocked(financeApi.useUpdateAccountMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as never)
+
+    vi.mocked(financeApi.useCreateAccountMutation).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as never)
+
+    vi.mocked(financeApi.useDeleteAccountMutation).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as never)
+
+    vi.mocked(financeApi.useAdjustAccountBalanceMutation).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as never)
+
+    vi.mocked(financeApi.useCreateInstitutionMutation).mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
     } as never)
@@ -318,6 +354,35 @@ describe("Phase 2 Web Finance Views", () => {
     )
 
     expect(screen.queryByTestId("budget-pace-tick")).toBeNull()
+
+    const pastCurrentYearBudget: financeApi.Budget = {
+      ...recurringBudget,
+      id: "bgt_3",
+      currentPeriod: {
+        startDate: "2026-03-01T00:00:00Z",
+        endDate: "2026-03-31T23:59:59Z",
+        spentAmount: "40000",
+        spentInBase: "40000",
+        limitInBase: "100000",
+        baseCurrency: "USD",
+        exchangeRateToBase: 1,
+      },
+    }
+
+    rerender(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <TimezoneProvider timezone="UTC" locale="en-US">
+          <BudgetPeriodProgress budget={pastCurrentYearBudget} />
+        </TimezoneProvider>
+      </QueryClientProvider>
+    )
+
+    expect(screen.getByText(/Mar 1 - Mar 31/)).toBeTruthy()
+    expect(screen.queryByText(/2026/)).toBeNull()
   })
 
   it("BudgetsView renders Period Summary KPIs and switches between Grid and Table layouts", () => {
@@ -916,5 +981,147 @@ describe("Phase 2 Web Finance Views", () => {
     ).toBeTruthy()
     expect(screen.getByRole("button", { name: "Omitir" })).toBeTruthy()
     expect(screen.getByRole("button", { name: "Registrar gasto" })).toBeTruthy()
+  })
+
+  it("uses @container and container-query grids on BudgetsView, AccountsView, and TransactionsView when inspectors open", async () => {
+    vi.mocked(financeApi.useListBudgetsQuery).mockReturnValue({
+      data: {
+        budgets: [
+          {
+            id: "bgt_1",
+            name: "Dining Out",
+            limitAmount: "50000",
+            currency: "USD",
+            interval: "MONTHLY",
+            status: "ACTIVE",
+            icon: "utensils",
+            color: "teal",
+            defaultAccountId: "acc_1",
+            currentPeriod: {
+              startDate: "2026-04-01T00:00:00Z",
+              endDate: "2026-04-30T23:59:59Z",
+              spentAmount: "20000",
+              spentInBase: "20000",
+              limitInBase: "50000",
+              baseCurrency: "USD",
+              exchangeRateToBase: 1,
+            },
+          },
+        ],
+      },
+      refetch: vi.fn(),
+    } as never)
+
+    const { container: budgetsContainer, unmount: unmountBudgets } =
+      wrapWithProviders(<BudgetsView />, ["/space/spc_1/finance/budgets"])
+
+    const budgetsPane = budgetsContainer.querySelector(".\\@container")
+    expect(budgetsPane).toBeTruthy()
+    expect(budgetsPane?.className).toContain("min-w-0")
+    expect(budgetsPane?.className).toContain("flex-1")
+    expect(budgetsPane?.parentElement?.className).toContain("lg:items-start")
+    expect(budgetsContainer.querySelector(".\\@xl\\:grid-cols-3")).toBeTruthy()
+    expect(
+      budgetsContainer.querySelector(
+        ".\\@xl\\:grid-cols-2.\\@4xl\\:grid-cols-3"
+      )
+    ).toBeTruthy()
+
+    fireEvent.click(screen.getByText("Dining Out"))
+    expect(await screen.findByRole("complementary")).toBeTruthy()
+    expect(budgetsContainer.querySelector(".\\@container")).toBeTruthy()
+    expect(
+      budgetsContainer.querySelector(
+        ".\\@xl\\:grid-cols-2.\\@4xl\\:grid-cols-3"
+      )
+    ).toBeTruthy()
+    unmountBudgets()
+
+    vi.mocked(financeApi.useListAccountsQuery).mockReturnValue({
+      data: {
+        accounts: [
+          {
+            id: "acc_1",
+            name: "Main Checking",
+            type: "BANK",
+            currency: "USD",
+            currentBalance: "150000",
+            isActive: true,
+          },
+        ],
+      },
+      refetch: vi.fn(),
+    } as never)
+
+    const { container: accountsContainer, unmount: unmountAccounts } =
+      wrapWithProviders(<AccountsView />, ["/space/spc_1/finance/accounts"])
+
+    const accountsPane = accountsContainer.querySelector(".\\@container")
+    expect(accountsPane).toBeTruthy()
+    expect(accountsPane?.className).toContain("min-w-0")
+    expect(accountsPane?.className).toContain("flex-1")
+    expect(accountsPane?.parentElement?.className).toContain("lg:items-start")
+    expect(
+      accountsContainer.querySelector(
+        ".\\@md\\:grid-cols-2.\\@4xl\\:grid-cols-4"
+      )
+    ).toBeTruthy()
+    expect(
+      accountsContainer.querySelector(
+        ".\\@xl\\:grid-cols-2.\\@4xl\\:grid-cols-3"
+      )
+    ).toBeTruthy()
+
+    fireEvent.click(screen.getAllByText("Main Checking")[0])
+    expect(await screen.findByRole("complementary")).toBeTruthy()
+    expect(accountsContainer.querySelector(".\\@container")).toBeTruthy()
+    expect(
+      accountsContainer.querySelector(
+        ".\\@md\\:grid-cols-2.\\@4xl\\:grid-cols-4"
+      )
+    ).toBeTruthy()
+    unmountAccounts()
+
+    vi.mocked(financeApi.useListTransactionsQuery).mockReturnValue({
+      data: {
+        transactions: [
+          {
+            id: "txn_1",
+            type: "EXPENSE",
+            budgetId: "bgt_1",
+            amount: "2500",
+            amountInBase: "2500",
+            currency: "USD",
+            description: "Whole Foods Market",
+            transactionDate: "2026-04-16T10:00:00Z",
+            effectiveDate: "2026-04-16T10:00:00Z",
+            accountId: "acc_1",
+            metadata: {},
+          },
+        ],
+      },
+      isLoading: false,
+      refetch: vi.fn(),
+    } as never)
+
+    const { container: txContainer } = wrapWithProviders(<TransactionsView />, [
+      "/space/spc_1/finance/transactions",
+    ])
+
+    const txPane = txContainer.querySelector(".\\@container")
+    expect(txPane).toBeTruthy()
+    expect(txPane?.className).toContain("min-w-0")
+    expect(txPane?.className).toContain("flex-1")
+    expect(txPane?.parentElement?.className).toContain("lg:items-start")
+    expect(
+      txContainer.querySelector(".grid-cols-2.\\@3xl\\:grid-cols-4")
+    ).toBeTruthy()
+
+    fireEvent.click(screen.getByText("Whole Foods Market"))
+    expect(await screen.findByRole("complementary")).toBeTruthy()
+    expect(txContainer.querySelector(".\\@container")).toBeTruthy()
+    expect(
+      txContainer.querySelector(".grid-cols-2.\\@3xl\\:grid-cols-4")
+    ).toBeTruthy()
   })
 })

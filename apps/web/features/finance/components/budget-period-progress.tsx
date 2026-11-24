@@ -45,17 +45,9 @@ export function BudgetPeriodProgress({
 
   const isOneTime = budget.interval === "ONE_TIME"
 
-  const startStr = period?.startDate
-    ? tz.format(period.startDate, { month: "short", day: "numeric" })
-    : ""
-  const endStr = period?.endDate
-    ? tz.format(period.endDate, { month: "short", day: "numeric" })
-    : ""
   const dateRangeStr = isOneTime
     ? t("finance.budgets.progress.lifetime")
-    : startStr && endStr
-      ? `${startStr} – ${endStr}`
-      : startStr || endStr || ""
+    : tz.formatDateRange(period?.startDate, period?.endDate)
 
   const now = tz.now()
   const end = period?.endDate ? new Date(period.endDate) : null

@@ -409,8 +409,8 @@ export function AccountsView() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-      <div className="min-w-0 flex-1">
+    <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:items-start">
+      <div className="@container min-w-0 flex-1">
         <FinancePageLayout
           title={t("finance.accounts.title")}
           description={t("finance.accounts.description")}
@@ -441,7 +441,7 @@ export function AccountsView() {
         >
           <div className="mt-2 animate-in space-y-8 duration-300 fade-in">
             {/* Dashboard Stats */}
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 @md:grid-cols-2 @4xl:grid-cols-4">
               <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-border/40 bg-card/30 p-6 shadow-sm backdrop-blur-sm select-none">
                 <div className="flex items-center gap-3">
                   <div className="rounded-2xl bg-primary/10 p-2.5 text-primary">
@@ -754,7 +754,7 @@ export function AccountsView() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                          <div className="grid grid-cols-1 gap-4 @xl:grid-cols-2 @4xl:grid-cols-3">
                             {group.accounts.map((acc) => (
                               <CardAccountItem
                                 key={acc.id}
@@ -791,7 +791,7 @@ export function AccountsView() {
                     })}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-4 @xl:grid-cols-2 @4xl:grid-cols-3">
                     {accounts.map((acc) => (
                       <CardAccountItem
                         key={acc.id}
@@ -848,7 +848,7 @@ export function AccountsView() {
                     {t("finance.accounts.noTransfers")}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 @xl:grid-cols-2">
                     {transfers.map((transfer) => {
                       const srcAcc = accounts.find(
                         (a) => a.id === transfer.sourceAccountId

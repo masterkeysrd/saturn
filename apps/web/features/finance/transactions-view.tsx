@@ -655,8 +655,8 @@ export function TransactionsView() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-      <div className="min-w-0 flex-1">
+    <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:items-start">
+      <div className="@container min-w-0 flex-1">
         <FinancePageLayout
           title={t("finance.transactions.title")}
           description={t("finance.transactions.description")}
@@ -695,7 +695,7 @@ export function TransactionsView() {
         >
           <div className="space-y-6">
             {/* Top Summary Stat Strip */}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 @3xl:grid-cols-4">
               <div className="flex items-center gap-3.5 rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
                   <ArrowUpRight className="size-5" />
