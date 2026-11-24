@@ -17,6 +17,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/crypto"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
+	platformworkflow "github.com/masterkeysrd/saturn/internal/platform/workflow"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -239,6 +240,9 @@ func (m *mockMessageStore) ListByThreadID(ctx context.Context, spaceID, threadID
 			list = append(list, msg)
 		}
 	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].EffectiveTime().Before(list[j].EffectiveTime())
+	})
 	return list, nil
 }
 func (m *mockMessageStore) Update(ctx context.Context, msg *domainmail.Message) error {
@@ -423,12 +427,62 @@ func (m *mockExternalMailProvider) UploadDraftAttachment(ctx context.Context, ac
 	}, nil
 }
 
+type mockThreadSummaryStore struct {
+	summaries map[string]*domainmail.ThreadSummary
+	upserts   []*domainmail.ThreadSummary
+}
+
+func newMockThreadSummaryStore() *mockThreadSummaryStore {
+	return &mockThreadSummaryStore{summaries: make(map[string]*domainmail.ThreadSummary)}
+}
+func (m *mockThreadSummaryStore) Get(ctx context.Context, spaceID, threadID, language string) (*domainmail.ThreadSummary, error) {
+	return m.summaries[spaceID+":"+threadID+":"+language], nil
+}
+func (m *mockThreadSummaryStore) Upsert(ctx context.Context, summary *domainmail.ThreadSummary) error {
+	m.upserts = append(m.upserts, summary)
+	m.summaries[summary.SpaceID+":"+summary.ThreadID+":"+summary.Language] = summary
+	return nil
+}
+
+type mockSummaryFlowExecutor struct {
+	calls     []appmail.SummarizeThreadFlowInput
+	flowRunID string
+	err       error
+	saveInto  *mockThreadSummaryStore
+	threadFn  func(spaceID, threadID string) *domainmail.Thread
+}
+
+var _ appmail.SummarizeFlowClient = (*mockSummaryFlowExecutor)(nil)
+
+func (m *mockSummaryFlowExecutor) Execute(ctx context.Context, input appmail.SummarizeThreadFlowInput) (*platformworkflow.FlowRun, error) {
+	m.calls = append(m.calls, input)
+	if m.err != nil {
+		return nil, m.err
+	}
+	if m.saveInto != nil && m.threadFn != nil {
+		if th := m.threadFn("spc_1", input.ThreadID); th != nil {
+			_ = m.saveInto.Upsert(ctx, &domainmail.ThreadSummary{
+				ThreadID:      input.ThreadID,
+				SpaceID:       "spc_1",
+				Language:      input.Language,
+				TLDR:          "flow summary",
+				KeyPoints:     []string{"kp"},
+				LastMessageID: "msg_last",
+				LastMessageAt: th.LastMessageAt,
+				MessageCount:  th.MessageCount,
+			})
+		}
+	}
+	return &platformworkflow.FlowRun{ID: m.flowRunID, Status: platformworkflow.RunCompleted}, nil
+}
+
 func newTestCoordinator(t *testing.T) (appmail.Coordinator, *mockMailboxStore, *mockThreadStore, *mockMessageStore, *mockDraftStore, *mockSyncStateStore) {
 	mbxStore := newMockMailboxStore()
 	thStore := newMockThreadStore()
 	msgStore := newMockMessageStore()
 	dftStore := newMockDraftStore()
 	syncStore := newMockSyncStateStore()
+	sumStore := newMockThreadSummaryStore()
 	extProv := &mockExternalMailProvider{}
 
 	domainService := domainmail.NewService(domainmail.Dependencies{
@@ -446,10 +500,16 @@ func newTestCoordinator(t *testing.T) (appmail.Coordinator, *mockMailboxStore, *
 		MessageStore:   msgStore,
 		DraftStore:     dftStore,
 		SyncStateStore: syncStore,
+		SummaryStore:   sumStore,
 		ExternalProviders: map[string]domainmail.ExternalMailProvider{
 			"google": extProv,
 		},
-		Events:     eventbus.NoopPublisher{},
+		Events: eventbus.NoopPublisher{},
+		SummarizeFlow: &appmail.SummarizeFlowClientMock{
+			ExecuteFunc: func(_ context.Context, _ appmail.SummarizeThreadFlowInput) (*platformworkflow.FlowRun, error) {
+				return &platformworkflow.FlowRun{ID: "wfr_stub", Status: platformworkflow.RunCompleted}, nil
+			},
+		},
 		HMACSecret: []byte("test-super-secret-hmac-key-32bytes"),
 	})
 
@@ -1302,4 +1362,211 @@ func TestCoordinator_ModifyThread_SpamAndMailboxIDMapping(t *testing.T) {
 	assert.False(t, modified.InInbox)
 	assert.ElementsMatch(t, []string{"SPAM", "Label_Add"}, prov.capturedAdd)
 	assert.ElementsMatch(t, []string{"INBOX", "Label_Rm"}, prov.capturedRemove)
+}
+
+func TestCoordinator_SaveThreadSummary(t *testing.T) {
+	validSumID, err := domainmail.GenerateThreadID()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name    string
+		ctx     context.Context
+		req     *appmail.SaveThreadSummaryRequest
+		wantErr bool
+	}{
+		{
+			name:    "unauthenticated without space context",
+			ctx:     context.Background(),
+			req:     &appmail.SaveThreadSummaryRequest{Summary: &domainmail.ThreadSummary{ThreadID: "mth_1"}},
+			wantErr: true,
+		},
+		{
+			name:    "nil request rejected",
+			ctx:     contextWithAuth("spc_1", string(space.RoleMember)),
+			req:     nil,
+			wantErr: true,
+		},
+		{
+			name:    "nil summary rejected",
+			ctx:     contextWithAuth("spc_1", string(space.RoleMember)),
+			req:     &appmail.SaveThreadSummaryRequest{Summary: nil},
+			wantErr: true,
+		},
+		{
+			name: "invalid thread id rejected",
+			ctx:  contextWithAuth("spc_1", string(space.RoleMember)),
+			req: &appmail.SaveThreadSummaryRequest{Summary: &domainmail.ThreadSummary{
+				ThreadID:      "bad_id",
+				Language:      "en",
+				LastMessageAt: time.Now().UTC(),
+			}},
+			wantErr: true,
+		},
+		{
+			name: "valid summary persisted for viewer too",
+			ctx:  contextWithAuth("spc_1", string(space.RoleViewer)),
+			req: &appmail.SaveThreadSummaryRequest{Summary: &domainmail.ThreadSummary{
+				ThreadID:      validSumID,
+				Language:      "es",
+				TLDR:          "Resumen",
+				KeyPoints:     []string{"punto"},
+				LastMessageAt: time.Now().UTC(),
+				MessageCount:  1,
+			}},
+			wantErr: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			coord, _, _, _, _, _ := newTestCoordinator(t)
+
+			got, err := coord.SaveThreadSummary(tc.ctx, tc.req)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, got)
+			assert.Equal(t, "spc_1", got.SpaceID)
+			assert.False(t, got.UpdateTime.IsZero())
+		})
+	}
+}
+
+func TestCoordinator_SummarizeThread(t *testing.T) {
+	thSumID, err := domainmail.GenerateThreadID()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name          string
+		ctx           context.Context
+		req           *appmail.SummarizeThreadRequest
+		setup         func(*mockThreadStore, *mockThreadSummaryStore, *mockSummaryFlowExecutor)
+		wantErr       bool
+		wantNotFound  bool
+		wantFlowCalls int
+		wantTLDR      string
+	}{
+		{
+			name:    "missing thread id rejected",
+			ctx:     contextWithAuth("spc_1", string(space.RoleViewer)),
+			req:     &appmail.SummarizeThreadRequest{ID: "  "},
+			wantErr: true,
+		},
+		{
+			name:         "unknown thread returns not found",
+			ctx:          contextWithAuth("spc_1", string(space.RoleMember)),
+			req:          &appmail.SummarizeThreadRequest{ID: thSumID},
+			setup:        func(_ *mockThreadStore, _ *mockThreadSummaryStore, _ *mockSummaryFlowExecutor) {},
+			wantErr:      true,
+			wantNotFound: true,
+		},
+		{
+			name: "viewer can summarize cached fresh summary without flow run",
+			ctx:  contextWithAuth("spc_1", string(space.RoleViewer)),
+			req:  &appmail.SummarizeThreadRequest{ID: thSumID},
+			setup: func(th *mockThreadStore, sum *mockThreadSummaryStore, _ *mockSummaryFlowExecutor) {
+				now := time.Now().UTC()
+				th.threads[thSumID] = &domainmail.Thread{ID: thSumID, SpaceID: "spc_1", LastMessageAt: now, MessageCount: 2}
+				sum.summaries["spc_1:"+thSumID+":en"] = &domainmail.ThreadSummary{
+					ThreadID: thSumID, SpaceID: "spc_1", Language: "en",
+					TLDR: "cached", LastMessageAt: now, MessageCount: 2,
+				}
+			},
+			wantErr:       false,
+			wantFlowCalls: 0,
+			wantTLDR:      "cached",
+		},
+		{
+			name: "stale summary triggers flow and returns fresh summary",
+			ctx:  contextWithAuth("spc_1", string(space.RoleMember)),
+			req:  &appmail.SummarizeThreadRequest{ID: thSumID, Language: "es"},
+			setup: func(th *mockThreadStore, sum *mockThreadSummaryStore, flow *mockSummaryFlowExecutor) {
+				old := time.Now().UTC().Add(-2 * time.Hour)
+				th.threads[thSumID] = &domainmail.Thread{ID: thSumID, SpaceID: "spc_1", LastMessageAt: time.Now().UTC(), MessageCount: 4}
+				sum.summaries["spc_1:"+thSumID+":es"] = &domainmail.ThreadSummary{
+					ThreadID: thSumID, SpaceID: "spc_1", Language: "es",
+					TLDR: "old", LastMessageAt: old, MessageCount: 1,
+				}
+				flow.saveInto = sum
+				flow.flowRunID = "frw_1"
+				flow.threadFn = func(_, _ string) *domainmail.Thread {
+					return &domainmail.Thread{ID: thSumID, SpaceID: "spc_1", LastMessageAt: old, MessageCount: 1}
+				}
+			},
+			wantErr:       false,
+			wantFlowCalls: 1,
+			wantTLDR:      "flow summary",
+		},
+		{
+			name: "force regenerate bypasses fresh cache",
+			ctx:  contextWithAuth("spc_1", string(space.RoleOwner)),
+			req:  &appmail.SummarizeThreadRequest{ID: thSumID, ForceRegenerate: true},
+			setup: func(th *mockThreadStore, sum *mockThreadSummaryStore, flow *mockSummaryFlowExecutor) {
+				now := time.Now().UTC()
+				th.threads[thSumID] = &domainmail.Thread{ID: thSumID, SpaceID: "spc_1", LastMessageAt: now, MessageCount: 2}
+				sum.summaries["spc_1:"+thSumID+":en"] = &domainmail.ThreadSummary{
+					ThreadID: thSumID, SpaceID: "spc_1", Language: "en",
+					TLDR: "cached", LastMessageAt: now, MessageCount: 2,
+				}
+				flow.saveInto = sum
+				flow.flowRunID = "frw_2"
+				flow.threadFn = func(_, _ string) *domainmail.Thread {
+					return &domainmail.Thread{ID: thSumID, SpaceID: "spc_1", LastMessageAt: now, MessageCount: 2}
+				}
+			},
+			wantErr:       false,
+			wantFlowCalls: 1,
+			wantTLDR:      "flow summary",
+		},
+		{
+			name: "flow failure propagates",
+			ctx:  contextWithAuth("spc_1", string(space.RoleMember)),
+			req:  &appmail.SummarizeThreadRequest{ID: thSumID},
+			setup: func(th *mockThreadStore, _ *mockThreadSummaryStore, flow *mockSummaryFlowExecutor) {
+				th.threads[thSumID] = &domainmail.Thread{ID: thSumID, SpaceID: "spc_1", LastMessageAt: time.Now().UTC(), MessageCount: 1}
+				flow.err = errors.E(errors.Internal, "llm unavailable")
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, _, thStore, _, _, _ := newTestCoordinator(t)
+
+			// Rebuild coordinator with instrumented summary flow executor.
+			sumStore := newMockThreadSummaryStore()
+			flowExec := &mockSummaryFlowExecutor{}
+			domainService := domainmail.NewService(domainmail.Dependencies{
+				ThreadStore: thStore,
+			})
+			instr := appmail.NewCoordinator(appmail.Dependencies{
+				DomainService: domainService,
+				ThreadStore:   thStore,
+				SummaryStore:  sumStore,
+				Events:        eventbus.NoopPublisher{},
+				SummarizeFlow: flowExec,
+				HMACSecret:    []byte("test-super-secret-hmac-key-32bytes"),
+			})
+
+			if tc.setup != nil {
+				tc.setup(thStore, sumStore, flowExec)
+			}
+
+			got, err := instr.SummarizeThread(tc.ctx, tc.req)
+			if tc.wantErr {
+				require.Error(t, err)
+				if tc.wantNotFound {
+					assert.True(t, errors.Is(err, errors.NotExist))
+				}
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, got)
+			assert.Equal(t, tc.wantTLDR, got.TLDR)
+			assert.Len(t, flowExec.calls, tc.wantFlowCalls)
+		})
+	}
 }

@@ -13,18 +13,22 @@ import {
   CalendarPlus,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   ChevronsUpDown,
   ChevronsDownUp,
   RefreshCw,
   AlertCircle,
   Image as ImageIcon,
   Sparkles,
+  MessageSquareShare,
+  Paperclip,
   ArrowLeft,
   Receipt,
 } from "lucide-react"
 import { openAIDrawer } from "@/features/ai/lib/drawer-events"
 import { CopilotAttachButton } from "@/features/ai/components/copilot-attach-button"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/components/ui/toast"
 import {
   DropdownMenu,
@@ -37,6 +41,7 @@ import {
   useTimezone,
   useConnectedAccounts,
   useMailThread,
+  useSummarizeMailThread,
   useI18n,
 } from "@saturn/hooks"
 import {
@@ -46,7 +51,11 @@ import {
   computeReplyRecipients,
   buildQuotedReplyHtml,
   buildForwardedMessageHtml,
+  computeHumanizedMailTimestamp,
+  partitionThreadMessagesForSuperCollapse,
+  type HumanizedMailTimestamp,
 } from "@saturn/core"
+import type { TranslationKey } from "@saturn/i18n"
 import type {
   Thread,
   Message,
@@ -59,6 +68,30 @@ import { MailComposer } from "./mail-composer"
 import { SenderAvatar } from "./sender-avatar"
 import { hasFinancialSignal } from "../mail-utils"
 import { cn } from "@/lib/utils"
+
+function translateHumanizedMailTimestamp(
+  stamp: HumanizedMailTimestamp,
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+): string {
+  switch (stamp.kind) {
+    case "just_now":
+      return t("mail.threadTime.justNow")
+    case "minutes_ago":
+      return t("mail.threadTime.minutesAgo", { count: stamp.count })
+    case "hours_ago":
+      return stamp.count === 1
+        ? t("mail.threadTime.hourAgo")
+        : t("mail.threadTime.hoursAgo", { count: stamp.count })
+    case "today":
+      return t("common.today")
+    case "yesterday":
+      return t("common.yesterday")
+    case "days_ago":
+      return t("mail.threadTime.daysAgo", { count: stamp.count })
+    case "date_dmy":
+      return stamp.formatted
+  }
+}
 
 export interface ThreadReaderProps {
   threadId?: string
@@ -113,7 +146,7 @@ export function ThreadReader({
   onDiscardDraft,
 }: ThreadReaderProps) {
   const tz = useTimezone()
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const { data: accountsData } = useConnectedAccounts()
   const accounts = useMemo(() => accountsData?.accounts || [], [accountsData])
 
@@ -125,6 +158,13 @@ export function ThreadReader({
     refetch: refetchThread,
   } = useMailThread(threadId)
   const thread = fetchedThread || initialThread
+
+  const summarizeMutation = useSummarizeMailThread({
+    onError: () => {
+      toast.add({ title: t("mail.summary.failed"), type: "error" })
+    },
+  })
+  const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(false)
 
   const account = useMemo(() => {
     return accounts.find((a) => a.id === thread?.connectedAccountId)
@@ -168,8 +208,37 @@ export function ThreadReader({
   // Track user overrides for expanded/collapsed messages (reset automatically via key on threadId change)
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set())
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [isMiddleUnfolded, setIsMiddleUnfolded] = useState(false)
 
   const messages = useMemo(() => thread?.messages || [], [thread?.messages])
+
+  // Drafts must never be hidden behind the super-collapse deck
+  const partitionInput = useMemo(
+    () =>
+      messages.map((m) =>
+        m.isDraft && !m.isUnread ? { ...m, isUnread: true } : m
+      ),
+    [messages]
+  )
+
+  const messageSegments = useMemo(
+    () =>
+      partitionThreadMessagesForSuperCollapse(partitionInput, isMiddleUnfolded),
+    [partitionInput, isMiddleUnfolded]
+  )
+
+  const humanizedTimeText = useCallback(
+    (date: string | undefined): string => {
+      if (!date) return ""
+      const stamp = computeHumanizedMailTimestamp(date, {
+        now: tz.now(),
+        timeZone: tz.timezone,
+      })
+      if (!stamp) return ""
+      return translateHumanizedMailTimestamp(stamp, t)
+    },
+    [t, tz]
+  )
 
   const isMessageExpanded = useCallback(
     (msg: Message, index: number) => {
@@ -177,8 +246,8 @@ export function ThreadReader({
       if (expandedIds.has(msg.id)) return true
       // In short threads (<= 3 messages), expand all by default for immediate context
       if (messages.length <= 3) return true
-      // In longer threads, expand the original message, the latest message, and unread messages
-      return index === 0 || index === messages.length - 1 || msg.isUnread
+      // In longer threads, expand only the latest message and unread messages
+      return index === messages.length - 1 || msg.isUnread
     },
     [collapsedIds, expandedIds, messages.length]
   )
@@ -214,10 +283,12 @@ export function ThreadReader({
       setCollapsedIds(toCollapse)
       const lastMsgId = messages[messages.length - 1]?.id
       setExpandedIds(new Set(lastMsgId ? [lastMsgId] : []))
+      setIsMiddleUnfolded(false)
     } else {
       // Expand all messages
       setCollapsedIds(new Set())
       setExpandedIds(new Set(messages.map((m) => m.id)))
+      setIsMiddleUnfolded(true)
     }
   }
 
@@ -524,15 +595,23 @@ export function ThreadReader({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() =>
-              openAIDrawer({
-                prompt: t("mail.summarizePrompt", {
-                  subject: thread.subject || t("mail.noSubject"),
+            data-testid="summarize-thread-btn"
+            onClick={() => {
+              if (isSummaryCollapsed) setIsSummaryCollapsed(false)
+              if (!thread.summary) {
+                summarizeMutation.mutate({
                   id: thread.id,
-                }),
-                autoSend: true,
-              })
-            }
+                  forceRegenerate: false,
+                  language,
+                })
+              } else if (thread.summary.isStale) {
+                summarizeMutation.mutate({
+                  id: thread.id,
+                  forceRegenerate: true,
+                  language,
+                })
+              }
+            }}
             title={t("mail.summarizeThread")}
             className="h-8 cursor-pointer gap-1.5 rounded-full px-2.5 text-xs text-primary hover:bg-primary/10"
           >
@@ -655,20 +734,199 @@ export function ThreadReader({
         </div>
       </div>
 
+      {/* In-Place AI Summary Card */}
+      {(Boolean(thread.summary) || summarizeMutation.isPending) && (
+        <div
+          data-testid="thread-summary-card"
+          className="mx-auto mt-4 w-full max-w-4xl rounded-xl border border-brand-secondary/25 bg-brand-secondary/5 px-4 py-3"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-brand-secondary" />
+              <span className="text-xs font-semibold text-foreground">
+                {t("mail.summary.title")}
+              </span>
+              {thread.summary?.isStale && !summarizeMutation.isPending && (
+                <>
+                  <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                    {t("mail.summary.staleBadge")}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    data-testid="summary-update-btn"
+                    onClick={() =>
+                      summarizeMutation.mutate({
+                        id: thread.id,
+                        forceRegenerate: true,
+                        language,
+                      })
+                    }
+                    className="h-6 px-2 text-[11px] font-medium text-amber-600 hover:bg-amber-500/10 hover:text-amber-600 dark:text-amber-400"
+                  >
+                    {t("mail.summary.updateSummary")}
+                  </Button>
+                </>
+              )}
+            </div>
+            <div className="flex shrink-0 items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                data-testid="summary-regenerate-btn"
+                title={t("mail.summary.regenerate")}
+                aria-label={t("mail.summary.regenerate")}
+                onClick={() =>
+                  summarizeMutation.mutate({
+                    id: thread.id,
+                    forceRegenerate: true,
+                    language,
+                  })
+                }
+                className="text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <RefreshCw
+                  className={cn(
+                    "h-3.5 w-3.5",
+                    summarizeMutation.isPending && "animate-spin"
+                  )}
+                />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                data-testid="summary-ask-copilot-btn"
+                title={t("mail.summary.askCopilot")}
+                aria-label={t("mail.summary.askCopilot")}
+                onClick={() =>
+                  openAIDrawer({
+                    prompt: t("mail.summarizePrompt", {
+                      subject: thread.subject || t("mail.noSubject"),
+                      id: thread.id,
+                    }),
+                    autoSend: false,
+                  })
+                }
+                className="text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <MessageSquareShare className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                data-testid="summary-toggle-btn"
+                title={
+                  isSummaryCollapsed
+                    ? t("mail.summary.expand")
+                    : t("mail.summary.collapse")
+                }
+                aria-label={
+                  isSummaryCollapsed
+                    ? t("mail.summary.expand")
+                    : t("mail.summary.collapse")
+                }
+                onClick={() => setIsSummaryCollapsed((prev) => !prev)}
+                className="text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                {isSummaryCollapsed ? (
+                  <ChevronDown className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronUp className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {summarizeMutation.isPending && !thread.summary && (
+            <div className="mt-3 flex flex-col gap-2">
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-3/5" />
+              <span className="text-xs text-muted-foreground">
+                {t("mail.summary.summarizing")}
+              </span>
+            </div>
+          )}
+
+          {!isSummaryCollapsed && thread.summary && (
+            <div className="mt-2 flex flex-col gap-3">
+              <p className="text-sm leading-relaxed text-foreground">
+                {thread.summary.tldr}
+              </p>
+
+              {thread.summary.keyPoints.length > 0 && (
+                <div className="border-t border-border/40 pt-2">
+                  <p className="text-xs font-semibold text-foreground">
+                    {t("mail.summary.keyPoints")}
+                  </p>
+                  <ul className="mt-1.5 list-disc space-y-1 pl-4 text-sm text-muted-foreground">
+                    {thread.summary.keyPoints.map((point) => (
+                      <li key={point}>{point}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {thread.summary.actionItems.length > 0 && (
+                <div className="border-t border-border/40 pt-2">
+                  <p className="text-xs font-semibold text-foreground">
+                    {t("mail.summary.actionItems")}
+                  </p>
+                  <ul className="mt-1 flex flex-col">
+                    {thread.summary.actionItems.map((item, idx) => (
+                      <li
+                        key={item}
+                        className={cn(
+                          "flex items-start gap-2 py-1.5 text-sm text-muted-foreground",
+                          idx > 0 && "border-t border-border/40"
+                        )}
+                      >
+                        <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-brand-secondary" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Messages Continuous Document Canvas */}
       <div className="flex-1 overflow-y-auto bg-muted/15">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-3 px-6 py-4">
-          {messages.map((msg, index) => {
+          {messageSegments.map((segment) => {
+            if (segment.type === "folded") {
+              return (
+                <button
+                  key={segment.key}
+                  type="button"
+                  data-testid="web-super-collapse-btn"
+                  aria-label={t("mail.superCollapse.hiddenMessagesCount", {
+                    count: segment.count,
+                  })}
+                  onClick={() => setIsMiddleUnfolded(true)}
+                  className="group flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-muted-foreground transition hover:text-foreground"
+                >
+                  <span className="relative flex-1 py-2">
+                    <span className="absolute inset-x-0 top-1 h-px bg-border/40" />
+                    <span className="block h-px bg-border/60" />
+                  </span>
+                  <span className="flex h-7 min-w-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-card px-3 text-xs font-semibold tabular-nums shadow-2xs transition group-hover:border-border">
+                    {segment.count}
+                  </span>
+                  <span className="relative flex-1 py-2">
+                    <span className="absolute inset-x-0 top-1 h-px bg-border/40" />
+                    <span className="block h-px bg-border/60" />
+                  </span>
+                </button>
+              )
+            }
+
+            const msg = segment.message
+            const index = segment.index
             const isExpanded = isMessageExpanded(msg, index)
-            const sentDateStr = msg.sentAt
-              ? tz.format(msg.sentAt, {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                })
-              : ""
+            const sentDateStr = humanizedTimeText(msg.sentAt)
 
             // If this message is an unsent draft, render it seamlessly into the message trail
             if (msg.isDraft) {
@@ -759,7 +1017,16 @@ export function ThreadReader({
                 <div
                   key={msg.id}
                   data-testid={`message-card-${msg.id}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={false}
                   onClick={() => toggleMessageExpanded(msg.id, false)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      toggleMessageExpanded(msg.id, false)
+                    }
+                  }}
                   className="group flex cursor-pointer items-center justify-between rounded-xl border border-border/50 bg-card/70 px-4 py-3 transition hover:bg-card"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden pr-4">
@@ -768,22 +1035,27 @@ export function ThreadReader({
                       name={msg.from?.name}
                       avatarUrl={msg.from?.avatarUrl}
                       isVerified={msg.from?.isVerified}
-                      size="sm"
+                      size="md"
                       showPopover={false}
                     />
-                    <span className="shrink-0 text-xs font-semibold text-foreground">
+                    {msg.isUnread && (
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
+                    )}
+                    <span className="max-w-[200px] shrink-0 truncate text-xs font-semibold text-foreground">
                       {msg.from?.name ||
                         msg.from?.email?.split("@")[0] ||
                         t("mail.unknown")}
                     </span>
-                    <span className="truncate text-xs text-muted-foreground">
+                    <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
                       {msg.snippet}
                     </span>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-2.5 text-xs text-muted-foreground">
+                  <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                    {msg.attachments && msg.attachments.length > 0 && (
+                      <Paperclip className="h-3.5 w-3.5" />
+                    )}
                     <span className="tabular-nums">{sentDateStr}</span>
-                    <ChevronDown className="h-4 w-4 opacity-50 group-hover:opacity-100" />
                   </div>
                 </div>
               )
@@ -796,9 +1068,25 @@ export function ThreadReader({
                 data-testid={`message-card-${msg.id}`}
                 className="rounded-xl border border-border/60 bg-card p-5 shadow-2xs"
               >
-                {/* Message Header */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3 overflow-hidden">
+                {/* Message Header (click anywhere to collapse) */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={true}
+                  data-testid={`message-header-${msg.id}`}
+                  onClick={() => toggleMessageExpanded(msg.id, true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      toggleMessageExpanded(msg.id, true)
+                    }
+                  }}
+                  className="flex cursor-pointer items-start justify-between gap-3"
+                >
+                  <div
+                    className="flex items-center gap-3 overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <SenderAvatar
                       email={msg.from?.email}
                       name={msg.from?.name}
@@ -835,7 +1123,10 @@ export function ThreadReader({
                   </div>
 
                   {/* Header Quick Actions & 3-Dots Menu */}
-                  <div className="flex shrink-0 items-center gap-1">
+                  <div
+                    className="flex shrink-0 items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <span className="mr-1 text-xs text-muted-foreground tabular-nums">
                       {sentDateStr}
                     </span>
@@ -944,16 +1235,6 @@ export function ThreadReader({
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-
-                    {/* Collapse Chevron Button */}
-                    <button
-                      type="button"
-                      onClick={() => toggleMessageExpanded(msg.id, true)}
-                      className="ml-0.5 rounded p-1 text-muted-foreground/70 hover:bg-muted hover:text-foreground"
-                      aria-label={t("mail.collapseMessage")}
-                    >
-                      <ChevronUp className="h-4 w-4" />
-                    </button>
                   </div>
                 </div>
 

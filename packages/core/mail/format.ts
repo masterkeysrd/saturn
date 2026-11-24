@@ -9,6 +9,16 @@ import {
   stripHtmlToPlainText,
   stripTrailingEmptyParagraphsAndBrs,
 } from "./html"
+import {
+  type DateInput,
+  MS_PER_HOUR,
+  MS_PER_SECOND,
+  MINUTES_PER_HOUR,
+  getDaysDiff,
+  getTimezoneParts,
+  isSameDayInTimezone,
+  parseDate,
+} from "../timezone"
 
 export { linkifyEmailsInHtml, stripHtmlToPlainText }
 
@@ -788,4 +798,138 @@ export function combineDraftBodyHtml(
   const trimmedEditable = editableHtml?.trim() || ""
   if (!trimmedEditable) return `<p><br></p>${trimmedQuote}`
   return `${trimmedEditable}${trimmedQuote}`
+}
+
+/**
+ * Copy-free discriminated timestamp descriptor for humanized mail thread dates.
+ * UI layers translate each kind into localized copy.
+ */
+export type HumanizedMailTimestamp =
+  | { kind: "just_now" }
+  | { kind: "minutes_ago"; count: number }
+  | { kind: "hours_ago"; count: number }
+  | { kind: "today" }
+  | { kind: "yesterday" }
+  | { kind: "days_ago"; count: number }
+  | { kind: "date_dmy"; formatted: string }
+
+export interface HumanizedMailTimestampOptions {
+  now?: Date
+  timeZone: string
+}
+
+const JUST_NOW_THRESHOLD_MS = 60 * MS_PER_SECOND
+const HOURS_AGO_THRESHOLD = 10
+
+/**
+ * Computes a copy-free humanized timestamp bucket for a mail date in the
+ * viewer's timezone. Returns null for invalid or empty dates.
+ */
+export function computeHumanizedMailTimestamp(
+  date: DateInput,
+  options: HumanizedMailTimestampOptions
+): HumanizedMailTimestamp | null {
+  const tz = options.timeZone
+  const d = parseDate(date, tz)
+  if (!d) return null
+
+  const now = options.now ?? new Date()
+  const diffMs = now.getTime() - d.getTime()
+  const diffMins = Math.floor(diffMs / (MINUTES_PER_HOUR * MS_PER_SECOND))
+  const diffHours = Math.floor(diffMs / MS_PER_HOUR)
+
+  if (diffMs >= 0) {
+    if (diffMs < JUST_NOW_THRESHOLD_MS) {
+      return { kind: "just_now" }
+    }
+    if (diffMins < MINUTES_PER_HOUR) {
+      return { kind: "minutes_ago", count: diffMins }
+    }
+    if (diffHours <= HOURS_AGO_THRESHOLD) {
+      return { kind: "hours_ago", count: diffHours }
+    }
+    if (isSameDayInTimezone(d, now, tz)) {
+      return { kind: "today" }
+    }
+  }
+
+  const daysDiff = getDaysDiff(d, tz, now)
+  if (daysDiff === -1) {
+    return { kind: "yesterday" }
+  }
+  if (daysDiff !== null && daysDiff >= -7 && daysDiff <= -2) {
+    return { kind: "days_ago", count: Math.abs(daysDiff) }
+  }
+
+  const parts = getTimezoneParts(d, tz)
+  if (!parts) return null
+  return {
+    kind: "date_dmy",
+    formatted: `${parts.day}/${parts.month}/${parts.year}`,
+  }
+}
+
+export type ThreadMessageSegment<T> =
+  | { type: "message"; message: T; index: number }
+  | { type: "folded"; messages: T[]; count: number; key: string }
+
+const SUPER_COLLAPSE_MIN_MESSAGES = 5
+const SUPER_COLLAPSE_MIN_FOLD_RUN = 2
+
+/**
+ * Partitions thread messages into Gmail-style `[First] ── [N] ── [Last 2]`
+ * super-collapse segments. Unread messages are never folded; single-message
+ * middle runs render directly instead of collapsing one row into a divider.
+ */
+export function partitionThreadMessagesForSuperCollapse<
+  T extends { id: string; isUnread?: boolean },
+>(messages: T[], unfolded: boolean): Array<ThreadMessageSegment<T>> {
+  if (unfolded || messages.length < SUPER_COLLAPSE_MIN_MESSAGES) {
+    return messages.map((message, index) => ({
+      type: "message" as const,
+      message,
+      index,
+    }))
+  }
+
+  const lastTwoStart = messages.length - 2
+  const keepIndex = (index: number) =>
+    index === 0 || index >= lastTwoStart || Boolean(messages[index].isUnread)
+
+  const segments: Array<ThreadMessageSegment<T>> = []
+  let foldRun: T[] = []
+
+  const flushFoldRun = () => {
+    if (foldRun.length >= SUPER_COLLAPSE_MIN_FOLD_RUN) {
+      const first = foldRun[0]
+      const last = foldRun[foldRun.length - 1]
+      segments.push({
+        type: "folded",
+        messages: foldRun,
+        count: foldRun.length,
+        key: `folded-${first.id}-${last.id}`,
+      })
+    } else if (foldRun.length === 1) {
+      const runIndex = messages.indexOf(foldRun[0])
+      segments.push({
+        type: "message",
+        message: foldRun[0],
+        index: runIndex,
+      })
+    }
+    foldRun = []
+  }
+
+  for (let index = 0; index < messages.length; index++) {
+    const message = messages[index]
+    if (keepIndex(index)) {
+      flushFoldRun()
+      segments.push({ type: "message", message, index })
+    } else {
+      foldRun.push(message)
+    }
+  }
+  flushFoldRun()
+
+  return segments
 }

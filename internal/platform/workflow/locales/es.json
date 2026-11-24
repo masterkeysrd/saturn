@@ -78,6 +78,10 @@
       "display_name": "Modificar etiquetas de correo",
       "description": "Agrega o quita etiquetas/carpetas de buzón o archiva un hilo de correo electrónico."
     },
+    "mail.save_thread_summary": {
+      "display_name": "Guardar resumen del hilo",
+      "description": "Persiste un TL;DR generado por IA, puntos clave y elementos de acción como resumen en caché de un hilo de correo electrónico."
+    },
     "output": {
       "display_name": "Salida",
       "description": "Finaliza la ruta actual y establece FlowRun.output para invocaciones síncronas."
@@ -147,6 +151,10 @@
     "mail.message": {
       "display_name": "Obtener mensaje de correo",
       "description": "Carga los metadatos del correo, el cuerpo en texto plano/HTML en caché y las referencias de adjuntos mail://."
+    },
+    "mail.thread": {
+      "display_name": "Obtener hilo de correo",
+      "description": "Carga un hilo con cuerpos de mensaje en texto plano saneados en orden cronológico, limitados para presupuestos de tokens de LLM."
     }
   },
   "cel_helpers": {

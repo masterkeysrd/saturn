@@ -346,7 +346,9 @@ const OTPSlots = React.forwardRef<OTPTextInputRef, OTPSlotsProps>(
           accessibilityLabel={t("auth.mobile.pasteCodeAria")}
         >
           <ClipboardPaste size={14} color={colors.primary} />
-          <Text style={styles.pasteButtonText}>{t("auth.mobile.pasteCode")}</Text>
+          <Text style={styles.pasteButtonText}>
+            {t("auth.mobile.pasteCode")}
+          </Text>
         </TouchableOpacity>
 
         {pasteHint && <Text style={styles.pasteHintText}>{pasteHint}</Text>}

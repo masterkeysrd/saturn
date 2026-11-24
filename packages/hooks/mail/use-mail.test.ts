@@ -7,6 +7,7 @@ import {
   useMailThread,
   useInfiniteMailThreads,
   useModifyThread,
+  useSummarizeMailThread,
 } from "./use-mail"
 import * as api from "@saturn/api/saturn/mail/v1/mail"
 
@@ -21,6 +22,7 @@ vi.mock("@saturn/api/saturn/mail/v1/mail", async () => {
     getThread: vi.fn(),
     modifyThread: vi.fn(),
     batchModifyThreads: vi.fn(),
+    summarizeThread: vi.fn(),
   }
 })
 
@@ -185,6 +187,90 @@ describe("useMail hooks", () => {
         expect(rolledBack?.threads).toHaveLength(2)
         expect(rolledBack?.threads.map((t) => t.id)).toContain("mth_to_archive")
       })
+    })
+  })
+
+  describe("useSummarizeMailThread", () => {
+    it("calls summarizeThread and hydrates mailKeys.thread cache with fresh summary", async () => {
+      const threadQueryKey = mailKeys.thread("mth_1")
+      queryClient.setQueryData<api.Thread>(threadQueryKey, {
+        id: "mth_1",
+        spaceId: "sp_1",
+        connectedAccountId: "acc_1",
+        providerThreadId: "p_1",
+        subject: "Quarterly Review",
+        snippet: "See attached",
+        participants: [],
+        messageCount: 3,
+        hasAttachments: false,
+        isUnread: false,
+        isStarred: false,
+        inInbox: true,
+        inSent: false,
+        inDrafts: false,
+        inTrash: false,
+        inSpam: false,
+        mailboxIds: [],
+        lastMessageAt: "",
+        createTime: "",
+        updateTime: "",
+        messages: [],
+        summary: {
+          threadId: "mth_1",
+          language: "en",
+          tldr: "Stale summary",
+          keyPoints: [],
+          actionItems: [],
+          lastMessageId: "msg_old",
+          lastMessageAt: "",
+          messageCount: 1,
+          isStale: true,
+          flowRunId: "",
+          updateTime: "",
+        },
+      })
+
+      const freshSummary: api.ThreadSummary = {
+        threadId: "mth_1",
+        language: "en",
+        tldr: "Fresh summary",
+        keyPoints: ["Ship by Friday"],
+        actionItems: ["Confirm dates"],
+        lastMessageId: "msg_new",
+        lastMessageAt: "",
+        messageCount: 3,
+        isStale: true,
+        flowRunId: "flow_1",
+        updateTime: "",
+      }
+      vi.mocked(api.summarizeThread).mockResolvedValueOnce(freshSummary)
+
+      const { result } = renderHook(() => useSummarizeMailThread(), {
+        wrapper: createWrapper(),
+      })
+
+      act(() => {
+        result.current.mutate({
+          id: "mth_1",
+          forceRegenerate: true,
+          language: "en",
+        })
+      })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(vi.mocked(api.summarizeThread)).toHaveBeenCalledWith("mth_1", {
+        id: "mth_1",
+        forceRegenerate: true,
+        language: "en",
+      })
+
+      const cached = queryClient.getQueryData<api.Thread>(threadQueryKey)
+      expect(cached?.summary?.tldr).toBe("Fresh summary")
+      expect(cached?.summary?.isStale).toBe(false)
+      expect(cached?.summary?.keyPoints).toEqual(["Ship by Friday"])
     })
   })
 

@@ -24,7 +24,9 @@ export function ResetPasswordView() {
   const hasToken = Boolean(token.trim())
   const [username, setUsername] = useState<string | null>(null)
   const [isValidating, setIsValidating] = useState(hasToken)
-  const [validationError, setValidationError] = useState<string | null>(null)
+  const [validationError, setValidationError] = useState<string | null>(() =>
+    hasToken ? null : t("auth.reset.noToken")
+  )
 
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -38,10 +40,7 @@ export function ResetPasswordView() {
   useEffect(() => {
     document.title = "Reset Password | Saturn"
 
-    if (!hasToken) {
-      setValidationError(t("auth.reset.noToken"))
-      return
-    }
+    if (!hasToken) return
 
     validateMutation.mutate(
       { token },
@@ -52,9 +51,7 @@ export function ResetPasswordView() {
         },
         onError: (err) => {
           setIsValidating(false)
-          setValidationError(
-            err.message || t("auth.reset.linkInvalid")
-          )
+          setValidationError(err.message || t("auth.reset.linkInvalid"))
         },
       }
     )
@@ -89,9 +86,7 @@ export function ResetPasswordView() {
       setIsSuccess(true)
     } catch (err: unknown) {
       const message =
-        err instanceof Error
-          ? err.message
-          : t("auth.reset.failed")
+        err instanceof Error ? err.message : t("auth.reset.failed")
       setSubmitError(message)
     }
   }

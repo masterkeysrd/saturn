@@ -74,7 +74,8 @@ export default function RegisterScreen() {
       })
       router.replace("/(app)/(tabs)")
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t("auth.mobile.registerFailed")
+      const msg =
+        err instanceof Error ? err.message : t("auth.mobile.registerFailed")
       setErrorState(msg)
       toast.show({
         type: "error",

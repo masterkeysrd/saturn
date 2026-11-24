@@ -124,7 +124,9 @@ export function CurrencyCombobox({
         className="w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-popover p-0 shadow-xl"
       >
         <Command>
-          <CommandInput placeholder={t("finance.pickers.currency.searchPlaceholder")} />
+          <CommandInput
+            placeholder={t("finance.pickers.currency.searchPlaceholder")}
+          />
           <CommandList>
             <CommandEmpty>
               {t("finance.pickers.currency.noCurrenciesFound")}

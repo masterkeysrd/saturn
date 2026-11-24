@@ -3274,8 +3274,42 @@
     "summarize": "Summarize",
     "summarizePrompt": "Summarize the email thread \"{subject}\" (thread ID: {id}) and list any action items.",
     "summarizeThread": "Summarize thread with AI",
+    "summary": {
+      "actionItems": "Action items",
+      "askCopilot": "Ask follow-up in Copilot",
+      "collapse": "Collapse summary",
+      "expand": "Expand summary",
+      "failed": "Could not summarize email thread",
+      "keyPoints": "Key points",
+      "regenerate": "Regenerate summary",
+      "staleBadge": "Outdated · New messages",
+      "summarize": "Summarize",
+      "summarizing": "Summarizing thread…",
+      "title": "AI Summary",
+      "updateSummary": "Update"
+    },
+    "superCollapse": {
+      "hiddenMessagesCount": "{count} earlier messages",
+      "hideDetails": "Hide details",
+      "showDetails": "Show details"
+    },
     "switchToList": "Switch to list view",
     "switchToSplit": "Switch to split view",
+    "threadHeader": {
+      "ccLabel": "Cc:",
+      "dateLabel": "Date:",
+      "fromLabel": "From:",
+      "markUnread": "Mark unread",
+      "stageToFinance": "Stage to Finance",
+      "toLabel": "To:"
+    },
+    "threadTime": {
+      "daysAgo": "{count} days ago",
+      "hourAgo": "1 hour ago",
+      "hoursAgo": "{count} hours ago",
+      "justNow": "Just now",
+      "minutesAgo": "{count} min ago"
+    },
     "toLabel": "To:",
     "toLabelShort": "To",
     "toPrefix": "to: ",

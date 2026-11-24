@@ -16,6 +16,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type mockSummaryReader struct {
+	summary *domainmail.ThreadSummary
+}
+
+func (m *mockSummaryReader) Get(ctx context.Context, spaceID, threadID, language string) (*domainmail.ThreadSummary, error) {
+	return m.summary, nil
+}
+
 type mockCoordinator struct {
 	appmail.Coordinator
 	createdMailbox      *domainmail.Mailbox
@@ -27,6 +35,8 @@ type mockCoordinator struct {
 	createdDraft        *domainmail.Draft
 	updatedDraft        *domainmail.Draft
 	sentMessage         *domainmail.Message
+	threadSummary       *domainmail.ThreadSummary
+	summarizeReq        *appmail.SummarizeThreadRequest
 }
 
 func (m *mockCoordinator) CreateMailbox(ctx context.Context, req *appmail.CreateMailboxRequest) (*domainmail.Mailbox, error) {
@@ -37,6 +47,10 @@ func (m *mockCoordinator) UpdateMailbox(ctx context.Context, req *appmail.Update
 }
 func (m *mockCoordinator) DeleteMailbox(ctx context.Context, req *appmail.DeleteMailboxRequest) error {
 	return nil
+}
+func (m *mockCoordinator) SummarizeThread(ctx context.Context, req *appmail.SummarizeThreadRequest) (*domainmail.ThreadSummary, error) {
+	m.summarizeReq = req
+	return m.threadSummary, nil
 }
 func (m *mockCoordinator) ModifyThread(ctx context.Context, req *appmail.ModifyThreadRequest) (*domainmail.Thread, error) {
 	return m.modifiedThread, nil
@@ -159,6 +173,7 @@ func TestHandler_MailboxOperations(t *testing.T) {
 		&mockThreadReader{},
 		&mockMessageReader{},
 		&mockDraftReader{},
+		&mockSummaryReader{},
 		nil,
 		nil,
 		nil,
@@ -204,6 +219,7 @@ func TestHandler_ThreadOperations(t *testing.T) {
 		&mockThreadReader{},
 		&mockMessageReader{},
 		&mockDraftReader{},
+		&mockSummaryReader{},
 		nil,
 		nil,
 		nil,
@@ -254,6 +270,7 @@ func TestHandler_DraftOperations(t *testing.T) {
 		&mockThreadReader{},
 		&mockMessageReader{},
 		&mockDraftReader{},
+		&mockSummaryReader{},
 		nil,
 		nil,
 		nil,
@@ -311,6 +328,7 @@ func TestHandler_ListThreadsPagination(t *testing.T) {
 		&mockThreadReader{threads: allThreads},
 		&mockMessageReader{},
 		&mockDraftReader{},
+		&mockSummaryReader{},
 		nil,
 		nil,
 		nil,
@@ -388,7 +406,7 @@ func TestHandler_ListThreadsReadThroughBackfill(t *testing.T) {
 		},
 	}
 
-	agg := mailaggregator.NewService(&mockMailboxReader{}, thReader, &mockMessageReader{}, &mockDraftReader{}, nil, nil, nil, []byte("secret"))
+	agg := mailaggregator.NewService(&mockMailboxReader{}, thReader, &mockMessageReader{}, &mockDraftReader{}, &mockSummaryReader{}, nil, nil, nil, []byte("secret"))
 	handler := grpcmail.NewHandler(coord, agg)
 	ctx := contextWithAuth("spc_1")
 
@@ -414,4 +432,115 @@ func TestHandler_ListThreadsReadThroughBackfill(t *testing.T) {
 	assert.Equal(t, "mth_2", resp2.Threads[0].Id)
 	assert.Equal(t, "mth_3", resp2.Threads[1].Id)
 	assert.Equal(t, "3", resp2.NextPageToken)
+}
+
+func TestHandler_SummarizeThread(t *testing.T) {
+	lastAt := time.Date(2026, 1, 10, 12, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name       string
+		summary    *domainmail.ThreadSummary
+		req        *mailv1.SummarizeThreadRequest
+		wantThread string
+		wantTLDR   string
+	}{
+		{
+			name: "returns summary for thread",
+			summary: &domainmail.ThreadSummary{
+				ThreadID:      "mth_1",
+				SpaceID:       "spc_1",
+				Language:      "en",
+				TLDR:          "Quarterly budget review scheduled.",
+				KeyPoints:     []string{"Budget cut by 10%"},
+				ActionItems:   []string{"Send revised forecast"},
+				LastMessageID: "msg_2",
+				LastMessageAt: lastAt,
+				MessageCount:  2,
+				FlowRunID:     new("frw_9"),
+			},
+			req:        &mailv1.SummarizeThreadRequest{Id: "mth_1"},
+			wantThread: "mth_1",
+			wantTLDR:   "Quarterly budget review scheduled.",
+		},
+		{
+			name:       "nil summary maps to nil response",
+			summary:    nil,
+			req:        &mailv1.SummarizeThreadRequest{Id: "mth_missing", ForceRegenerate: true},
+			wantThread: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			coord := &mockCoordinator{threadSummary: tc.summary}
+			agg := mailaggregator.NewService(
+				&mockMailboxReader{},
+				&mockThreadReader{},
+				&mockMessageReader{},
+				&mockDraftReader{},
+				&mockSummaryReader{},
+				nil,
+				nil,
+				nil,
+				[]byte("secret"),
+			)
+			handler := grpcmail.NewHandler(coord, agg)
+			ctx := contextWithAuth("spc_1")
+
+			resp, err := handler.SummarizeThread(ctx, tc.req)
+			require.NoError(t, err)
+			require.NotNil(t, coord.summarizeReq)
+			assert.Equal(t, tc.req.GetId(), coord.summarizeReq.ID)
+			assert.Equal(t, tc.req.GetForceRegenerate(), coord.summarizeReq.ForceRegenerate)
+
+			if tc.wantTLDR == "" {
+				assert.Nil(t, resp)
+				return
+			}
+			require.NotNil(t, resp)
+			assert.Equal(t, tc.wantThread, resp.ThreadId)
+			assert.Equal(t, tc.wantTLDR, resp.Tldr)
+			assert.Equal(t, []string{"Budget cut by 10%"}, resp.KeyPoints)
+			assert.Equal(t, "frw_9", resp.FlowRunId)
+			assert.False(t, resp.IsStale)
+		})
+	}
+}
+
+func TestHandler_GetThread_AttachesSummaryWithStaleness(t *testing.T) {
+	thReader := &mockThreadReader{threads: []*domainmail.Thread{
+		{
+			ID:            "mth_1",
+			SpaceID:       "spc_1",
+			Subject:       "Stale summary thread",
+			LastMessageAt: time.Now().UTC().Add(time.Hour),
+			MessageCount:  5,
+		},
+	}}
+	agg := mailaggregator.NewService(
+		&mockMailboxReader{},
+		thReader,
+		&mockMessageReader{},
+		&mockDraftReader{},
+		&mockSummaryReader{summary: &domainmail.ThreadSummary{
+			ThreadID:      "mth_1",
+			SpaceID:       "spc_1",
+			Language:      "en",
+			TLDR:          "Old summary",
+			LastMessageAt: time.Now().UTC(),
+			MessageCount:  2,
+		}},
+		nil,
+		nil,
+		nil,
+		[]byte("secret"),
+	)
+	handler := grpcmail.NewHandler(&mockCoordinator{}, agg)
+	ctx := contextWithAuth("spc_1")
+
+	resp, err := handler.GetThread(ctx, &mailv1.GetThreadRequest{Id: "mth_1"})
+	require.NoError(t, err)
+	require.NotNil(t, resp.Summary)
+	assert.Equal(t, "Old summary", resp.Summary.Tldr)
+	assert.True(t, resp.Summary.IsStale)
 }

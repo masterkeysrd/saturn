@@ -12,6 +12,7 @@ import (
 	domainmail "github.com/masterkeysrd/saturn/internal/domain/mail"
 	"github.com/masterkeysrd/saturn/internal/platform/connector"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	platformi18n "github.com/masterkeysrd/saturn/internal/platform/i18n"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -24,6 +25,7 @@ type Service struct {
 	threadReader      ThreadReader
 	messageReader     MessageReader
 	draftReader       DraftReader
+	summaryReader     SummaryReader
 	accountReader     ConnectedAccountReader
 	tokenManager      *connector.TokenManager
 	externalProviders map[string]domainmail.ExternalMailProvider
@@ -36,6 +38,7 @@ func NewService(
 	threadReader ThreadReader,
 	messageReader MessageReader,
 	draftReader DraftReader,
+	summaryReader SummaryReader,
 	accountReader ConnectedAccountReader,
 	tokenManager *connector.TokenManager,
 	externalProviders map[string]domainmail.ExternalMailProvider,
@@ -46,6 +49,7 @@ func NewService(
 		threadReader:      threadReader,
 		messageReader:     messageReader,
 		draftReader:       draftReader,
+		summaryReader:     summaryReader,
 		accountReader:     accountReader,
 		tokenManager:      tokenManager,
 		externalProviders: externalProviders,
@@ -303,9 +307,20 @@ func (s *Service) GetThread(ctx context.Context, spaceID, id string) (*ThreadPro
 		messageProjections = append(messageProjections, proj)
 	}
 
+	language := platformi18n.From(ctx)
+	if language == "" {
+		language = platformi18n.DefaultLanguage
+	}
+	summary, err := s.summaryReader.Get(ctx, spaceID, id, language)
+	if err != nil {
+		// Summary hydration is best-effort; the reader degrades gracefully to no summary.
+		summary = nil
+	}
+
 	return &ThreadProjection{
 		Thread:   thread,
 		Messages: messageProjections,
+		Summary:  summary,
 	}, nil
 }
 

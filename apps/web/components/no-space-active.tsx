@@ -45,7 +45,9 @@ export function NoSpaceActiveScreen() {
       navigate(`/space/${space.id}/finance`)
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : t("settings.spaces.createFailedDefault")
+        err instanceof Error
+          ? err.message
+          : t("settings.spaces.createFailedDefault")
       console.error(err)
       toast.add({
         type: "error",

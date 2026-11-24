@@ -92,7 +92,9 @@ export default function CreateSpaceModal() {
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.subtitle}>{t("settings.spaces.mobile.createDesc")}</Text>
+        <Text style={styles.subtitle}>
+          {t("settings.spaces.mobile.createDesc")}
+        </Text>
 
         <Card style={styles.formCard}>
           <TextInput

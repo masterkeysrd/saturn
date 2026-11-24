@@ -20,6 +20,7 @@ type WorkflowDependencies struct {
 	Coordinator       Coordinator
 	MessageStore      domainmail.MessageStore
 	MailboxStore      domainmail.MailboxStore
+	ThreadStore       domainmail.ThreadStore
 	AccountStore      connector.Store
 	TokenManager      *connector.TokenManager
 	ExternalProviders map[string]domainmail.ExternalMailProvider
@@ -29,6 +30,36 @@ type WorkflowDependencies struct {
 type GetMessageParams struct {
 	ID string `json:"id" jsonschema:"Email message ID"`
 }
+
+// GetThreadParams identifies an email thread for mail.thread.
+type GetThreadParams struct {
+	ID string `json:"id" jsonschema:"Email thread ID"`
+}
+
+// ThreadMessageDetail is a chronological, LLM-friendly message projection inside a mail.thread loader result.
+type ThreadMessageDetail struct {
+	ID        string `json:"id"`
+	From      string `json:"from"`
+	SentAt    string `json:"sent_at"`
+	BodyText  string `json:"body_text"`
+	Truncated bool   `json:"truncated"`
+}
+
+// ThreadDetail is the workflow-facing projection of a mail thread and its chronological messages.
+type ThreadDetail struct {
+	ID            string                `json:"id"`
+	Subject       string                `json:"subject"`
+	Participants  []string              `json:"participants"`
+	MessageCount  int                   `json:"message_count"`
+	LastMessageID string                `json:"last_message_id"`
+	LastMessageAt string                `json:"last_message_at"`
+	Messages      []ThreadMessageDetail `json:"messages"`
+}
+
+const (
+	maxThreadMessageBodyChars = 6000
+	maxThreadTotalBodyChars   = 40000
+)
 
 // MessageDetail is the workflow-facing projection of a mail message and cached body.
 type MessageDetail struct {
@@ -91,10 +122,29 @@ type ModifyLabelsOutput struct {
 	Updated bool `json:"updated"`
 }
 
+// SaveThreadSummaryInputs defines inputs for the mail.save_thread_summary action step.
+type SaveThreadSummaryInputs struct {
+	ThreadID      string   `json:"thread_id" jsonschema:"Target thread ID"`
+	Language      string   `json:"language,omitempty" jsonschema:"Summary language tag (en or es)"`
+	TLDR          string   `json:"tldr" jsonschema:"Concise summary paragraph"`
+	KeyPoints     []string `json:"key_points,omitempty" jsonschema:"Distinct key points of the conversation"`
+	ActionItems   []string `json:"action_items,omitempty" jsonschema:"Requested or implied action items"`
+	LastMessageID string   `json:"last_message_id,omitempty" jsonschema:"ID of the latest message covered by the summary"`
+	LastMessageAt string   `json:"last_message_at,omitempty" jsonschema:"RFC3339 timestamp of the latest summarized message"`
+	MessageCount  int      `json:"message_count,omitempty" jsonschema:"Number of messages covered by the summary"`
+}
+
+// SaveThreadSummaryOutput defines outputs for mail.save_thread_summary.
+type SaveThreadSummaryOutput struct {
+	ThreadID string `json:"thread_id"`
+	Language string `json:"language"`
+}
+
 // RegisterWorkflows registers mail DataLoaders, Action Steps, and the mail:// ArtifactReader onto reg.
 func RegisterWorkflows(reg *workflow.Registry, deps WorkflowDependencies) {
 	registerMailLoaders(reg, deps)
 	registerMailSteps(reg, deps)
+	registerMailSystemFlows(reg)
 	reg.RegisterArtifactReader(&mailArtifactReader{deps: deps})
 }
 
@@ -145,6 +195,68 @@ func registerMailLoaders(reg *workflow.Registry, deps WorkflowDependencies) {
 		if body, bodyErr := deps.MessageStore.GetBody(ctx, spaceID, msg.ID); bodyErr == nil && body != nil {
 			detail.BodyPlain = body.PlainText
 			detail.BodyHTML = body.SanitizedHTML
+		}
+
+		return detail, nil
+	})
+
+	reg.RegisterLoader(workflow.LoaderDescriptor{
+		Name:        "mail.thread",
+		Owner:       "mail",
+		DisplayName: "Get Mail Thread",
+		Description: "Loads a thread with chronological sanitized plain-text message bodies capped for LLM token budgets.",
+	}, func(ctx context.Context, spaceID string, params GetThreadParams) (*ThreadDetail, error) {
+		threadID := strings.TrimSpace(params.ID)
+		if threadID == "" {
+			return nil, nil
+		}
+		thread, err := deps.ThreadStore.GetByID(ctx, spaceID, threadID)
+		if err != nil {
+			if errors.Is(err, errors.NotExist) {
+				return nil, nil
+			}
+			return nil, err
+		}
+		if thread == nil {
+			return nil, nil
+		}
+
+		msgs, err := deps.MessageStore.ListByThreadID(ctx, spaceID, thread.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		detail := &ThreadDetail{
+			ID:            thread.ID,
+			Subject:       thread.Subject,
+			Participants:  make([]string, 0, len(thread.Participants)),
+			MessageCount:  thread.MessageCount,
+			LastMessageAt: thread.LastMessageAt.UTC().Format(time.RFC3339),
+			Messages:      make([]ThreadMessageDetail, 0, len(msgs)),
+		}
+		for _, p := range thread.Participants {
+			detail.Participants = append(detail.Participants, p.String())
+		}
+
+		totalChars := 0
+		for _, msg := range msgs {
+			body, truncated := threadMessageBody(ctx, deps.MessageStore, spaceID, msg)
+			if totalChars+len(body) > maxThreadTotalBodyChars {
+				body, _ = truncateRunes(body, max(0, maxThreadTotalBodyChars-totalChars))
+				truncated = true
+			}
+			totalChars += len(body)
+
+			detail.Messages = append(detail.Messages, ThreadMessageDetail{
+				ID:        msg.ID,
+				From:      msg.From.String(),
+				SentAt:    msg.EffectiveTime().UTC().Format(time.RFC3339),
+				BodyText:  body,
+				Truncated: truncated,
+			})
+		}
+		if len(msgs) > 0 {
+			detail.LastMessageID = msgs[len(msgs)-1].ID
 		}
 
 		return detail, nil
@@ -259,6 +371,108 @@ func registerMailSteps(reg *workflow.Registry, deps WorkflowDependencies) {
 		}
 		return ModifyLabelsOutput{Updated: true}, nil
 	})
+
+	reg.RegisterStep(workflow.StepDescriptor{
+		Type:                "mail.save_thread_summary",
+		Owner:               "mail",
+		Category:            "action",
+		DisplayName:         "Save Thread Summary",
+		Description:         "Persists an AI-generated TL;DR, key points, and action items as the cached summary of an email thread.",
+		InvalidatesPrefixes: []string{"mail."},
+	}, func(ctx context.Context, execCtx *workflow.StepContext[SaveThreadSummaryInputs]) (SaveThreadSummaryOutput, error) {
+		in := execCtx.Inputs
+		threadID := strings.TrimSpace(in.ThreadID)
+		if threadID == "" {
+			return SaveThreadSummaryOutput{}, fmt.Errorf("thread_id is required")
+		}
+
+		language := strings.ToLower(strings.TrimSpace(in.Language))
+		if primary, _, ok := strings.Cut(language, "-"); ok {
+			language = primary
+		}
+		if !strings.HasPrefix(language, "es") {
+			language = "en"
+		}
+
+		lastMessageAt := time.Time{}
+		if raw := strings.TrimSpace(in.LastMessageAt); raw != "" {
+			parsed, err := time.Parse(time.RFC3339, raw)
+			if err != nil {
+				return SaveThreadSummaryOutput{}, fmt.Errorf("invalid last_message_at %q: %w", raw, err)
+			}
+			lastMessageAt = parsed.UTC()
+		}
+
+		var flowRunID *string
+		if runID := strings.TrimSpace(execCtx.FlowRunID); runID != "" {
+			flowRunID = &runID
+		}
+
+		summary := &domainmail.ThreadSummary{
+			ThreadID:      threadID,
+			SpaceID:       execCtx.SpaceID,
+			Language:      language,
+			TLDR:          strings.TrimSpace(in.TLDR),
+			KeyPoints:     in.KeyPoints,
+			ActionItems:   in.ActionItems,
+			LastMessageID: strings.TrimSpace(in.LastMessageID),
+			LastMessageAt: lastMessageAt,
+			MessageCount:  in.MessageCount,
+			FlowRunID:     flowRunID,
+		}
+
+		scopedCtx := auth.WithSpaceScope(ctx, execCtx.SpaceID, string(space.RoleOwner))
+		saved, err := deps.Coordinator.SaveThreadSummary(scopedCtx, &SaveThreadSummaryRequest{Summary: summary})
+		if err != nil {
+			return SaveThreadSummaryOutput{}, err
+		}
+		return SaveThreadSummaryOutput{ThreadID: saved.ThreadID, Language: saved.Language}, nil
+	})
+}
+
+// threadMessageBody resolves the plain-text body for a message in a thread loader pass,
+// stripping HTML when no plain-text alternative exists, and caps the text per message.
+func threadMessageBody(ctx context.Context, store domainmail.MessageStore, spaceID string, msg *domainmail.Message) (string, bool) {
+	plain := strings.TrimSpace(msg.Snippet)
+	if body, err := store.GetBody(ctx, spaceID, msg.ID); err == nil && body != nil {
+		if strings.TrimSpace(body.PlainText) != "" {
+			plain = strings.TrimSpace(body.PlainText)
+		} else if strings.TrimSpace(body.SanitizedHTML) != "" {
+			plain = stripHTMLTags(body.SanitizedHTML)
+		}
+	}
+	return truncateRunes(plain, maxThreadMessageBodyChars)
+}
+
+// stripHTMLTags removes HTML tags and collapses whitespace into readable plain text.
+func stripHTMLTags(htmlBody string) string {
+	var b strings.Builder
+	b.Grow(len(htmlBody))
+	inTag := false
+	for _, r := range htmlBody {
+		switch {
+		case r == '<':
+			inTag = true
+		case r == '>':
+			inTag = false
+			b.WriteRune(' ')
+		case !inTag:
+			b.WriteRune(r)
+		}
+	}
+	return strings.Join(strings.Fields(b.String()), " ")
+}
+
+// truncateRunes caps s to at most limit runes, reporting whether truncation occurred.
+func truncateRunes(s string, limit int) (string, bool) {
+	count := 0
+	for i := range s {
+		if count == limit {
+			return s[:i], true
+		}
+		count++
+	}
+	return s, false
 }
 
 type mailArtifactReader struct {

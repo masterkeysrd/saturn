@@ -314,3 +314,67 @@ func TestSyncStateStore(t *testing.T) {
 		assert.Contains(t, joined, "DELETE FROM mail.sync_states")
 	})
 }
+
+func TestThreadSummaryStore(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Get returns nil for missing row", func(t *testing.T) {
+		db := &mockDB{
+			getFn: func(ctx context.Context, dest any, query string, args ...any) error {
+				return errors.E(errors.NotExist, "not found")
+			},
+		}
+		store := NewThreadSummaryStore(db)
+
+		summary, err := store.Get(ctx, "spc_1", "mth_1", "en")
+		require.NoError(t, err)
+		assert.Nil(t, summary)
+	})
+
+	t.Run("Upsert and Get", func(t *testing.T) {
+		var executedQuery string
+		db := &mockDB{
+			execFn: func(ctx context.Context, query string, args ...any) (sql.Result, error) {
+				executedQuery = query
+				return mockResult{rowsAffected: 1}, nil
+			},
+			getFn: func(ctx context.Context, dest any, query string, args ...any) error {
+				if rec, ok := dest.(*ThreadSummaryRecord); ok {
+					rec.ThreadID = "mth_1"
+					rec.SpaceID = "spc_1"
+					rec.Language = "en"
+					rec.TLDR = "Resumen"
+					rec.KeyPointsJSON = []byte(`["punto 1"]`)
+					rec.ActionJSON = []byte(`["accion 1"]`)
+					rec.LastMessageAt = time.Now().UTC()
+					rec.MessageCount = 2
+				}
+				return nil
+			},
+		}
+		store := NewThreadSummaryStore(db)
+
+		err := store.Upsert(ctx, &mail.ThreadSummary{
+			ThreadID:      "mth_1",
+			SpaceID:       "spc_1",
+			Language:      "en",
+			TLDR:          "Resumen",
+			KeyPoints:     []string{"punto 1"},
+			ActionItems:   []string{"accion 1"},
+			LastMessageAt: time.Now().UTC(),
+			MessageCount:  2,
+			FlowRunID:     new("frw_1"),
+		})
+		require.NoError(t, err)
+		assert.Contains(t, executedQuery, "INSERT INTO mail.thread_summaries")
+		assert.Contains(t, executedQuery, "ON CONFLICT (thread_id, language)")
+
+		summary, err := store.Get(ctx, "spc_1", "mth_1", "en")
+		require.NoError(t, err)
+		require.NotNil(t, summary)
+		assert.Equal(t, "Resumen", summary.TLDR)
+		assert.Equal(t, []string{"punto 1"}, summary.KeyPoints)
+		assert.Equal(t, []string{"accion 1"}, summary.ActionItems)
+		assert.Equal(t, 2, summary.MessageCount)
+	})
+}

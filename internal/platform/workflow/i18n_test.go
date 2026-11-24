@@ -47,6 +47,7 @@ func TestLocalizeCatalog(t *testing.T) {
 		"finance.import_statement_draft",
 		"mail.create_draft",
 		"mail.modify_labels",
+		"mail.save_thread_summary",
 		"test.unknown_step",
 	}
 	for _, stepType := range domainSteps {
@@ -75,6 +76,7 @@ func TestLocalizeCatalog(t *testing.T) {
 		"finance.recurring_templates",
 		"mail.message",
 		"mail.mailboxes",
+		"mail.thread",
 		"test.unknown_loader",
 	}
 	for _, loaderName := range loaders {

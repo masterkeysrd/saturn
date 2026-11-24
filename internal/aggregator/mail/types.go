@@ -43,10 +43,16 @@ type ConnectedAccountReader interface {
 	GetAccount(ctx context.Context, spaceID, id string) (*connector.ConnectedAccount, error)
 }
 
+// SummaryReader defines read operations for cached thread summaries.
+type SummaryReader interface {
+	Get(ctx context.Context, spaceID, threadID, language string) (*domainmail.ThreadSummary, error)
+}
+
 // ThreadProjection models an aggregated thread with all hydrated messages and attachments.
 type ThreadProjection struct {
 	Thread   *domainmail.Thread
 	Messages []*MessageProjection
+	Summary  *domainmail.ThreadSummary
 }
 
 // MessageProjection models a hydrated message with body content and signed attachment links.

@@ -113,7 +113,11 @@ export function CreateIncomeForm({
         err instanceof Error
           ? err.message
           : t("finance.transactions.incomeForm.recordFailedDesc")
-      toast.add({ title: t("finance.transactions.incomeForm.recordFailed"), description: msg, type: "error" })
+      toast.add({
+        title: t("finance.transactions.incomeForm.recordFailed"),
+        description: msg,
+        type: "error",
+      })
     },
   })
 
@@ -123,7 +127,11 @@ export function CreateIncomeForm({
         err instanceof Error
           ? err.message
           : t("finance.transactions.incomeForm.updateFailedDesc")
-      toast.add({ title: t("finance.transactions.incomeForm.updateFailed"), description: msg, type: "error" })
+      toast.add({
+        title: t("finance.transactions.incomeForm.updateFailed"),
+        description: msg,
+        type: "error",
+      })
     },
   })
 

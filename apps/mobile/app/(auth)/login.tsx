@@ -116,9 +116,7 @@ export default function LoginScreen() {
       router.replace("/(app)/(tabs)")
     } catch (err: unknown) {
       const msg =
-        err instanceof Error
-          ? err.message
-          : t("auth.mobile.biometricFailed")
+        err instanceof Error ? err.message : t("auth.mobile.biometricFailed")
       // If user dismissed the prompt, avoid intrusive error
       if (!msg.toLowerCase().includes("cancel")) {
         setError(msg)
@@ -186,7 +184,8 @@ export default function LoginScreen() {
       })
       router.replace("/(app)/(tabs)")
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t("auth.mobile.signInFailed")
+      const msg =
+        err instanceof Error ? err.message : t("auth.mobile.signInFailed")
       setError(msg)
       toast.show({
         type: "error",

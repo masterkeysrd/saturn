@@ -797,7 +797,9 @@ type Thread struct {
 	// Timestamp when the thread record was last updated.
 	UpdateTime *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
 	// Chronological messages in the thread (populated on GetThread).
-	Messages      []*Message `protobuf:"bytes,21,rep,name=messages,proto3" json:"messages,omitempty"`
+	Messages []*Message `protobuf:"bytes,21,rep,name=messages,proto3" json:"messages,omitempty"`
+	// Built-in AI summary of the thread for the negotiated language (populated on GetThread).
+	Summary       *ThreadSummary `protobuf:"bytes,22,opt,name=summary,proto3,oneof" json:"summary,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -979,6 +981,149 @@ func (x *Thread) GetMessages() []*Message {
 	return nil
 }
 
+func (x *Thread) GetSummary() *ThreadSummary {
+	if x != nil {
+		return x.Summary
+	}
+	return nil
+}
+
+// ThreadSummary models a built-in AI-generated summary of an email thread conversation.
+type ThreadSummary struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Summarized thread identifier (mth_...).
+	ThreadId string `protobuf:"bytes,1,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
+	// Language tag the summary was generated in (e.g. "en", "es").
+	Language string `protobuf:"bytes,2,opt,name=language,proto3" json:"language,omitempty"`
+	// Concise plain-language summary paragraph.
+	Tldr string `protobuf:"bytes,3,opt,name=tldr,proto3" json:"tldr,omitempty"`
+	// Distinct key points extracted from the conversation.
+	KeyPoints []string `protobuf:"bytes,4,rep,name=key_points,json=keyPoints,proto3" json:"key_points,omitempty"`
+	// Action items requested or implied by the conversation.
+	ActionItems []string `protobuf:"bytes,5,rep,name=action_items,json=actionItems,proto3" json:"action_items,omitempty"`
+	// Identifier of the latest message covered by the summary.
+	LastMessageId string `protobuf:"bytes,6,opt,name=last_message_id,json=lastMessageId,proto3" json:"last_message_id,omitempty"`
+	// Timestamp of the latest message covered by the summary.
+	LastMessageAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=last_message_at,json=lastMessageAt,proto3" json:"last_message_at,omitempty"`
+	// Number of messages covered by the summary.
+	MessageCount int32 `protobuf:"varint,8,opt,name=message_count,json=messageCount,proto3" json:"message_count,omitempty"`
+	// Whether newer messages exist in the thread since this summary was generated.
+	IsStale bool `protobuf:"varint,9,opt,name=is_stale,json=isStale,proto3" json:"is_stale,omitempty"`
+	// Workflow run that produced this summary, when available.
+	FlowRunId string `protobuf:"bytes,10,opt,name=flow_run_id,json=flowRunId,proto3" json:"flow_run_id,omitempty"`
+	// Timestamp when the summary record was last updated.
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ThreadSummary) Reset() {
+	*x = ThreadSummary{}
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ThreadSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ThreadSummary) ProtoMessage() {}
+
+func (x *ThreadSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ThreadSummary.ProtoReflect.Descriptor instead.
+func (*ThreadSummary) Descriptor() ([]byte, []int) {
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ThreadSummary) GetThreadId() string {
+	if x != nil {
+		return x.ThreadId
+	}
+	return ""
+}
+
+func (x *ThreadSummary) GetLanguage() string {
+	if x != nil {
+		return x.Language
+	}
+	return ""
+}
+
+func (x *ThreadSummary) GetTldr() string {
+	if x != nil {
+		return x.Tldr
+	}
+	return ""
+}
+
+func (x *ThreadSummary) GetKeyPoints() []string {
+	if x != nil {
+		return x.KeyPoints
+	}
+	return nil
+}
+
+func (x *ThreadSummary) GetActionItems() []string {
+	if x != nil {
+		return x.ActionItems
+	}
+	return nil
+}
+
+func (x *ThreadSummary) GetLastMessageId() string {
+	if x != nil {
+		return x.LastMessageId
+	}
+	return ""
+}
+
+func (x *ThreadSummary) GetLastMessageAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastMessageAt
+	}
+	return nil
+}
+
+func (x *ThreadSummary) GetMessageCount() int32 {
+	if x != nil {
+		return x.MessageCount
+	}
+	return 0
+}
+
+func (x *ThreadSummary) GetIsStale() bool {
+	if x != nil {
+		return x.IsStale
+	}
+	return false
+}
+
+func (x *ThreadSummary) GetFlowRunId() string {
+	if x != nil {
+		return x.FlowRunId
+	}
+	return ""
+}
+
+func (x *ThreadSummary) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
 // Draft models an editable email composition.
 type Draft struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1026,7 +1171,7 @@ type Draft struct {
 
 func (x *Draft) Reset() {
 	*x = Draft{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[5]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1038,7 +1183,7 @@ func (x *Draft) String() string {
 func (*Draft) ProtoMessage() {}
 
 func (x *Draft) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[5]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1051,7 +1196,7 @@ func (x *Draft) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Draft.ProtoReflect.Descriptor instead.
 func (*Draft) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{5}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Draft) GetId() string {
@@ -1200,7 +1345,7 @@ type ListMailboxesRequest struct {
 
 func (x *ListMailboxesRequest) Reset() {
 	*x = ListMailboxesRequest{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[6]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1212,7 +1357,7 @@ func (x *ListMailboxesRequest) String() string {
 func (*ListMailboxesRequest) ProtoMessage() {}
 
 func (x *ListMailboxesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[6]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1225,7 +1370,7 @@ func (x *ListMailboxesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMailboxesRequest.ProtoReflect.Descriptor instead.
 func (*ListMailboxesRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{6}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListMailboxesRequest) GetConnectedAccountId() string {
@@ -1253,7 +1398,7 @@ type ListMailboxesResponse struct {
 
 func (x *ListMailboxesResponse) Reset() {
 	*x = ListMailboxesResponse{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[7]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1265,7 +1410,7 @@ func (x *ListMailboxesResponse) String() string {
 func (*ListMailboxesResponse) ProtoMessage() {}
 
 func (x *ListMailboxesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[7]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1278,7 +1423,7 @@ func (x *ListMailboxesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMailboxesResponse.ProtoReflect.Descriptor instead.
 func (*ListMailboxesResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{7}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListMailboxesResponse) GetMailboxes() []*Mailbox {
@@ -1299,7 +1444,7 @@ type CreateMailboxRequest struct {
 
 func (x *CreateMailboxRequest) Reset() {
 	*x = CreateMailboxRequest{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[8]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1311,7 +1456,7 @@ func (x *CreateMailboxRequest) String() string {
 func (*CreateMailboxRequest) ProtoMessage() {}
 
 func (x *CreateMailboxRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[8]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1324,7 +1469,7 @@ func (x *CreateMailboxRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMailboxRequest.ProtoReflect.Descriptor instead.
 func (*CreateMailboxRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{8}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CreateMailboxRequest) GetMailbox() *Mailbox {
@@ -1349,7 +1494,7 @@ type UpdateMailboxRequest struct {
 
 func (x *UpdateMailboxRequest) Reset() {
 	*x = UpdateMailboxRequest{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[9]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1361,7 +1506,7 @@ func (x *UpdateMailboxRequest) String() string {
 func (*UpdateMailboxRequest) ProtoMessage() {}
 
 func (x *UpdateMailboxRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[9]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1374,7 +1519,7 @@ func (x *UpdateMailboxRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMailboxRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMailboxRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{9}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdateMailboxRequest) GetId() string {
@@ -1409,7 +1554,7 @@ type DeleteMailboxRequest struct {
 
 func (x *DeleteMailboxRequest) Reset() {
 	*x = DeleteMailboxRequest{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[10]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1421,7 +1566,7 @@ func (x *DeleteMailboxRequest) String() string {
 func (*DeleteMailboxRequest) ProtoMessage() {}
 
 func (x *DeleteMailboxRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[10]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1434,7 +1579,7 @@ func (x *DeleteMailboxRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMailboxRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMailboxRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{10}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteMailboxRequest) GetId() string {
@@ -1469,7 +1614,7 @@ type ListThreadsRequest struct {
 
 func (x *ListThreadsRequest) Reset() {
 	*x = ListThreadsRequest{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[11]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1481,7 +1626,7 @@ func (x *ListThreadsRequest) String() string {
 func (*ListThreadsRequest) ProtoMessage() {}
 
 func (x *ListThreadsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[11]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1494,7 +1639,7 @@ func (x *ListThreadsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListThreadsRequest.ProtoReflect.Descriptor instead.
 func (*ListThreadsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{11}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListThreadsRequest) GetConnectedAccountId() string {
@@ -1568,7 +1713,7 @@ type ListThreadsResponse struct {
 
 func (x *ListThreadsResponse) Reset() {
 	*x = ListThreadsResponse{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[12]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1580,7 +1725,7 @@ func (x *ListThreadsResponse) String() string {
 func (*ListThreadsResponse) ProtoMessage() {}
 
 func (x *ListThreadsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[12]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1593,7 +1738,7 @@ func (x *ListThreadsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListThreadsResponse.ProtoReflect.Descriptor instead.
 func (*ListThreadsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{12}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListThreadsResponse) GetThreads() []*Thread {
@@ -1628,7 +1773,7 @@ type GetThreadRequest struct {
 
 func (x *GetThreadRequest) Reset() {
 	*x = GetThreadRequest{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[13]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1640,7 +1785,7 @@ func (x *GetThreadRequest) String() string {
 func (*GetThreadRequest) ProtoMessage() {}
 
 func (x *GetThreadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[13]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1653,12 +1798,76 @@ func (x *GetThreadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetThreadRequest.ProtoReflect.Descriptor instead.
 func (*GetThreadRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{13}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetThreadRequest) GetId() string {
 	if x != nil {
 		return x.Id
+	}
+	return ""
+}
+
+// Request to generate or refresh the AI summary of a thread.
+type SummarizeThreadRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Thread identifier to summarize.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// When true, regenerates the summary even if a fresh cached summary exists.
+	ForceRegenerate bool `protobuf:"varint,2,opt,name=force_regenerate,json=forceRegenerate,proto3" json:"force_regenerate,omitempty"`
+	// Optional summary language override ("en" or "es"), falling back to the negotiated request language.
+	Language      *string `protobuf:"bytes,3,opt,name=language,proto3,oneof" json:"language,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SummarizeThreadRequest) Reset() {
+	*x = SummarizeThreadRequest{}
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SummarizeThreadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SummarizeThreadRequest) ProtoMessage() {}
+
+func (x *SummarizeThreadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SummarizeThreadRequest.ProtoReflect.Descriptor instead.
+func (*SummarizeThreadRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *SummarizeThreadRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *SummarizeThreadRequest) GetForceRegenerate() bool {
+	if x != nil {
+		return x.ForceRegenerate
+	}
+	return false
+}
+
+func (x *SummarizeThreadRequest) GetLanguage() string {
+	if x != nil && x.Language != nil {
+		return *x.Language
 	}
 	return ""
 }
@@ -1688,7 +1897,7 @@ type ModifyThreadRequest struct {
 
 func (x *ModifyThreadRequest) Reset() {
 	*x = ModifyThreadRequest{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[14]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1700,7 +1909,7 @@ func (x *ModifyThreadRequest) String() string {
 func (*ModifyThreadRequest) ProtoMessage() {}
 
 func (x *ModifyThreadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[14]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1713,7 +1922,7 @@ func (x *ModifyThreadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModifyThreadRequest.ProtoReflect.Descriptor instead.
 func (*ModifyThreadRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{14}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ModifyThreadRequest) GetId() string {
@@ -1797,7 +2006,7 @@ type BatchModifyThreadsRequest struct {
 
 func (x *BatchModifyThreadsRequest) Reset() {
 	*x = BatchModifyThreadsRequest{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[15]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1809,7 +2018,7 @@ func (x *BatchModifyThreadsRequest) String() string {
 func (*BatchModifyThreadsRequest) ProtoMessage() {}
 
 func (x *BatchModifyThreadsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[15]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1822,7 +2031,7 @@ func (x *BatchModifyThreadsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchModifyThreadsRequest.ProtoReflect.Descriptor instead.
 func (*BatchModifyThreadsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{15}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *BatchModifyThreadsRequest) GetIds() []string {
@@ -1898,7 +2107,7 @@ type ListDraftsRequest struct {
 
 func (x *ListDraftsRequest) Reset() {
 	*x = ListDraftsRequest{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[16]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1910,7 +2119,7 @@ func (x *ListDraftsRequest) String() string {
 func (*ListDraftsRequest) ProtoMessage() {}
 
 func (x *ListDraftsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[16]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1923,7 +2132,7 @@ func (x *ListDraftsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDraftsRequest.ProtoReflect.Descriptor instead.
 func (*ListDraftsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{16}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListDraftsRequest) GetConnectedAccountId() string {
@@ -1969,7 +2178,7 @@ type ListDraftsResponse struct {
 
 func (x *ListDraftsResponse) Reset() {
 	*x = ListDraftsResponse{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[17]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1981,7 +2190,7 @@ func (x *ListDraftsResponse) String() string {
 func (*ListDraftsResponse) ProtoMessage() {}
 
 func (x *ListDraftsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[17]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1994,7 +2203,7 @@ func (x *ListDraftsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDraftsResponse.ProtoReflect.Descriptor instead.
 func (*ListDraftsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{17}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListDraftsResponse) GetDrafts() []*Draft {
@@ -2029,7 +2238,7 @@ type GetDraftRequest struct {
 
 func (x *GetDraftRequest) Reset() {
 	*x = GetDraftRequest{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[18]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2041,7 +2250,7 @@ func (x *GetDraftRequest) String() string {
 func (*GetDraftRequest) ProtoMessage() {}
 
 func (x *GetDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[18]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2054,7 +2263,7 @@ func (x *GetDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDraftRequest.ProtoReflect.Descriptor instead.
 func (*GetDraftRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{18}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *GetDraftRequest) GetId() string {
@@ -2075,7 +2284,7 @@ type CreateDraftRequest struct {
 
 func (x *CreateDraftRequest) Reset() {
 	*x = CreateDraftRequest{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[19]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2087,7 +2296,7 @@ func (x *CreateDraftRequest) String() string {
 func (*CreateDraftRequest) ProtoMessage() {}
 
 func (x *CreateDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[19]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2100,7 +2309,7 @@ func (x *CreateDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateDraftRequest.ProtoReflect.Descriptor instead.
 func (*CreateDraftRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{19}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *CreateDraftRequest) GetDraft() *Draft {
@@ -2125,7 +2334,7 @@ type UpdateDraftRequest struct {
 
 func (x *UpdateDraftRequest) Reset() {
 	*x = UpdateDraftRequest{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[20]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2137,7 +2346,7 @@ func (x *UpdateDraftRequest) String() string {
 func (*UpdateDraftRequest) ProtoMessage() {}
 
 func (x *UpdateDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[20]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2150,7 +2359,7 @@ func (x *UpdateDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDraftRequest.ProtoReflect.Descriptor instead.
 func (*UpdateDraftRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{20}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *UpdateDraftRequest) GetId() string {
@@ -2185,7 +2394,7 @@ type DeleteDraftRequest struct {
 
 func (x *DeleteDraftRequest) Reset() {
 	*x = DeleteDraftRequest{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[21]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2197,7 +2406,7 @@ func (x *DeleteDraftRequest) String() string {
 func (*DeleteDraftRequest) ProtoMessage() {}
 
 func (x *DeleteDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[21]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2210,7 +2419,7 @@ func (x *DeleteDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteDraftRequest.ProtoReflect.Descriptor instead.
 func (*DeleteDraftRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{21}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *DeleteDraftRequest) GetId() string {
@@ -2231,7 +2440,7 @@ type SendDraftRequest struct {
 
 func (x *SendDraftRequest) Reset() {
 	*x = SendDraftRequest{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[22]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2243,7 +2452,7 @@ func (x *SendDraftRequest) String() string {
 func (*SendDraftRequest) ProtoMessage() {}
 
 func (x *SendDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[22]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2256,7 +2465,7 @@ func (x *SendDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendDraftRequest.ProtoReflect.Descriptor instead.
 func (*SendDraftRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{22}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *SendDraftRequest) GetId() string {
@@ -2277,7 +2486,7 @@ type MessageReceivedEvent struct {
 
 func (x *MessageReceivedEvent) Reset() {
 	*x = MessageReceivedEvent{}
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[23]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2289,7 +2498,7 @@ func (x *MessageReceivedEvent) String() string {
 func (*MessageReceivedEvent) ProtoMessage() {}
 
 func (x *MessageReceivedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_mail_v1_mail_proto_msgTypes[23]
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2302,7 +2511,7 @@ func (x *MessageReceivedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageReceivedEvent.ProtoReflect.Descriptor instead.
 func (*MessageReceivedEvent) Descriptor() ([]byte, []int) {
-	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{23}
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *MessageReceivedEvent) GetMessage() *Message {
@@ -2387,7 +2596,7 @@ const file_saturn_mail_v1_mail_proto_rawDesc = "" +
 	"\vcreate_time\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"createTime\x12;\n" +
 	"\vupdate_time\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"\xab\x06\n" +
+	"updateTime\"\xf5\x06\n" +
 	"\x06Thread\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bspace_id\x18\x02 \x01(\tR\aspaceId\x120\n" +
@@ -2414,7 +2623,25 @@ const file_saturn_mail_v1_mail_proto_rawDesc = "" +
 	"createTime\x12;\n" +
 	"\vupdate_time\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"updateTime\x123\n" +
-	"\bmessages\x18\x15 \x03(\v2\x17.saturn.mail.v1.MessageR\bmessages\"\xfe\x05\n" +
+	"\bmessages\x18\x15 \x03(\v2\x17.saturn.mail.v1.MessageR\bmessages\x12<\n" +
+	"\asummary\x18\x16 \x01(\v2\x1d.saturn.mail.v1.ThreadSummaryH\x00R\asummary\x88\x01\x01B\n" +
+	"\n" +
+	"\b_summary\"\xa7\x03\n" +
+	"\rThreadSummary\x12\x1b\n" +
+	"\tthread_id\x18\x01 \x01(\tR\bthreadId\x12\x1a\n" +
+	"\blanguage\x18\x02 \x01(\tR\blanguage\x12\x12\n" +
+	"\x04tldr\x18\x03 \x01(\tR\x04tldr\x12\x1d\n" +
+	"\n" +
+	"key_points\x18\x04 \x03(\tR\tkeyPoints\x12!\n" +
+	"\faction_items\x18\x05 \x03(\tR\vactionItems\x12&\n" +
+	"\x0flast_message_id\x18\x06 \x01(\tR\rlastMessageId\x12B\n" +
+	"\x0flast_message_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\rlastMessageAt\x12#\n" +
+	"\rmessage_count\x18\b \x01(\x05R\fmessageCount\x12\x19\n" +
+	"\bis_stale\x18\t \x01(\bR\aisStale\x12\x1e\n" +
+	"\vflow_run_id\x18\n" +
+	" \x01(\tR\tflowRunId\x12;\n" +
+	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"updateTime\"\xfe\x05\n" +
 	"\x05Draft\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bspace_id\x18\x02 \x01(\tR\aspaceId\x120\n" +
@@ -2474,7 +2701,12 @@ const file_saturn_mail_v1_mail_proto_rawDesc = "" +
 	"\n" +
 	"total_size\x18\x03 \x01(\x05R\ttotalSize\"'\n" +
 	"\x10GetThreadRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\xe7\x02\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\x86\x01\n" +
+	"\x16SummarizeThreadRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12)\n" +
+	"\x10force_regenerate\x18\x02 \x01(\bR\x0fforceRegenerate\x12\x1f\n" +
+	"\blanguage\x18\x03 \x01(\tH\x00R\blanguage\x88\x01\x01B\v\n" +
+	"\t_language\"\xe7\x02\n" +
 	"\x13ModifyThreadRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12&\n" +
 	"\x0fadd_mailbox_ids\x18\x02 \x03(\tR\raddMailboxIds\x12,\n" +
@@ -2550,14 +2782,15 @@ const file_saturn_mail_v1_mail_proto_rawDesc = "" +
 	"\x0eDRAFT_MODE_NEW\x10\x01\x12\x14\n" +
 	"\x10DRAFT_MODE_REPLY\x10\x02\x12\x18\n" +
 	"\x14DRAFT_MODE_REPLY_ALL\x10\x03\x12\x16\n" +
-	"\x12DRAFT_MODE_FORWARD\x10\x042\x99\r\n" +
+	"\x12DRAFT_MODE_FORWARD\x10\x042\xa5\x0e\n" +
 	"\vMailService\x12x\n" +
 	"\rListMailboxes\x12$.saturn.mail.v1.ListMailboxesRequest\x1a%.saturn.mail.v1.ListMailboxesResponse\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/v1/mail/mailboxes\x12}\n" +
 	"\rCreateMailbox\x12$.saturn.mail.v1.CreateMailboxRequest\x1a\x17.saturn.mail.v1.Mailbox\"-\xdaA\amailbox\x82\xd3\xe4\x93\x02\x1d:\amailbox\"\x12/v1/mail/mailboxes\x12\x91\x01\n" +
 	"\rUpdateMailbox\x12$.saturn.mail.v1.UpdateMailboxRequest\x1a\x17.saturn.mail.v1.Mailbox\"A\xdaA\x16id,mailbox,update_mask\x82\xd3\xe4\x93\x02\":\amailbox2\x17/v1/mail/mailboxes/{id}\x12s\n" +
 	"\rDeleteMailbox\x12$.saturn.mail.v1.DeleteMailboxRequest\x1a\x16.google.protobuf.Empty\"$\xdaA\x02id\x82\xd3\xe4\x93\x02\x19*\x17/v1/mail/mailboxes/{id}\x12p\n" +
 	"\vListThreads\x12\".saturn.mail.v1.ListThreadsRequest\x1a#.saturn.mail.v1.ListThreadsResponse\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/v1/mail/threads\x12i\n" +
-	"\tGetThread\x12 .saturn.mail.v1.GetThreadRequest\x1a\x16.saturn.mail.v1.Thread\"\"\xdaA\x02id\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/mail/threads/{id}\x12y\n" +
+	"\tGetThread\x12 .saturn.mail.v1.GetThreadRequest\x1a\x16.saturn.mail.v1.Thread\"\"\xdaA\x02id\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/mail/threads/{id}\x12\x89\x01\n" +
+	"\x0fSummarizeThread\x12&.saturn.mail.v1.SummarizeThreadRequest\x1a\x1d.saturn.mail.v1.ThreadSummary\"/\xdaA\x02id\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/v1/mail/threads/{id}:summarize\x12y\n" +
 	"\fModifyThread\x12#.saturn.mail.v1.ModifyThreadRequest\x1a\x16.saturn.mail.v1.Thread\",\xdaA\x02id\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/mail/threads/{id}:modify\x12\x80\x01\n" +
 	"\x12BatchModifyThreads\x12).saturn.mail.v1.BatchModifyThreadsRequest\x1a\x16.google.protobuf.Empty\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/mail/threads:batchModify\x12l\n" +
 	"\n" +
@@ -2581,7 +2814,7 @@ func file_saturn_mail_v1_mail_proto_rawDescGZIP() []byte {
 }
 
 var file_saturn_mail_v1_mail_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_saturn_mail_v1_mail_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_saturn_mail_v1_mail_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_saturn_mail_v1_mail_proto_goTypes = []any{
 	(MailboxRole)(0),                  // 0: saturn.mail.v1.MailboxRole
 	(DraftMode)(0),                    // 1: saturn.mail.v1.DraftMode
@@ -2590,100 +2823,107 @@ var file_saturn_mail_v1_mail_proto_goTypes = []any{
 	(*Mailbox)(nil),                   // 4: saturn.mail.v1.Mailbox
 	(*Message)(nil),                   // 5: saturn.mail.v1.Message
 	(*Thread)(nil),                    // 6: saturn.mail.v1.Thread
-	(*Draft)(nil),                     // 7: saturn.mail.v1.Draft
-	(*ListMailboxesRequest)(nil),      // 8: saturn.mail.v1.ListMailboxesRequest
-	(*ListMailboxesResponse)(nil),     // 9: saturn.mail.v1.ListMailboxesResponse
-	(*CreateMailboxRequest)(nil),      // 10: saturn.mail.v1.CreateMailboxRequest
-	(*UpdateMailboxRequest)(nil),      // 11: saturn.mail.v1.UpdateMailboxRequest
-	(*DeleteMailboxRequest)(nil),      // 12: saturn.mail.v1.DeleteMailboxRequest
-	(*ListThreadsRequest)(nil),        // 13: saturn.mail.v1.ListThreadsRequest
-	(*ListThreadsResponse)(nil),       // 14: saturn.mail.v1.ListThreadsResponse
-	(*GetThreadRequest)(nil),          // 15: saturn.mail.v1.GetThreadRequest
-	(*ModifyThreadRequest)(nil),       // 16: saturn.mail.v1.ModifyThreadRequest
-	(*BatchModifyThreadsRequest)(nil), // 17: saturn.mail.v1.BatchModifyThreadsRequest
-	(*ListDraftsRequest)(nil),         // 18: saturn.mail.v1.ListDraftsRequest
-	(*ListDraftsResponse)(nil),        // 19: saturn.mail.v1.ListDraftsResponse
-	(*GetDraftRequest)(nil),           // 20: saturn.mail.v1.GetDraftRequest
-	(*CreateDraftRequest)(nil),        // 21: saturn.mail.v1.CreateDraftRequest
-	(*UpdateDraftRequest)(nil),        // 22: saturn.mail.v1.UpdateDraftRequest
-	(*DeleteDraftRequest)(nil),        // 23: saturn.mail.v1.DeleteDraftRequest
-	(*SendDraftRequest)(nil),          // 24: saturn.mail.v1.SendDraftRequest
-	(*MessageReceivedEvent)(nil),      // 25: saturn.mail.v1.MessageReceivedEvent
-	(*timestamppb.Timestamp)(nil),     // 26: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),     // 27: google.protobuf.FieldMask
-	(*emptypb.Empty)(nil),             // 28: google.protobuf.Empty
+	(*ThreadSummary)(nil),             // 7: saturn.mail.v1.ThreadSummary
+	(*Draft)(nil),                     // 8: saturn.mail.v1.Draft
+	(*ListMailboxesRequest)(nil),      // 9: saturn.mail.v1.ListMailboxesRequest
+	(*ListMailboxesResponse)(nil),     // 10: saturn.mail.v1.ListMailboxesResponse
+	(*CreateMailboxRequest)(nil),      // 11: saturn.mail.v1.CreateMailboxRequest
+	(*UpdateMailboxRequest)(nil),      // 12: saturn.mail.v1.UpdateMailboxRequest
+	(*DeleteMailboxRequest)(nil),      // 13: saturn.mail.v1.DeleteMailboxRequest
+	(*ListThreadsRequest)(nil),        // 14: saturn.mail.v1.ListThreadsRequest
+	(*ListThreadsResponse)(nil),       // 15: saturn.mail.v1.ListThreadsResponse
+	(*GetThreadRequest)(nil),          // 16: saturn.mail.v1.GetThreadRequest
+	(*SummarizeThreadRequest)(nil),    // 17: saturn.mail.v1.SummarizeThreadRequest
+	(*ModifyThreadRequest)(nil),       // 18: saturn.mail.v1.ModifyThreadRequest
+	(*BatchModifyThreadsRequest)(nil), // 19: saturn.mail.v1.BatchModifyThreadsRequest
+	(*ListDraftsRequest)(nil),         // 20: saturn.mail.v1.ListDraftsRequest
+	(*ListDraftsResponse)(nil),        // 21: saturn.mail.v1.ListDraftsResponse
+	(*GetDraftRequest)(nil),           // 22: saturn.mail.v1.GetDraftRequest
+	(*CreateDraftRequest)(nil),        // 23: saturn.mail.v1.CreateDraftRequest
+	(*UpdateDraftRequest)(nil),        // 24: saturn.mail.v1.UpdateDraftRequest
+	(*DeleteDraftRequest)(nil),        // 25: saturn.mail.v1.DeleteDraftRequest
+	(*SendDraftRequest)(nil),          // 26: saturn.mail.v1.SendDraftRequest
+	(*MessageReceivedEvent)(nil),      // 27: saturn.mail.v1.MessageReceivedEvent
+	(*timestamppb.Timestamp)(nil),     // 28: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),     // 29: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),             // 30: google.protobuf.Empty
 }
 var file_saturn_mail_v1_mail_proto_depIdxs = []int32{
 	0,  // 0: saturn.mail.v1.Mailbox.system_role:type_name -> saturn.mail.v1.MailboxRole
-	26, // 1: saturn.mail.v1.Mailbox.create_time:type_name -> google.protobuf.Timestamp
-	26, // 2: saturn.mail.v1.Mailbox.update_time:type_name -> google.protobuf.Timestamp
+	28, // 1: saturn.mail.v1.Mailbox.create_time:type_name -> google.protobuf.Timestamp
+	28, // 2: saturn.mail.v1.Mailbox.update_time:type_name -> google.protobuf.Timestamp
 	2,  // 3: saturn.mail.v1.Message.from:type_name -> saturn.mail.v1.Participant
 	2,  // 4: saturn.mail.v1.Message.to:type_name -> saturn.mail.v1.Participant
 	2,  // 5: saturn.mail.v1.Message.cc:type_name -> saturn.mail.v1.Participant
 	2,  // 6: saturn.mail.v1.Message.bcc:type_name -> saturn.mail.v1.Participant
 	2,  // 7: saturn.mail.v1.Message.reply_to:type_name -> saturn.mail.v1.Participant
-	26, // 8: saturn.mail.v1.Message.sent_at:type_name -> google.protobuf.Timestamp
-	26, // 9: saturn.mail.v1.Message.received_at:type_name -> google.protobuf.Timestamp
+	28, // 8: saturn.mail.v1.Message.sent_at:type_name -> google.protobuf.Timestamp
+	28, // 9: saturn.mail.v1.Message.received_at:type_name -> google.protobuf.Timestamp
 	3,  // 10: saturn.mail.v1.Message.attachments:type_name -> saturn.mail.v1.Attachment
-	26, // 11: saturn.mail.v1.Message.create_time:type_name -> google.protobuf.Timestamp
-	26, // 12: saturn.mail.v1.Message.update_time:type_name -> google.protobuf.Timestamp
+	28, // 11: saturn.mail.v1.Message.create_time:type_name -> google.protobuf.Timestamp
+	28, // 12: saturn.mail.v1.Message.update_time:type_name -> google.protobuf.Timestamp
 	2,  // 13: saturn.mail.v1.Thread.participants:type_name -> saturn.mail.v1.Participant
-	26, // 14: saturn.mail.v1.Thread.last_message_at:type_name -> google.protobuf.Timestamp
-	26, // 15: saturn.mail.v1.Thread.create_time:type_name -> google.protobuf.Timestamp
-	26, // 16: saturn.mail.v1.Thread.update_time:type_name -> google.protobuf.Timestamp
+	28, // 14: saturn.mail.v1.Thread.last_message_at:type_name -> google.protobuf.Timestamp
+	28, // 15: saturn.mail.v1.Thread.create_time:type_name -> google.protobuf.Timestamp
+	28, // 16: saturn.mail.v1.Thread.update_time:type_name -> google.protobuf.Timestamp
 	5,  // 17: saturn.mail.v1.Thread.messages:type_name -> saturn.mail.v1.Message
-	1,  // 18: saturn.mail.v1.Draft.mode:type_name -> saturn.mail.v1.DraftMode
-	2,  // 19: saturn.mail.v1.Draft.to:type_name -> saturn.mail.v1.Participant
-	2,  // 20: saturn.mail.v1.Draft.cc:type_name -> saturn.mail.v1.Participant
-	2,  // 21: saturn.mail.v1.Draft.bcc:type_name -> saturn.mail.v1.Participant
-	3,  // 22: saturn.mail.v1.Draft.attachments:type_name -> saturn.mail.v1.Attachment
-	26, // 23: saturn.mail.v1.Draft.create_time:type_name -> google.protobuf.Timestamp
-	26, // 24: saturn.mail.v1.Draft.update_time:type_name -> google.protobuf.Timestamp
-	0,  // 25: saturn.mail.v1.ListMailboxesRequest.system_role:type_name -> saturn.mail.v1.MailboxRole
-	4,  // 26: saturn.mail.v1.ListMailboxesResponse.mailboxes:type_name -> saturn.mail.v1.Mailbox
-	4,  // 27: saturn.mail.v1.CreateMailboxRequest.mailbox:type_name -> saturn.mail.v1.Mailbox
-	4,  // 28: saturn.mail.v1.UpdateMailboxRequest.mailbox:type_name -> saturn.mail.v1.Mailbox
-	27, // 29: saturn.mail.v1.UpdateMailboxRequest.update_mask:type_name -> google.protobuf.FieldMask
-	0,  // 30: saturn.mail.v1.ListThreadsRequest.system_bucket:type_name -> saturn.mail.v1.MailboxRole
-	6,  // 31: saturn.mail.v1.ListThreadsResponse.threads:type_name -> saturn.mail.v1.Thread
-	7,  // 32: saturn.mail.v1.ListDraftsResponse.drafts:type_name -> saturn.mail.v1.Draft
-	7,  // 33: saturn.mail.v1.CreateDraftRequest.draft:type_name -> saturn.mail.v1.Draft
-	7,  // 34: saturn.mail.v1.UpdateDraftRequest.draft:type_name -> saturn.mail.v1.Draft
-	27, // 35: saturn.mail.v1.UpdateDraftRequest.update_mask:type_name -> google.protobuf.FieldMask
-	5,  // 36: saturn.mail.v1.MessageReceivedEvent.message:type_name -> saturn.mail.v1.Message
-	8,  // 37: saturn.mail.v1.MailService.ListMailboxes:input_type -> saturn.mail.v1.ListMailboxesRequest
-	10, // 38: saturn.mail.v1.MailService.CreateMailbox:input_type -> saturn.mail.v1.CreateMailboxRequest
-	11, // 39: saturn.mail.v1.MailService.UpdateMailbox:input_type -> saturn.mail.v1.UpdateMailboxRequest
-	12, // 40: saturn.mail.v1.MailService.DeleteMailbox:input_type -> saturn.mail.v1.DeleteMailboxRequest
-	13, // 41: saturn.mail.v1.MailService.ListThreads:input_type -> saturn.mail.v1.ListThreadsRequest
-	15, // 42: saturn.mail.v1.MailService.GetThread:input_type -> saturn.mail.v1.GetThreadRequest
-	16, // 43: saturn.mail.v1.MailService.ModifyThread:input_type -> saturn.mail.v1.ModifyThreadRequest
-	17, // 44: saturn.mail.v1.MailService.BatchModifyThreads:input_type -> saturn.mail.v1.BatchModifyThreadsRequest
-	18, // 45: saturn.mail.v1.MailService.ListDrafts:input_type -> saturn.mail.v1.ListDraftsRequest
-	20, // 46: saturn.mail.v1.MailService.GetDraft:input_type -> saturn.mail.v1.GetDraftRequest
-	21, // 47: saturn.mail.v1.MailService.CreateDraft:input_type -> saturn.mail.v1.CreateDraftRequest
-	22, // 48: saturn.mail.v1.MailService.UpdateDraft:input_type -> saturn.mail.v1.UpdateDraftRequest
-	23, // 49: saturn.mail.v1.MailService.DeleteDraft:input_type -> saturn.mail.v1.DeleteDraftRequest
-	24, // 50: saturn.mail.v1.MailService.SendDraft:input_type -> saturn.mail.v1.SendDraftRequest
-	9,  // 51: saturn.mail.v1.MailService.ListMailboxes:output_type -> saturn.mail.v1.ListMailboxesResponse
-	4,  // 52: saturn.mail.v1.MailService.CreateMailbox:output_type -> saturn.mail.v1.Mailbox
-	4,  // 53: saturn.mail.v1.MailService.UpdateMailbox:output_type -> saturn.mail.v1.Mailbox
-	28, // 54: saturn.mail.v1.MailService.DeleteMailbox:output_type -> google.protobuf.Empty
-	14, // 55: saturn.mail.v1.MailService.ListThreads:output_type -> saturn.mail.v1.ListThreadsResponse
-	6,  // 56: saturn.mail.v1.MailService.GetThread:output_type -> saturn.mail.v1.Thread
-	6,  // 57: saturn.mail.v1.MailService.ModifyThread:output_type -> saturn.mail.v1.Thread
-	28, // 58: saturn.mail.v1.MailService.BatchModifyThreads:output_type -> google.protobuf.Empty
-	19, // 59: saturn.mail.v1.MailService.ListDrafts:output_type -> saturn.mail.v1.ListDraftsResponse
-	7,  // 60: saturn.mail.v1.MailService.GetDraft:output_type -> saturn.mail.v1.Draft
-	7,  // 61: saturn.mail.v1.MailService.CreateDraft:output_type -> saturn.mail.v1.Draft
-	7,  // 62: saturn.mail.v1.MailService.UpdateDraft:output_type -> saturn.mail.v1.Draft
-	28, // 63: saturn.mail.v1.MailService.DeleteDraft:output_type -> google.protobuf.Empty
-	5,  // 64: saturn.mail.v1.MailService.SendDraft:output_type -> saturn.mail.v1.Message
-	51, // [51:65] is the sub-list for method output_type
-	37, // [37:51] is the sub-list for method input_type
-	37, // [37:37] is the sub-list for extension type_name
-	37, // [37:37] is the sub-list for extension extendee
-	0,  // [0:37] is the sub-list for field type_name
+	7,  // 18: saturn.mail.v1.Thread.summary:type_name -> saturn.mail.v1.ThreadSummary
+	28, // 19: saturn.mail.v1.ThreadSummary.last_message_at:type_name -> google.protobuf.Timestamp
+	28, // 20: saturn.mail.v1.ThreadSummary.update_time:type_name -> google.protobuf.Timestamp
+	1,  // 21: saturn.mail.v1.Draft.mode:type_name -> saturn.mail.v1.DraftMode
+	2,  // 22: saturn.mail.v1.Draft.to:type_name -> saturn.mail.v1.Participant
+	2,  // 23: saturn.mail.v1.Draft.cc:type_name -> saturn.mail.v1.Participant
+	2,  // 24: saturn.mail.v1.Draft.bcc:type_name -> saturn.mail.v1.Participant
+	3,  // 25: saturn.mail.v1.Draft.attachments:type_name -> saturn.mail.v1.Attachment
+	28, // 26: saturn.mail.v1.Draft.create_time:type_name -> google.protobuf.Timestamp
+	28, // 27: saturn.mail.v1.Draft.update_time:type_name -> google.protobuf.Timestamp
+	0,  // 28: saturn.mail.v1.ListMailboxesRequest.system_role:type_name -> saturn.mail.v1.MailboxRole
+	4,  // 29: saturn.mail.v1.ListMailboxesResponse.mailboxes:type_name -> saturn.mail.v1.Mailbox
+	4,  // 30: saturn.mail.v1.CreateMailboxRequest.mailbox:type_name -> saturn.mail.v1.Mailbox
+	4,  // 31: saturn.mail.v1.UpdateMailboxRequest.mailbox:type_name -> saturn.mail.v1.Mailbox
+	29, // 32: saturn.mail.v1.UpdateMailboxRequest.update_mask:type_name -> google.protobuf.FieldMask
+	0,  // 33: saturn.mail.v1.ListThreadsRequest.system_bucket:type_name -> saturn.mail.v1.MailboxRole
+	6,  // 34: saturn.mail.v1.ListThreadsResponse.threads:type_name -> saturn.mail.v1.Thread
+	8,  // 35: saturn.mail.v1.ListDraftsResponse.drafts:type_name -> saturn.mail.v1.Draft
+	8,  // 36: saturn.mail.v1.CreateDraftRequest.draft:type_name -> saturn.mail.v1.Draft
+	8,  // 37: saturn.mail.v1.UpdateDraftRequest.draft:type_name -> saturn.mail.v1.Draft
+	29, // 38: saturn.mail.v1.UpdateDraftRequest.update_mask:type_name -> google.protobuf.FieldMask
+	5,  // 39: saturn.mail.v1.MessageReceivedEvent.message:type_name -> saturn.mail.v1.Message
+	9,  // 40: saturn.mail.v1.MailService.ListMailboxes:input_type -> saturn.mail.v1.ListMailboxesRequest
+	11, // 41: saturn.mail.v1.MailService.CreateMailbox:input_type -> saturn.mail.v1.CreateMailboxRequest
+	12, // 42: saturn.mail.v1.MailService.UpdateMailbox:input_type -> saturn.mail.v1.UpdateMailboxRequest
+	13, // 43: saturn.mail.v1.MailService.DeleteMailbox:input_type -> saturn.mail.v1.DeleteMailboxRequest
+	14, // 44: saturn.mail.v1.MailService.ListThreads:input_type -> saturn.mail.v1.ListThreadsRequest
+	16, // 45: saturn.mail.v1.MailService.GetThread:input_type -> saturn.mail.v1.GetThreadRequest
+	17, // 46: saturn.mail.v1.MailService.SummarizeThread:input_type -> saturn.mail.v1.SummarizeThreadRequest
+	18, // 47: saturn.mail.v1.MailService.ModifyThread:input_type -> saturn.mail.v1.ModifyThreadRequest
+	19, // 48: saturn.mail.v1.MailService.BatchModifyThreads:input_type -> saturn.mail.v1.BatchModifyThreadsRequest
+	20, // 49: saturn.mail.v1.MailService.ListDrafts:input_type -> saturn.mail.v1.ListDraftsRequest
+	22, // 50: saturn.mail.v1.MailService.GetDraft:input_type -> saturn.mail.v1.GetDraftRequest
+	23, // 51: saturn.mail.v1.MailService.CreateDraft:input_type -> saturn.mail.v1.CreateDraftRequest
+	24, // 52: saturn.mail.v1.MailService.UpdateDraft:input_type -> saturn.mail.v1.UpdateDraftRequest
+	25, // 53: saturn.mail.v1.MailService.DeleteDraft:input_type -> saturn.mail.v1.DeleteDraftRequest
+	26, // 54: saturn.mail.v1.MailService.SendDraft:input_type -> saturn.mail.v1.SendDraftRequest
+	10, // 55: saturn.mail.v1.MailService.ListMailboxes:output_type -> saturn.mail.v1.ListMailboxesResponse
+	4,  // 56: saturn.mail.v1.MailService.CreateMailbox:output_type -> saturn.mail.v1.Mailbox
+	4,  // 57: saturn.mail.v1.MailService.UpdateMailbox:output_type -> saturn.mail.v1.Mailbox
+	30, // 58: saturn.mail.v1.MailService.DeleteMailbox:output_type -> google.protobuf.Empty
+	15, // 59: saturn.mail.v1.MailService.ListThreads:output_type -> saturn.mail.v1.ListThreadsResponse
+	6,  // 60: saturn.mail.v1.MailService.GetThread:output_type -> saturn.mail.v1.Thread
+	7,  // 61: saturn.mail.v1.MailService.SummarizeThread:output_type -> saturn.mail.v1.ThreadSummary
+	6,  // 62: saturn.mail.v1.MailService.ModifyThread:output_type -> saturn.mail.v1.Thread
+	30, // 63: saturn.mail.v1.MailService.BatchModifyThreads:output_type -> google.protobuf.Empty
+	21, // 64: saturn.mail.v1.MailService.ListDrafts:output_type -> saturn.mail.v1.ListDraftsResponse
+	8,  // 65: saturn.mail.v1.MailService.GetDraft:output_type -> saturn.mail.v1.Draft
+	8,  // 66: saturn.mail.v1.MailService.CreateDraft:output_type -> saturn.mail.v1.Draft
+	8,  // 67: saturn.mail.v1.MailService.UpdateDraft:output_type -> saturn.mail.v1.Draft
+	30, // 68: saturn.mail.v1.MailService.DeleteDraft:output_type -> google.protobuf.Empty
+	5,  // 69: saturn.mail.v1.MailService.SendDraft:output_type -> saturn.mail.v1.Message
+	55, // [55:70] is the sub-list for method output_type
+	40, // [40:55] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_saturn_mail_v1_mail_proto_init() }
@@ -2691,16 +2931,18 @@ func file_saturn_mail_v1_mail_proto_init() {
 	if File_saturn_mail_v1_mail_proto != nil {
 		return
 	}
-	file_saturn_mail_v1_mail_proto_msgTypes[11].OneofWrappers = []any{}
-	file_saturn_mail_v1_mail_proto_msgTypes[14].OneofWrappers = []any{}
+	file_saturn_mail_v1_mail_proto_msgTypes[4].OneofWrappers = []any{}
+	file_saturn_mail_v1_mail_proto_msgTypes[12].OneofWrappers = []any{}
 	file_saturn_mail_v1_mail_proto_msgTypes[15].OneofWrappers = []any{}
+	file_saturn_mail_v1_mail_proto_msgTypes[16].OneofWrappers = []any{}
+	file_saturn_mail_v1_mail_proto_msgTypes[17].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_mail_v1_mail_proto_rawDesc), len(file_saturn_mail_v1_mail_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   24,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

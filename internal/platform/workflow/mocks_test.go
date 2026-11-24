@@ -953,3 +953,52 @@ func (mock *AgentExecutorMock) ExecuteAgentCalls() []struct {
 	defer mock.lockExecuteAgent.RUnlock()
 	return mock.calls.ExecuteAgent
 }
+
+// Compile-time interface assertion.
+var _ SystemFlowRunner = (*SystemFlowRunnerMock)(nil)
+
+// SystemFlowRunnerMock is a mock implementation of SystemFlowRunner.
+type SystemFlowRunnerMock struct {
+	// ExecuteSystemFlowRawFunc mocks the ExecuteSystemFlowRaw method.
+	ExecuteSystemFlowRawFunc func(ctx context.Context, systemKey string, input map[string]any) (*FlowRun, error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		ExecuteSystemFlowRaw []struct {
+			Ctx       context.Context
+			SystemKey string
+			Input     map[string]any
+		}
+	}
+	lockExecuteSystemFlowRaw sync.RWMutex
+}
+
+// ExecuteSystemFlowRaw calls ExecuteSystemFlowRawFunc.
+func (mock *SystemFlowRunnerMock) ExecuteSystemFlowRaw(ctx context.Context, systemKey string, input map[string]any) (*FlowRun, error) {
+	if mock.ExecuteSystemFlowRawFunc == nil {
+		panic("SystemFlowRunnerMock.ExecuteSystemFlowRawFunc: method is nil but SystemFlowRunner.ExecuteSystemFlowRaw was just called")
+	}
+	mock.lockExecuteSystemFlowRaw.Lock()
+	mock.calls.ExecuteSystemFlowRaw = append(mock.calls.ExecuteSystemFlowRaw, struct {
+		Ctx       context.Context
+		SystemKey string
+		Input     map[string]any
+	}{
+		Ctx:       ctx,
+		SystemKey: systemKey,
+		Input:     input,
+	})
+	mock.lockExecuteSystemFlowRaw.Unlock()
+	return mock.ExecuteSystemFlowRawFunc(ctx, systemKey, input)
+}
+
+// ExecuteSystemFlowRawCalls returns all calls made to ExecuteSystemFlowRaw.
+func (mock *SystemFlowRunnerMock) ExecuteSystemFlowRawCalls() []struct {
+	Ctx       context.Context
+	SystemKey string
+	Input     map[string]any
+} {
+	mock.lockExecuteSystemFlowRaw.RLock()
+	defer mock.lockExecuteSystemFlowRaw.RUnlock()
+	return mock.calls.ExecuteSystemFlowRaw
+}

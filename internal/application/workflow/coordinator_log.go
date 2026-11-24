@@ -219,6 +219,30 @@ func (l *LoggingCoordinator) ExecuteFlow(ctx context.Context, req *ExecuteFlowRe
 	return res, nil
 }
 
+// ExecuteSystemFlowRaw executes next.ExecuteSystemFlowRaw and logs execution duration and errors.
+func (l *LoggingCoordinator) ExecuteSystemFlowRaw(ctx context.Context, systemKey string, input map[string]any) (*workflow.FlowRun, error) {
+	start := time.Now()
+	res, err := l.next.ExecuteSystemFlowRaw(ctx, systemKey, input)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "workflow.ExecuteSystemFlowRaw failed",
+			log.String("component", "workflow"),
+			log.String("operation", "ExecuteSystemFlowRaw"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "workflow.ExecuteSystemFlowRaw completed",
+		log.String("component", "workflow"),
+		log.String("operation", "ExecuteSystemFlowRaw"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
 // InvokeWebhookTrigger executes next.InvokeWebhookTrigger and logs execution duration and errors.
 func (l *LoggingCoordinator) InvokeWebhookTrigger(ctx context.Context, req *InvokeWebhookTriggerRequest) (*workflow.FlowRun, error) {
 	start := time.Now()

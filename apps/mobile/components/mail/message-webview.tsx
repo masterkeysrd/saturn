@@ -231,10 +231,6 @@ const createStyles = (t: SaturnMobileTheme) => ({
   webViewWrapper: {
     width: "100%" as const,
     backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: t.colors.border,
-    borderRadius: t.radius.sm,
-    overflow: "hidden" as const,
   },
   webView: {
     flex: 1,

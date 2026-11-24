@@ -55,6 +55,15 @@ service MailService {
     option (google.api.method_signature) = "id";
   }
 
+  // Generates or refreshes the AI summary of an email thread.
+  rpc SummarizeThread(SummarizeThreadRequest) returns (ThreadSummary) {
+    option (google.api.http) = {
+      post: "/v1/mail/threads/{id}:summarize"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+
   // Applies label and status modifications to a single email thread.
   rpc ModifyThread(ModifyThreadRequest) returns (Thread) {
     option (google.api.http) = {
@@ -311,6 +320,34 @@ message Thread {
   google.protobuf.Timestamp update_time = 20;
   // Chronological messages in the thread (populated on GetThread).
   repeated Message messages = 21;
+  // Built-in AI summary of the thread for the negotiated language (populated on GetThread).
+  optional ThreadSummary summary = 22;
+}
+
+// ThreadSummary models a built-in AI-generated summary of an email thread conversation.
+message ThreadSummary {
+  // Summarized thread identifier (mth_...).
+  string thread_id = 1;
+  // Language tag the summary was generated in (e.g. "en", "es").
+  string language = 2;
+  // Concise plain-language summary paragraph.
+  string tldr = 3;
+  // Distinct key points extracted from the conversation.
+  repeated string key_points = 4;
+  // Action items requested or implied by the conversation.
+  repeated string action_items = 5;
+  // Identifier of the latest message covered by the summary.
+  string last_message_id = 6;
+  // Timestamp of the latest message covered by the summary.
+  google.protobuf.Timestamp last_message_at = 7;
+  // Number of messages covered by the summary.
+  int32 message_count = 8;
+  // Whether newer messages exist in the thread since this summary was generated.
+  bool is_stale = 9;
+  // Workflow run that produced this summary, when available.
+  string flow_run_id = 10;
+  // Timestamp when the summary record was last updated.
+  google.protobuf.Timestamp update_time = 11;
 }
 
 // Draft models an editable email composition.
@@ -425,6 +462,16 @@ message ListThreadsResponse {
 message GetThreadRequest {
   // Thread identifier to retrieve.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to generate or refresh the AI summary of a thread.
+message SummarizeThreadRequest {
+  // Thread identifier to summarize.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  // When true, regenerates the summary even if a fresh cached summary exists.
+  bool force_regenerate = 2;
+  // Optional summary language override ("en" or "es"), falling back to the negotiated request language.
+  optional string language = 3;
 }
 
 // Request to modify labels or flags of a thread.

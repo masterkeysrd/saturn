@@ -13,8 +13,10 @@ import {
   listThreads,
   modifyThread,
   batchModifyThreads,
+  summarizeThread,
   type Mailbox,
   type Thread,
+  type ThreadSummary,
   type Message,
   type ListMailboxesRequest,
   type ListMailboxesResponse,
@@ -23,12 +25,14 @@ import {
   type GetThreadRequest,
   type ModifyThreadRequest,
   type BatchModifyThreadsRequest,
+  type SummarizeThreadRequest,
   type MailboxRole,
 } from "@saturn/api/saturn/mail/v1/mail"
 
 export type {
   Mailbox,
   Thread,
+  ThreadSummary,
   Message,
   ListMailboxesRequest,
   ListMailboxesResponse,
@@ -37,6 +41,7 @@ export type {
   GetThreadRequest,
   ModifyThreadRequest,
   BatchModifyThreadsRequest,
+  SummarizeThreadRequest,
   MailboxRole,
 }
 
@@ -306,6 +311,23 @@ export function useModifyThread(
       if (options?.onSettled) {
         options.onSettled(...args)
       }
+    },
+    ...options,
+  })
+}
+
+export function useSummarizeMailThread(
+  options?: UseMutationOptions<ThreadSummary, Error, SummarizeThreadRequest>
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation<ThreadSummary, Error, SummarizeThreadRequest>({
+    mutationFn: ({ id, ...req }) => summarizeThread(id, { ...req, id }),
+    onSuccess: (summary, variables, context, mutation) => {
+      queryClient.setQueryData<Thread>(mailKeys.thread(variables.id), (old) =>
+        old ? { ...old, summary: { ...summary, isStale: false } } : old
+      )
+      options?.onSuccess?.(summary, variables, context, mutation)
     },
     ...options,
   })

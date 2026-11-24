@@ -4,6 +4,7 @@ import { createElement, type ReactNode } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { MemoryRouter } from "react-router-dom"
 import { Toaster } from "@/components/ui/toast"
+import { OPEN_AI_DRAWER_EVENT } from "@/features/ai/lib/drawer-events"
 import { MailView } from "./mail-view"
 import { MailUnreadBadge } from "./components/mail-unread-badge"
 import * as hooks from "@saturn/hooks"
@@ -276,6 +277,7 @@ describe("MailView Web Feature", () => {
   let queryClient: QueryClient
 
   const mockModifyThreadMutate = vi.fn()
+  const mockSummarizeMutate = vi.fn()
   const mockSaveDraftMutateAsync = vi
     .fn()
     .mockResolvedValue({ id: "mdf_new_1" })
@@ -380,6 +382,11 @@ describe("MailView Web Feature", () => {
       mutate: mockModifyThreadMutate,
       isPending: false,
     } as unknown as ReturnType<typeof hooks.useModifyThread>)
+
+    vi.spyOn(hooks, "useSummarizeMailThread").mockReturnValue({
+      mutate: mockSummarizeMutate,
+      isPending: false,
+    } as unknown as ReturnType<typeof hooks.useSummarizeMailThread>)
 
     vi.spyOn(hooks, "useBatchModifyThreads").mockReturnValue({
       mutate: vi.fn(),
@@ -1366,5 +1373,212 @@ describe("MailView Web Feature", () => {
         writable: true,
       })
     }
+  })
+
+  it("summarizes thread in place without opening the AI drawer", async () => {
+    const drawerEvents: Event[] = []
+    const handleDrawer = () => drawerEvents.push(new Event("drawer"))
+    window.addEventListener(OPEN_AI_DRAWER_EVENT, handleDrawer)
+
+    try {
+      render(<MailView />, { wrapper: createWrapper() })
+      fireEvent.click(screen.getByTestId("thread-row-mth_101"))
+
+      expect(screen.queryByTestId("thread-summary-card")).toBeNull()
+
+      fireEvent.click(screen.getByTestId("summarize-thread-btn"))
+
+      await waitFor(() => {
+        expect(mockSummarizeMutate).toHaveBeenCalledWith({
+          id: "mth_101",
+          forceRegenerate: false,
+          language: "en",
+        })
+      })
+      expect(drawerEvents).toHaveLength(0)
+    } finally {
+      window.removeEventListener(OPEN_AI_DRAWER_EVENT, handleDrawer)
+    }
+  })
+
+  it("renders hydrated thread summary in-place card with key points and action items", async () => {
+    const summarizedThread: Thread = {
+      ...mockThreads[0],
+      summary: {
+        threadId: "mth_101",
+        language: "en",
+        tldr: "Budget figures need final sign-off before Friday.",
+        keyPoints: ["Q3 budget is 4% over plan"],
+        actionItems: ["Approve revised budget"],
+        lastMessageId: "msg_101_1",
+        lastMessageAt: "2026-10-20T10:15:00Z",
+        messageCount: 2,
+        isStale: false,
+        flowRunId: "flow_1",
+        updateTime: "2026-10-20T10:20:00Z",
+      },
+    }
+
+    vi.spyOn(hooks, "useMailThread").mockReturnValue({
+      data: summarizedThread,
+      isLoading: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof hooks.useMailThread>)
+
+    render(<MailView />, { wrapper: createWrapper() })
+    fireEvent.click(screen.getByTestId("thread-row-mth_101"))
+
+    await waitFor(() => {
+      expect(screen.getByTestId("thread-summary-card")).toBeDefined()
+    })
+
+    const card = screen.getByTestId("thread-summary-card")
+    expect(card.textContent).toContain(
+      "Budget figures need final sign-off before Friday."
+    )
+    expect(card.textContent).toContain("Q3 budget is 4% over plan")
+    expect(card.textContent).toContain("Approve revised budget")
+    expect(screen.queryByTestId("summary-update-btn")).toBeNull()
+
+    // Collapsing the summary hides the body but keeps the card header
+    fireEvent.click(screen.getByTestId("summary-toggle-btn"))
+    expect(screen.getByTestId("thread-summary-card")).toBeDefined()
+    expect(card.textContent).not.toContain(
+      "Budget figures need final sign-off before Friday."
+    )
+
+    // Regenerate triggers a forced regeneration mutation
+    fireEvent.click(screen.getByTestId("summary-regenerate-btn"))
+    await waitFor(() => {
+      expect(mockSummarizeMutate).toHaveBeenCalledWith({
+        id: "mth_101",
+        forceRegenerate: true,
+        language: "en",
+      })
+    })
+  })
+
+  function makeLongThread(messageCount: number): Thread {
+    const base = mockThreads[0].messages[1]
+    const messages = Array.from({ length: messageCount }, (_, i) => ({
+      ...base,
+      id: `msg_long_${i + 1}`,
+      subject: `Long thread message ${i + 1}`,
+      snippet: `Snippet number ${i + 1} for the long thread.`,
+      isUnread: false,
+      sentAt: `2026-10-20T1${i}:00:00Z`,
+      bodyHtml: `<p>Body of message ${i + 1}</p>`,
+      bodyPlain: `Body of message ${i + 1}`,
+    }))
+    return {
+      ...mockThreads[0],
+      messageCount,
+      isUnread: false,
+      messages: messages as Thread["messages"],
+    }
+  }
+
+  it("super-collapses long threads into first / deck / last two and unfolds without expanding", () => {
+    vi.spyOn(hooks, "useMailThread").mockReturnValue({
+      data: makeLongThread(6),
+      isLoading: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof hooks.useMailThread>)
+
+    render(<MailView />, { wrapper: createWrapper() })
+    fireEvent.click(screen.getByTestId("thread-row-mth_101"))
+
+    // Deck divider replaces the 3 middle messages
+    const deck = screen.getByTestId("web-super-collapse-btn")
+    expect(deck).toBeDefined()
+    expect(deck.textContent).toContain("3")
+    expect(screen.getByTestId("message-card-msg_long_1")).toBeDefined()
+    expect(screen.getByTestId("message-card-msg_long_5")).toBeDefined()
+    expect(screen.getByTestId("message-card-msg_long_6")).toBeDefined()
+    expect(screen.queryByTestId("message-card-msg_long_2")).toBeNull()
+    expect(screen.queryByTestId("message-card-msg_long_3")).toBeNull()
+    expect(screen.queryByTestId("message-card-msg_long_4")).toBeNull()
+
+    // Only the latest message is expanded (one sandboxed body iframe)
+    expect(screen.getAllByTestId("sandboxed-email-frame")).toHaveLength(1)
+
+    // Clicking the deck unfolds the middle messages in collapsed state
+    fireEvent.click(deck)
+    expect(screen.queryByTestId("web-super-collapse-btn")).toBeNull()
+    expect(screen.getByTestId("message-card-msg_long_2")).toBeDefined()
+    expect(screen.getByTestId("message-card-msg_long_3")).toBeDefined()
+    expect(screen.getByTestId("message-card-msg_long_4")).toBeDefined()
+    // Unfolded messages stay collapsed: still only one body iframe
+    expect(screen.getAllByTestId("sandboxed-email-frame")).toHaveLength(1)
+    expect(
+      screen
+        .getByTestId("message-card-msg_long_2")
+        .textContent?.includes("Snippet number 2")
+    ).toBe(true)
+  })
+
+  it("collapses expanded message via clickable header and shows no per-message chevrons", () => {
+    vi.spyOn(hooks, "useMailThread").mockReturnValue({
+      data: makeLongThread(6),
+      isLoading: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof hooks.useMailThread>)
+
+    render(<MailView />, { wrapper: createWrapper() })
+    fireEvent.click(screen.getByTestId("thread-row-mth_101"))
+
+    // Latest message is expanded with a clickable header
+    const header = screen.getByTestId("message-header-msg_long_6")
+    expect(header.getAttribute("aria-expanded")).toBe("true")
+    expect(screen.getAllByTestId("sandboxed-email-frame")).toHaveLength(1)
+
+    // Clicking the header row collapses the message
+    fireEvent.click(header)
+    expect(screen.queryByTestId("message-header-msg_long_6")).toBeNull()
+    expect(screen.queryAllByTestId("sandboxed-email-frame")).toHaveLength(0)
+    expect(
+      screen
+        .getByTestId("message-card-msg_long_6")
+        .textContent?.includes("Snippet number 6")
+    ).toBe(true)
+
+    // Per-message collapse chevron (aria-label "Collapse message") is gone
+    expect(screen.queryByLabelText("Collapse message")).toBeNull()
+  })
+
+  it("renders humanized d/m/y dates on collapsed message rows for older threads", () => {
+    vi.spyOn(hooks, "useMailThread").mockReturnValue({
+      data: makeLongThread(2),
+      isLoading: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof hooks.useMailThread>)
+
+    render(<MailView />, { wrapper: createWrapper() })
+    fireEvent.click(screen.getByTestId("thread-row-mth_101"))
+
+    // Sent 2026-10-20 (> 7 days before current date) renders d/m/y
+    expect(screen.getByTestId("message-card-msg_long_1").textContent).toContain(
+      "20/10/2026"
+    )
+  })
+
+  it("toolbar Expand All unfolds the super-collapse deck and Collapse All restores it", () => {
+    vi.spyOn(hooks, "useMailThread").mockReturnValue({
+      data: makeLongThread(6),
+      isLoading: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof hooks.useMailThread>)
+
+    render(<MailView />, { wrapper: createWrapper() })
+    fireEvent.click(screen.getByTestId("thread-row-mth_101"))
+    expect(screen.getByTestId("web-super-collapse-btn")).toBeDefined()
+
+    const toggleBtn = screen.getByTestId("toggle-expand-all-btn")
+    fireEvent.click(toggleBtn)
+    expect(screen.queryByTestId("web-super-collapse-btn")).toBeNull()
+    expect(screen.getByTestId("message-card-msg_long_3")).toBeDefined()
+
+    fireEvent.click(toggleBtn)
+    expect(screen.getByTestId("web-super-collapse-btn")).toBeDefined()
   })
 })

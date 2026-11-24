@@ -155,6 +155,20 @@ func (c *Client) GetThread(ctx context.Context, req *GetThreadRequest) (*Thread,
 	return &resp, nil
 }
 
+// SummarizeThread executes POST /api/v1/mail/threads/{id}:summarize.
+func (c *Client) SummarizeThread(ctx context.Context, req *SummarizeThreadRequest) (*ThreadSummary, error) {
+	var resp ThreadSummary
+	path := fmt.Sprintf("/api/v1/mail/threads/%s:summarize", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 // ModifyThread executes POST /api/v1/mail/threads/{id}:modify.
 func (c *Client) ModifyThread(ctx context.Context, req *ModifyThreadRequest) (*Thread, error) {
 	var resp Thread

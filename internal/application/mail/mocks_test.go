@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	domainmail "github.com/masterkeysrd/saturn/internal/domain/mail"
+	platformworkflow "github.com/masterkeysrd/saturn/internal/platform/workflow"
 )
 
 // Compile-time interface assertion.
@@ -25,6 +26,12 @@ type CoordinatorMock struct {
 
 	// ModifyThreadFunc mocks the ModifyThread method.
 	ModifyThreadFunc func(ctx context.Context, req *ModifyThreadRequest) (*domainmail.Thread, error)
+
+	// SaveThreadSummaryFunc mocks the SaveThreadSummary method.
+	SaveThreadSummaryFunc func(ctx context.Context, req *SaveThreadSummaryRequest) (*domainmail.ThreadSummary, error)
+
+	// SummarizeThreadFunc mocks the SummarizeThread method.
+	SummarizeThreadFunc func(ctx context.Context, req *SummarizeThreadRequest) (*domainmail.ThreadSummary, error)
 
 	// BatchModifyThreadsFunc mocks the BatchModifyThreads method.
 	BatchModifyThreadsFunc func(ctx context.Context, req *BatchModifyThreadsRequest) error
@@ -71,6 +78,14 @@ type CoordinatorMock struct {
 			Ctx context.Context
 			Req *ModifyThreadRequest
 		}
+		SaveThreadSummary []struct {
+			Ctx context.Context
+			Req *SaveThreadSummaryRequest
+		}
+		SummarizeThread []struct {
+			Ctx context.Context
+			Req *SummarizeThreadRequest
+		}
 		BatchModifyThreads []struct {
 			Ctx context.Context
 			Req *BatchModifyThreadsRequest
@@ -112,6 +127,8 @@ type CoordinatorMock struct {
 	lockUpdateMailbox            sync.RWMutex
 	lockDeleteMailbox            sync.RWMutex
 	lockModifyThread             sync.RWMutex
+	lockSaveThreadSummary        sync.RWMutex
+	lockSummarizeThread          sync.RWMutex
 	lockBatchModifyThreads       sync.RWMutex
 	lockCreateDraft              sync.RWMutex
 	lockUpdateDraft              sync.RWMutex
@@ -229,6 +246,60 @@ func (mock *CoordinatorMock) ModifyThreadCalls() []struct {
 	mock.lockModifyThread.RLock()
 	defer mock.lockModifyThread.RUnlock()
 	return mock.calls.ModifyThread
+}
+
+// SaveThreadSummary calls SaveThreadSummaryFunc.
+func (mock *CoordinatorMock) SaveThreadSummary(ctx context.Context, req *SaveThreadSummaryRequest) (*domainmail.ThreadSummary, error) {
+	if mock.SaveThreadSummaryFunc == nil {
+		panic("CoordinatorMock.SaveThreadSummaryFunc: method is nil but Coordinator.SaveThreadSummary was just called")
+	}
+	mock.lockSaveThreadSummary.Lock()
+	mock.calls.SaveThreadSummary = append(mock.calls.SaveThreadSummary, struct {
+		Ctx context.Context
+		Req *SaveThreadSummaryRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockSaveThreadSummary.Unlock()
+	return mock.SaveThreadSummaryFunc(ctx, req)
+}
+
+// SaveThreadSummaryCalls returns all calls made to SaveThreadSummary.
+func (mock *CoordinatorMock) SaveThreadSummaryCalls() []struct {
+	Ctx context.Context
+	Req *SaveThreadSummaryRequest
+} {
+	mock.lockSaveThreadSummary.RLock()
+	defer mock.lockSaveThreadSummary.RUnlock()
+	return mock.calls.SaveThreadSummary
+}
+
+// SummarizeThread calls SummarizeThreadFunc.
+func (mock *CoordinatorMock) SummarizeThread(ctx context.Context, req *SummarizeThreadRequest) (*domainmail.ThreadSummary, error) {
+	if mock.SummarizeThreadFunc == nil {
+		panic("CoordinatorMock.SummarizeThreadFunc: method is nil but Coordinator.SummarizeThread was just called")
+	}
+	mock.lockSummarizeThread.Lock()
+	mock.calls.SummarizeThread = append(mock.calls.SummarizeThread, struct {
+		Ctx context.Context
+		Req *SummarizeThreadRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockSummarizeThread.Unlock()
+	return mock.SummarizeThreadFunc(ctx, req)
+}
+
+// SummarizeThreadCalls returns all calls made to SummarizeThread.
+func (mock *CoordinatorMock) SummarizeThreadCalls() []struct {
+	Ctx context.Context
+	Req *SummarizeThreadRequest
+} {
+	mock.lockSummarizeThread.RLock()
+	defer mock.lockSummarizeThread.RUnlock()
+	return mock.calls.SummarizeThread
 }
 
 // BatchModifyThreads calls BatchModifyThreadsFunc.
@@ -472,4 +543,49 @@ func (mock *CoordinatorMock) PruneWindowAndBodiesCalls() []struct {
 	mock.lockPruneWindowAndBodies.RLock()
 	defer mock.lockPruneWindowAndBodies.RUnlock()
 	return mock.calls.PruneWindowAndBodies
+}
+
+// Compile-time interface assertion.
+var _ SummarizeFlowClient = (*SummarizeFlowClientMock)(nil)
+
+// SummarizeFlowClientMock is a mock implementation of SummarizeFlowClient.
+type SummarizeFlowClientMock struct {
+	// ExecuteFunc mocks the Execute method.
+	ExecuteFunc func(ctx context.Context, input SummarizeThreadFlowInput) (*platformworkflow.FlowRun, error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Execute []struct {
+			Ctx   context.Context
+			Input SummarizeThreadFlowInput
+		}
+	}
+	lockExecute sync.RWMutex
+}
+
+// Execute calls ExecuteFunc.
+func (mock *SummarizeFlowClientMock) Execute(ctx context.Context, input SummarizeThreadFlowInput) (*platformworkflow.FlowRun, error) {
+	if mock.ExecuteFunc == nil {
+		panic("SummarizeFlowClientMock.ExecuteFunc: method is nil but SummarizeFlowClient.Execute was just called")
+	}
+	mock.lockExecute.Lock()
+	mock.calls.Execute = append(mock.calls.Execute, struct {
+		Ctx   context.Context
+		Input SummarizeThreadFlowInput
+	}{
+		Ctx:   ctx,
+		Input: input,
+	})
+	mock.lockExecute.Unlock()
+	return mock.ExecuteFunc(ctx, input)
+}
+
+// ExecuteCalls returns all calls made to Execute.
+func (mock *SummarizeFlowClientMock) ExecuteCalls() []struct {
+	Ctx   context.Context
+	Input SummarizeThreadFlowInput
+} {
+	mock.lockExecute.RLock()
+	defer mock.lockExecute.RUnlock()
+	return mock.calls.Execute
 }

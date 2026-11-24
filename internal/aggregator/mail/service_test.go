@@ -13,6 +13,7 @@ import (
 	domainmail "github.com/masterkeysrd/saturn/internal/domain/mail"
 	"github.com/masterkeysrd/saturn/internal/platform/connector"
 	"github.com/masterkeysrd/saturn/internal/platform/crypto"
+	platformi18n "github.com/masterkeysrd/saturn/internal/platform/i18n"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -142,6 +143,17 @@ func (m *mockDraftReader) ListBySpace(ctx context.Context, spaceID string, filte
 	return list, nil
 }
 
+type mockSummaryReader struct {
+	summaries map[string]*domainmail.ThreadSummary
+}
+
+func (m *mockSummaryReader) Get(ctx context.Context, spaceID, threadID, language string) (*domainmail.ThreadSummary, error) {
+	if m.summaries == nil {
+		return nil, nil
+	}
+	return m.summaries[spaceID+":"+threadID+":"+language], nil
+}
+
 func TestAggregator_GetThread_Hydration(t *testing.T) {
 	thReader := &mockThreadReader{threads: make(map[string]*domainmail.Thread)}
 	msgReader := &mockMessageReader{
@@ -150,6 +162,7 @@ func TestAggregator_GetThread_Hydration(t *testing.T) {
 	}
 	mbxReader := &mockMailboxReader{mailboxes: make(map[string]*domainmail.Mailbox)}
 	dftReader := &mockDraftReader{drafts: make(map[string]*domainmail.Draft)}
+	sumReader := &mockSummaryReader{summaries: make(map[string]*domainmail.ThreadSummary)}
 
 	secret := []byte("secret-key-32-bytes-long-for-testing")
 	service := mailaggregator.NewService(
@@ -157,6 +170,7 @@ func TestAggregator_GetThread_Hydration(t *testing.T) {
 		thReader,
 		msgReader,
 		dftReader,
+		sumReader,
 		nil,
 		nil,
 		nil,
@@ -239,6 +253,7 @@ func TestAggregator_ListThreads_LocalAndHybrid(t *testing.T) {
 		thReader,
 		msgReader,
 		dftReader,
+		&mockSummaryReader{},
 		nil,
 		nil,
 		nil,
@@ -291,6 +306,7 @@ func TestAggregator_ListThreads_HybridSearchPagination(t *testing.T) {
 		thReader,
 		msgReader,
 		dftReader,
+		&mockSummaryReader{},
 		nil,
 		nil,
 		nil,
@@ -497,6 +513,7 @@ func TestAggregator_HybridSearch_OffsetCapAndPersistsRemoteStub(t *testing.T) {
 		thReader,
 		msgReader,
 		dftReader,
+		&mockSummaryReader{},
 		accReader,
 		tokenMgr,
 		map[string]domainmail.ExternalMailProvider{"google": prov},
@@ -595,6 +612,7 @@ func TestAggregator_GetThread_AutoHealsPlainPreFallbackBody(t *testing.T) {
 		thReader,
 		msgReader,
 		dftReader,
+		&mockSummaryReader{},
 		accReader,
 		tokenMgr,
 		map[string]domainmail.ExternalMailProvider{"google": prov},
@@ -607,4 +625,81 @@ func TestAggregator_GetThread_AutoHealsPlainPreFallbackBody(t *testing.T) {
 	assert.Contains(t, proj.Messages[0].BodyHTML, "https://m.media-amazon.com/hero.jpg")
 	assert.True(t, proj.Messages[0].Message.HasRemoteImages)
 	assert.Contains(t, msgReader.bodies["msg_amazon"].SanitizedHTML, "https://m.media-amazon.com/hero.jpg")
+}
+
+func TestAggregator_GetThread_SummaryHydration(t *testing.T) {
+	thReader := &mockThreadReader{threads: make(map[string]*domainmail.Thread)}
+	msgReader := &mockMessageReader{
+		messages: make(map[string]*domainmail.Message),
+		bodies:   make(map[string]*domainmail.MessageBody),
+	}
+	mbxReader := &mockMailboxReader{mailboxes: make(map[string]*domainmail.Mailbox)}
+	dftReader := &mockDraftReader{drafts: make(map[string]*domainmail.Draft)}
+	sumReader := &mockSummaryReader{summaries: map[string]*domainmail.ThreadSummary{
+		"spc_1:mth_sum:es": {
+			ThreadID:      "mth_sum",
+			SpaceID:       "spc_1",
+			Language:      "es",
+			TLDR:          "Resumen en español",
+			KeyPoints:     []string{"punto"},
+			LastMessageAt: time.Now().UTC().Add(-time.Hour),
+			MessageCount:  1,
+		},
+	}}
+
+	service := mailaggregator.NewService(
+		mbxReader,
+		thReader,
+		msgReader,
+		dftReader,
+		sumReader,
+		nil,
+		nil,
+		nil,
+		[]byte("secret-key-32-bytes-long-for-testing"),
+	)
+
+	thread := &domainmail.Thread{
+		ID:            "mth_sum",
+		SpaceID:       "spc_1",
+		Subject:       "Summary Hydration",
+		LastMessageAt: time.Now().UTC(),
+		MessageCount:  2,
+	}
+	thReader.threads["mth_sum"] = thread
+
+	tests := []struct {
+		name     string
+		language string
+		wantTLDR string
+	}{
+		{
+			name:     "negotiated spanish returns cached summary",
+			language: "es",
+			wantTLDR: "Resumen en español",
+		},
+		{
+			name:     "missing language falls back to english with no summary",
+			language: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			if tc.language != "" {
+				ctx = platformi18n.With(ctx, tc.language)
+			}
+
+			projection, err := service.GetThread(ctx, "spc_1", "mth_sum")
+			require.NoError(t, err)
+			if tc.wantTLDR == "" {
+				assert.Nil(t, projection.Summary)
+				return
+			}
+			require.NotNil(t, projection.Summary)
+			assert.Equal(t, tc.wantTLDR, projection.Summary.TLDR)
+			assert.True(t, projection.Summary.IsStale(projection.Thread))
+		})
+	}
 }

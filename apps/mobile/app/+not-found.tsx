@@ -14,7 +14,9 @@ export default function NotFoundScreen() {
         <Text style={styles.title}>{t("common.notFound.description")}</Text>
         <Link href="/" asChild>
           <TouchableOpacity style={styles.link}>
-            <Text style={styles.linkText}>{t("common.notFound.returnCta")}</Text>
+            <Text style={styles.linkText}>
+              {t("common.notFound.returnCta")}
+            </Text>
           </TouchableOpacity>
         </Link>
       </View>

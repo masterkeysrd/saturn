@@ -31,6 +31,11 @@ authentication:
       api_key_scopes:
         - mail:read
         - mail:write
+    - selector: "saturn.mail.v1.MailService.SummarizeThread"
+      auth_required: true
+      api_key_scopes:
+        - mail:read
+        - mail:write
     - selector: "saturn.mail.v1.MailService.ListDrafts"
       auth_required: true
       api_key_scopes:

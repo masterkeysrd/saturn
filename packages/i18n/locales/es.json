@@ -3274,8 +3274,42 @@
     "summarize": "Resumir",
     "summarizePrompt": "Resume el hilo de correo \"{subject}\" (ID de hilo: {id}) y enumera los puntos de acción pendientes.",
     "summarizeThread": "Resumir hilo con IA",
+    "summary": {
+      "actionItems": "Acciones",
+      "askCopilot": "Preguntar en Copilot",
+      "collapse": "Contraer resumen",
+      "expand": "Expandir resumen",
+      "failed": "No se pudo resumir la conversación",
+      "keyPoints": "Puntos clave",
+      "regenerate": "Regenerar resumen",
+      "staleBadge": "Desactualizado · Nuevos mensajes",
+      "summarize": "Resumir",
+      "summarizing": "Resumiendo conversación…",
+      "title": "Resumen de IA",
+      "updateSummary": "Actualizar"
+    },
+    "superCollapse": {
+      "hiddenMessagesCount": "{count} mensajes anteriores",
+      "hideDetails": "Ocultar detalles",
+      "showDetails": "Ver detalles"
+    },
     "switchToList": "Cambiar a vista de lista",
     "switchToSplit": "Cambiar a vista dividida",
+    "threadHeader": {
+      "ccLabel": "Cc:",
+      "dateLabel": "Fecha:",
+      "fromLabel": "De:",
+      "markUnread": "Marcar no leído",
+      "stageToFinance": "Enviar a Finanzas",
+      "toLabel": "Para:"
+    },
+    "threadTime": {
+      "daysAgo": "hace {count} días",
+      "hourAgo": "hace 1 hora",
+      "hoursAgo": "hace {count} horas",
+      "justNow": "Ahora mismo",
+      "minutesAgo": "hace {count} min"
+    },
     "toLabel": "Para:",
     "toLabelShort": "Para",
     "toPrefix": "para: ",

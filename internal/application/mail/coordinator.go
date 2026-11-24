@@ -17,6 +17,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/connector"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
+	platformworkflow "github.com/masterkeysrd/saturn/internal/platform/workflow"
 )
 
 // Coordinator defines application use-case operations for mailboxes, threads, drafts, and sync.
@@ -35,6 +36,11 @@ type Coordinator interface {
 
 	// @transactional
 	ModifyThread(ctx context.Context, req *ModifyThreadRequest) (*domainmail.Thread, error)
+
+	// @transactional
+	SaveThreadSummary(ctx context.Context, req *SaveThreadSummaryRequest) (*domainmail.ThreadSummary, error)
+
+	SummarizeThread(ctx context.Context, req *SummarizeThreadRequest) (*domainmail.ThreadSummary, error)
 
 	// @transactional
 	BatchModifyThreads(ctx context.Context, req *BatchModifyThreadsRequest) error
@@ -103,6 +109,18 @@ type BatchModifyThreadsRequest struct {
 	InSpam           *bool
 }
 
+// SaveThreadSummaryRequest represents parameters to persist a thread summary produced by a workflow run.
+type SaveThreadSummaryRequest struct {
+	Summary *domainmail.ThreadSummary
+}
+
+// SummarizeThreadRequest represents parameters to generate or refresh an AI summary of a thread.
+type SummarizeThreadRequest struct {
+	ID              string
+	ForceRegenerate bool
+	Language        string
+}
+
 // CreateDraftRequest represents parameters to create a new draft.
 type CreateDraftRequest struct {
 	Draft *domainmail.Draft
@@ -158,6 +176,13 @@ type PruneWindowAndBodiesRequest struct {
 	Now time.Time
 }
 
+// SummarizeFlowClient defines typed execution of the built-in thread summarization flow.
+//
+// @Mock
+type SummarizeFlowClient interface {
+	Execute(ctx context.Context, input SummarizeThreadFlowInput) (*platformworkflow.FlowRun, error)
+}
+
 // Dependencies encapsulates domain stores and external services for the Coordinator.
 type Dependencies struct {
 	DomainService     *domainmail.Service
@@ -166,10 +191,12 @@ type Dependencies struct {
 	MessageStore      domainmail.MessageStore
 	DraftStore        domainmail.DraftStore
 	SyncStateStore    domainmail.SyncStateStore
+	SummaryStore      domainmail.ThreadSummaryStore
 	AccountStore      connector.Store
 	TokenManager      *connector.TokenManager
 	ExternalProviders map[string]domainmail.ExternalMailProvider
 	Events            eventbus.EventPublisher
+	SummarizeFlow     SummarizeFlowClient
 	HMACSecret        []byte
 }
 
@@ -180,10 +207,12 @@ type coordinator struct {
 	messageStore      domainmail.MessageStore
 	draftStore        domainmail.DraftStore
 	syncStateStore    domainmail.SyncStateStore
+	summaryStore      domainmail.ThreadSummaryStore
 	accountStore      connector.Store
 	tokenManager      *connector.TokenManager
 	externalProviders map[string]domainmail.ExternalMailProvider
 	events            eventbus.EventPublisher
+	summarizeFlow     SummarizeFlowClient
 	hmacSecret        []byte
 }
 
@@ -196,10 +225,12 @@ func NewCoordinator(deps Dependencies) Coordinator {
 		messageStore:      deps.MessageStore,
 		draftStore:        deps.DraftStore,
 		syncStateStore:    deps.SyncStateStore,
+		summaryStore:      deps.SummaryStore,
 		accountStore:      deps.AccountStore,
 		tokenManager:      deps.TokenManager,
 		externalProviders: deps.ExternalProviders,
 		events:            deps.Events,
+		summarizeFlow:     deps.SummarizeFlow,
 		hmacSecret:        deps.HMACSecret,
 	}
 }

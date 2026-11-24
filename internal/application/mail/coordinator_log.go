@@ -123,6 +123,54 @@ func (l *LoggingCoordinator) ModifyThread(ctx context.Context, req *ModifyThread
 	return res, nil
 }
 
+// SaveThreadSummary executes next.SaveThreadSummary and logs execution duration and errors.
+func (l *LoggingCoordinator) SaveThreadSummary(ctx context.Context, req *SaveThreadSummaryRequest) (*domainmail.ThreadSummary, error) {
+	start := time.Now()
+	res, err := l.next.SaveThreadSummary(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "mail.SaveThreadSummary failed",
+			log.String("component", "mail"),
+			log.String("operation", "SaveThreadSummary"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "mail.SaveThreadSummary completed",
+		log.String("component", "mail"),
+		log.String("operation", "SaveThreadSummary"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// SummarizeThread executes next.SummarizeThread and logs execution duration and errors.
+func (l *LoggingCoordinator) SummarizeThread(ctx context.Context, req *SummarizeThreadRequest) (*domainmail.ThreadSummary, error) {
+	start := time.Now()
+	res, err := l.next.SummarizeThread(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "mail.SummarizeThread failed",
+			log.String("component", "mail"),
+			log.String("operation", "SummarizeThread"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "mail.SummarizeThread completed",
+		log.String("component", "mail"),
+		log.String("operation", "SummarizeThread"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
 // BatchModifyThreads executes next.BatchModifyThreads and logs execution duration and errors.
 func (l *LoggingCoordinator) BatchModifyThreads(ctx context.Context, req *BatchModifyThreadsRequest) error {
 	start := time.Now()

@@ -159,6 +159,8 @@ type Coordinator interface {
 
 	ExecuteFlow(ctx context.Context, req *ExecuteFlowRequest) (*workflow.FlowRun, error)
 
+	ExecuteSystemFlowRaw(ctx context.Context, systemKey string, input map[string]any) (*workflow.FlowRun, error)
+
 	// @transactional
 	InvokeWebhookTrigger(ctx context.Context, req *InvokeWebhookTriggerRequest) (*workflow.FlowRun, error)
 
@@ -437,6 +439,37 @@ func (c *coordinator) ExecuteFlow(ctx context.Context, req *ExecuteFlowRequest) 
 	})
 	if err != nil {
 		return nil, errors.E(op, err)
+	}
+	return run, nil
+}
+
+// ExecuteSystemFlowRaw executes a built-in system flow (system.* key) for the
+// active space. Any space member (including viewers) may invoke system flows:
+// the role is elevated to member internally while ExecuteFlow keeps its
+// global write-access guard for user-authored flows.
+func (c *coordinator) ExecuteSystemFlowRaw(ctx context.Context, systemKey string, input map[string]any) (*workflow.FlowRun, error) {
+	const op errors.Op = "application/workflow.ExecuteSystemFlowRaw"
+
+	if !strings.HasPrefix(strings.TrimSpace(systemKey), "system.") {
+		return nil, errors.E(op, errors.Invalid, "system flow key must start with \"system.\"")
+	}
+	if _, err := getSpaceID(ctx, op); err != nil {
+		return nil, err
+	}
+
+	run, err := c.ExecuteFlow(auth.WithSpaceRole(ctx, string(space.RoleMember)), &ExecuteFlowRequest{
+		ID:    strings.TrimSpace(systemKey),
+		Input: input,
+	})
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	if run.Status == workflow.RunFailed {
+		failure := "unknown workflow failure"
+		if run.Error != nil && run.Error.Message != "" {
+			failure = run.Error.Message
+		}
+		return run, errors.E(op, errors.Internal, fmt.Sprintf("system flow %q run failed: %s", systemKey, failure))
 	}
 	return run, nil
 }

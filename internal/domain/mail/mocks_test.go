@@ -794,6 +794,94 @@ func (mock *ThreadStoreMock) DeleteByConnectedAccountCalls() []struct {
 }
 
 // Compile-time interface assertion.
+var _ ThreadSummaryStore = (*ThreadSummaryStoreMock)(nil)
+
+// ThreadSummaryStoreMock is a mock implementation of ThreadSummaryStore.
+type ThreadSummaryStoreMock struct {
+	// GetFunc mocks the Get method.
+	GetFunc func(ctx context.Context, spaceID string, threadID string, language string) (*ThreadSummary, error)
+
+	// UpsertFunc mocks the Upsert method.
+	UpsertFunc func(ctx context.Context, summary *ThreadSummary) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Get []struct {
+			Ctx      context.Context
+			SpaceID  string
+			ThreadID string
+			Language string
+		}
+		Upsert []struct {
+			Ctx     context.Context
+			Summary *ThreadSummary
+		}
+	}
+	lockGet    sync.RWMutex
+	lockUpsert sync.RWMutex
+}
+
+// Get calls GetFunc.
+func (mock *ThreadSummaryStoreMock) Get(ctx context.Context, spaceID string, threadID string, language string) (*ThreadSummary, error) {
+	if mock.GetFunc == nil {
+		panic("ThreadSummaryStoreMock.GetFunc: method is nil but ThreadSummaryStore.Get was just called")
+	}
+	mock.lockGet.Lock()
+	mock.calls.Get = append(mock.calls.Get, struct {
+		Ctx      context.Context
+		SpaceID  string
+		ThreadID string
+		Language string
+	}{
+		Ctx:      ctx,
+		SpaceID:  spaceID,
+		ThreadID: threadID,
+		Language: language,
+	})
+	mock.lockGet.Unlock()
+	return mock.GetFunc(ctx, spaceID, threadID, language)
+}
+
+// GetCalls returns all calls made to Get.
+func (mock *ThreadSummaryStoreMock) GetCalls() []struct {
+	Ctx      context.Context
+	SpaceID  string
+	ThreadID string
+	Language string
+} {
+	mock.lockGet.RLock()
+	defer mock.lockGet.RUnlock()
+	return mock.calls.Get
+}
+
+// Upsert calls UpsertFunc.
+func (mock *ThreadSummaryStoreMock) Upsert(ctx context.Context, summary *ThreadSummary) error {
+	if mock.UpsertFunc == nil {
+		panic("ThreadSummaryStoreMock.UpsertFunc: method is nil but ThreadSummaryStore.Upsert was just called")
+	}
+	mock.lockUpsert.Lock()
+	mock.calls.Upsert = append(mock.calls.Upsert, struct {
+		Ctx     context.Context
+		Summary *ThreadSummary
+	}{
+		Ctx:     ctx,
+		Summary: summary,
+	})
+	mock.lockUpsert.Unlock()
+	return mock.UpsertFunc(ctx, summary)
+}
+
+// UpsertCalls returns all calls made to Upsert.
+func (mock *ThreadSummaryStoreMock) UpsertCalls() []struct {
+	Ctx     context.Context
+	Summary *ThreadSummary
+} {
+	mock.lockUpsert.RLock()
+	defer mock.lockUpsert.RUnlock()
+	return mock.calls.Upsert
+}
+
+// Compile-time interface assertion.
 var _ MessageStore = (*MessageStoreMock)(nil)
 
 // MessageStoreMock is a mock implementation of MessageStore.

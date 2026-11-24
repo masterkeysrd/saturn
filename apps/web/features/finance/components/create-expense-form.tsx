@@ -121,7 +121,11 @@ export function CreateExpenseForm({
         err instanceof Error
           ? err.message
           : t("finance.transactions.expenseForm.recordFailedDesc")
-      toast.add({ title: t("finance.transactions.expenseForm.recordFailed"), description: msg, type: "error" })
+      toast.add({
+        title: t("finance.transactions.expenseForm.recordFailed"),
+        description: msg,
+        type: "error",
+      })
     },
   })
 
@@ -131,7 +135,11 @@ export function CreateExpenseForm({
         err instanceof Error
           ? err.message
           : t("finance.transactions.expenseForm.updateFailedDesc")
-      toast.add({ title: t("finance.transactions.expenseForm.updateFailed"), description: msg, type: "error" })
+      toast.add({
+        title: t("finance.transactions.expenseForm.updateFailed"),
+        description: msg,
+        type: "error",
+      })
     },
   })
 

@@ -26,6 +26,7 @@ const (
 	MailService_DeleteMailbox_FullMethodName      = "/saturn.mail.v1.MailService/DeleteMailbox"
 	MailService_ListThreads_FullMethodName        = "/saturn.mail.v1.MailService/ListThreads"
 	MailService_GetThread_FullMethodName          = "/saturn.mail.v1.MailService/GetThread"
+	MailService_SummarizeThread_FullMethodName    = "/saturn.mail.v1.MailService/SummarizeThread"
 	MailService_ModifyThread_FullMethodName       = "/saturn.mail.v1.MailService/ModifyThread"
 	MailService_BatchModifyThreads_FullMethodName = "/saturn.mail.v1.MailService/BatchModifyThreads"
 	MailService_ListDrafts_FullMethodName         = "/saturn.mail.v1.MailService/ListDrafts"
@@ -55,6 +56,8 @@ type MailServiceClient interface {
 	ListThreads(ctx context.Context, in *ListThreadsRequest, opts ...grpc.CallOption) (*ListThreadsResponse, error)
 	// Retrieves details of a specific thread by ID, hydrating all messages and bodies.
 	GetThread(ctx context.Context, in *GetThreadRequest, opts ...grpc.CallOption) (*Thread, error)
+	// Generates or refreshes the AI summary of an email thread.
+	SummarizeThread(ctx context.Context, in *SummarizeThreadRequest, opts ...grpc.CallOption) (*ThreadSummary, error)
 	// Applies label and status modifications to a single email thread.
 	ModifyThread(ctx context.Context, in *ModifyThreadRequest, opts ...grpc.CallOption) (*Thread, error)
 	// Applies label and status modifications to multiple email threads in batch.
@@ -135,6 +138,16 @@ func (c *mailServiceClient) GetThread(ctx context.Context, in *GetThreadRequest,
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Thread)
 	err := c.cc.Invoke(ctx, MailService_GetThread_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mailServiceClient) SummarizeThread(ctx context.Context, in *SummarizeThreadRequest, opts ...grpc.CallOption) (*ThreadSummary, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ThreadSummary)
+	err := c.cc.Invoke(ctx, MailService_SummarizeThread_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -240,6 +253,8 @@ type MailServiceServer interface {
 	ListThreads(context.Context, *ListThreadsRequest) (*ListThreadsResponse, error)
 	// Retrieves details of a specific thread by ID, hydrating all messages and bodies.
 	GetThread(context.Context, *GetThreadRequest) (*Thread, error)
+	// Generates or refreshes the AI summary of an email thread.
+	SummarizeThread(context.Context, *SummarizeThreadRequest) (*ThreadSummary, error)
 	// Applies label and status modifications to a single email thread.
 	ModifyThread(context.Context, *ModifyThreadRequest) (*Thread, error)
 	// Applies label and status modifications to multiple email threads in batch.
@@ -282,6 +297,9 @@ func (UnimplementedMailServiceServer) ListThreads(context.Context, *ListThreadsR
 }
 func (UnimplementedMailServiceServer) GetThread(context.Context, *GetThreadRequest) (*Thread, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetThread not implemented")
+}
+func (UnimplementedMailServiceServer) SummarizeThread(context.Context, *SummarizeThreadRequest) (*ThreadSummary, error) {
+	return nil, status.Error(codes.Unimplemented, "method SummarizeThread not implemented")
 }
 func (UnimplementedMailServiceServer) ModifyThread(context.Context, *ModifyThreadRequest) (*Thread, error) {
 	return nil, status.Error(codes.Unimplemented, "method ModifyThread not implemented")
@@ -431,6 +449,24 @@ func _MailService_GetThread_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MailServiceServer).GetThread(ctx, req.(*GetThreadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MailService_SummarizeThread_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SummarizeThreadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MailServiceServer).SummarizeThread(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MailService_SummarizeThread_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MailServiceServer).SummarizeThread(ctx, req.(*SummarizeThreadRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -609,6 +645,10 @@ var MailService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetThread",
 			Handler:    _MailService_GetThread_Handler,
+		},
+		{
+			MethodName: "SummarizeThread",
+			Handler:    _MailService_SummarizeThread_Handler,
 		},
 		{
 			MethodName: "ModifyThread",

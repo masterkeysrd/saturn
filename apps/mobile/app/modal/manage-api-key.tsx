@@ -48,7 +48,10 @@ function computeExpirationISO(
   ).toISOString()
 }
 
-const EXPIRATION_PRESET_LABEL_KEYS: Record<APIKeyExpirationPreset, TranslationKey> = {
+const EXPIRATION_PRESET_LABEL_KEYS: Record<
+  APIKeyExpirationPreset,
+  TranslationKey
+> = {
   "30d": "settings.apiKeys.preset30d",
   "90d": "settings.apiKeys.preset90d",
   "1y": "settings.apiKeys.preset1y",
@@ -164,7 +167,8 @@ export default function ManageAPIKeyModal() {
       })
       if (!parsed.success) {
         setErrorMessage(
-          parsed.error.issues[0]?.message || t("settings.apiKeys.checkFormInputs")
+          parsed.error.issues[0]?.message ||
+            t("settings.apiKeys.checkFormInputs")
         )
         return
       }
@@ -242,9 +246,7 @@ export default function ManageAPIKeyModal() {
     } catch (err: unknown) {
       haptics.error()
       setErrorMessage(
-        err instanceof Error
-          ? err.message
-          : t("settings.apiKeys.createFailed")
+        err instanceof Error ? err.message : t("settings.apiKeys.createFailed")
       )
     }
   }

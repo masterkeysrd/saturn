@@ -78,6 +78,10 @@
       "display_name": "Modify Mail Labels",
       "description": "Adds/removes mailbox labels or archives an email thread."
     },
+    "mail.save_thread_summary": {
+      "display_name": "Save Thread Summary",
+      "description": "Persists an AI-generated TL;DR, key points, and action items as the cached summary of an email thread."
+    },
     "output": {
       "display_name": "Output",
       "description": "Terminates the current path and sets FlowRun.output for synchronous callers."
@@ -147,6 +151,10 @@
     "mail.message": {
       "display_name": "Get Mail Message",
       "description": "Loads email metadata, cached plain/HTML body, and mail:// attachment artifact references."
+    },
+    "mail.thread": {
+      "display_name": "Get Mail Thread",
+      "description": "Loads a thread with chronological sanitized plain-text message bodies capped for LLM token budgets."
     }
   },
   "cel_helpers": {

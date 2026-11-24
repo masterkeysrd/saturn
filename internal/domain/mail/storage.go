@@ -96,6 +96,17 @@ type ListThreadsFilter struct {
 	Offset             int
 }
 
+// ThreadSummaryStore defines persistence operations for ThreadSummary entities.
+//
+// @Mock
+type ThreadSummaryStore interface {
+	// Get retrieves a ThreadSummary by space ID, thread ID, and language.
+	Get(ctx context.Context, spaceID, threadID, language string) (*ThreadSummary, error)
+
+	// Upsert inserts or updates a ThreadSummary keyed by (thread_id, language).
+	Upsert(ctx context.Context, summary *ThreadSummary) error
+}
+
 // MessageStore defines persistence operations for Message and MessageBody entities.
 //
 // @Mock

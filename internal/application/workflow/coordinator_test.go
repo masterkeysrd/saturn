@@ -3,6 +3,7 @@ package workflowapp
 import (
 	"context"
 	"encoding/json/v2"
+	"maps"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -206,6 +207,124 @@ func TestCoordinator_SystemFlows(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestCoordinator_ExecuteSystemFlowRaw(t *testing.T) {
+	tests := []struct {
+		name        string
+		ctx         context.Context
+		systemKey   string
+		input       map[string]any
+		wantErr     any
+		wantStatus  workflow.FlowRunStatus
+		wantMessage string
+	}{
+		{
+			name:       "member runs system flow with typed input passthrough",
+			ctx:        testSpaceCtx("spc_1", string(space.RoleMember)),
+			systemKey:  "system.mail.summarize_thread",
+			input:      map[string]any{"thread_id": "mth_1", "language": "es"},
+			wantStatus: workflow.RunCompleted,
+		},
+		{
+			name:       "viewer is elevated to member and runs system flow",
+			ctx:        testSpaceCtx("spc_1", string(space.RoleViewer)),
+			systemKey:  "system.mail.summarize_thread",
+			input:      map[string]any{"thread_id": "mth_1"},
+			wantStatus: workflow.RunCompleted,
+		},
+		{
+			name:      "non-system key rejected",
+			ctx:       testSpaceCtx("spc_1", string(space.RoleOwner)),
+			systemKey: "flw_user_flow",
+			wantErr:   errors.Invalid,
+		},
+		{
+			name:      "missing space context rejected",
+			ctx:       context.Background(),
+			systemKey: "system.mail.summarize_thread",
+			wantErr:   errors.Unauthenticated,
+		},
+		{
+			name:        "failed run surfaces internal error with message",
+			ctx:         testSpaceCtx("spc_1", string(space.RoleOwner)),
+			systemKey:   "system.mail.summarize_thread",
+			input:       map[string]any{"thread_id": "mth_boom"},
+			wantErr:     errors.Internal,
+			wantStatus:  workflow.RunFailed,
+			wantMessage: "llm exploded",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var gotInput map[string]any
+			ws := &WorkflowServiceMock{
+				ResolveFlowOrSeedSystemFunc: func(_ context.Context, _, id string) (*workflow.Flow, error) {
+					return &workflow.Flow{
+						ID:        id,
+						SpaceID:   "spc_1",
+						Name:      "System Flow",
+						IsEnabled: true,
+						Steps: []workflow.StepNode{
+							workflow.OutputStep(workflow.OutputStepConfig{
+								ID:    "out",
+								Value: map[string]any{"echo": "{{ input.thread_id }}"},
+							}),
+						},
+					}, nil
+				},
+				CreateOrResumeRunFunc: func(_ context.Context, run *workflow.FlowRun) (*workflow.FlowRun, bool, error) {
+					run.ID = "wfr_raw"
+					return run, true, nil
+				},
+			}
+			if tc.wantStatus == workflow.RunFailed {
+				ws.ExecuteFunc = func(_ context.Context, opts workflow.ExecuteOptions) (*workflow.FlowRun, error) {
+					gotInput = opts.Input
+					return &workflow.FlowRun{
+						ID:     "wfr_raw",
+						Status: workflow.RunFailed,
+						Error:  &workflow.FlowError{Message: "llm exploded"},
+					}, nil
+				}
+			} else {
+				ws.ExecuteFunc = func(_ context.Context, opts workflow.ExecuteOptions) (*workflow.FlowRun, error) {
+					gotInput = opts.Input
+					return newTestEngine(t, nil).Execute(t.Context(), opts)
+				}
+			}
+
+			coord := NewCoordinator(Dependencies{
+				Workflow:    ws,
+				SpaceLoader: defaultSpaceLoader(),
+				Transactor:  noopTransactor{},
+			})
+
+			run, err := coord.ExecuteSystemFlowRaw(tc.ctx, tc.systemKey, tc.input)
+			if tc.wantErr != nil {
+				if !errors.Is(err, tc.wantErr) {
+					t.Fatalf("ExecuteSystemFlowRaw() error = %v, want errors.Is %v", err, tc.wantErr)
+				}
+				if tc.wantMessage != "" && !strings.Contains(err.Error(), tc.wantMessage) {
+					t.Errorf("error = %q, want it to contain %q", err, tc.wantMessage)
+				}
+				if tc.wantStatus != "" && (run == nil || run.Status != tc.wantStatus) {
+					t.Errorf("run = %+v, want status %s", run, tc.wantStatus)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ExecuteSystemFlowRaw() unexpected error = %v", err)
+			}
+			if run.Status != tc.wantStatus {
+				t.Errorf("run.Status = %s, want %s", run.Status, tc.wantStatus)
+			}
+			if tc.input != nil && !maps.Equal(gotInput, tc.input) {
+				t.Errorf("flow input = %+v, want %+v", gotInput, tc.input)
+			}
+		})
+	}
 }
 
 func TestCoordinator_FlowCRUD(t *testing.T) {

@@ -169,6 +169,10 @@ func (t *TransactionalCoordinator) ExecuteFlow(ctx context.Context, req *Execute
 	return t.next.ExecuteFlow(ctx, req)
 }
 
+func (t *TransactionalCoordinator) ExecuteSystemFlowRaw(ctx context.Context, systemKey string, input map[string]any) (*workflow.FlowRun, error) {
+	return t.next.ExecuteSystemFlowRaw(ctx, systemKey, input)
+}
+
 // InvokeWebhookTrigger executes next.InvokeWebhookTrigger inside a database transaction.
 func (t *TransactionalCoordinator) InvokeWebhookTrigger(ctx context.Context, req *InvokeWebhookTriggerRequest) (*workflow.FlowRun, error) {
 	ctx, tx, err := t.txr.Begin(ctx)

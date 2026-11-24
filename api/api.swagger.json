@@ -6365,6 +6365,46 @@
         ]
       }
     },
+    "/v1/mail/threads/{id}:summarize": {
+      "post": {
+        "summary": "Generates or refreshes the AI summary of an email thread.",
+        "operationId": "MailService_SummarizeThread",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ThreadSummary"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Thread identifier to summarize.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MailServiceSummarizeThreadBody"
+            }
+          }
+        ],
+        "tags": [
+          "MailService"
+        ]
+      }
+    },
     "/v1/mail/threads:batchModify": {
       "post": {
         "summary": "Applies label and status modifications to multiple email threads in batch.",
@@ -10681,6 +10721,20 @@
       "type": "object",
       "description": "Request to send an existing draft."
     },
+    "MailServiceSummarizeThreadBody": {
+      "type": "object",
+      "properties": {
+        "forceRegenerate": {
+          "type": "boolean",
+          "description": "When true, regenerates the summary even if a fresh cached summary exists."
+        },
+        "language": {
+          "type": "string",
+          "description": "Optional summary language override (\"en\" or \"es\"), falling back to the negotiated request language."
+        }
+      },
+      "description": "Request to generate or refresh the AI summary of a thread."
+    },
     "MessageAdminRetryDeliveryBody": {
       "type": "object",
       "description": "Request message for MessageAdmin.RetryDelivery."
@@ -11840,6 +11894,10 @@
             "$ref": "#/definitions/v1Message"
           },
           "description": "Chronological messages in the thread (populated on GetThread)."
+        },
+        "summary": {
+          "$ref": "#/definitions/v1ThreadSummary",
+          "description": "Built-in AI summary of the thread for the negotiated language (populated on GetThread)."
         }
       },
       "description": "Thread models an aggregated email conversation consisting of one or more messages."
@@ -18447,6 +18505,65 @@
         }
       },
       "description": "ThreadState stores runtime state for a thread (active run, pending approvals, memory)."
+    },
+    "v1ThreadSummary": {
+      "type": "object",
+      "properties": {
+        "threadId": {
+          "type": "string",
+          "description": "Summarized thread identifier (mth_...)."
+        },
+        "language": {
+          "type": "string",
+          "description": "Language tag the summary was generated in (e.g. \"en\", \"es\")."
+        },
+        "tldr": {
+          "type": "string",
+          "description": "Concise plain-language summary paragraph."
+        },
+        "keyPoints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Distinct key points extracted from the conversation."
+        },
+        "actionItems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Action items requested or implied by the conversation."
+        },
+        "lastMessageId": {
+          "type": "string",
+          "description": "Identifier of the latest message covered by the summary."
+        },
+        "lastMessageAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of the latest message covered by the summary."
+        },
+        "messageCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of messages covered by the summary."
+        },
+        "isStale": {
+          "type": "boolean",
+          "description": "Whether newer messages exist in the thread since this summary was generated."
+        },
+        "flowRunId": {
+          "type": "string",
+          "description": "Workflow run that produced this summary, when available."
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the summary record was last updated."
+        }
+      },
+      "description": "ThreadSummary models a built-in AI-generated summary of an email thread conversation."
     },
     "v1TokenUsage": {
       "type": "object",

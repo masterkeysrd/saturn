@@ -225,6 +225,19 @@ func (h *Handler) GetThread(ctx context.Context, req *mailv1.GetThreadRequest) (
 	return mapThreadProjectionToProto(proj), nil
 }
 
+// SummarizeThread generates or refreshes the AI summary of an email thread.
+func (h *Handler) SummarizeThread(ctx context.Context, req *mailv1.SummarizeThreadRequest) (*mailv1.ThreadSummary, error) {
+	summary, err := h.coordinator.SummarizeThread(ctx, &appmail.SummarizeThreadRequest{
+		ID:              req.GetId(),
+		ForceRegenerate: req.GetForceRegenerate(),
+		Language:        req.GetLanguage(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mapDomainThreadSummaryToProto(summary, nil), nil
+}
+
 // ModifyThread modifies labels or flags on an email thread.
 func (h *Handler) ModifyThread(ctx context.Context, req *mailv1.ModifyThreadRequest) (*mailv1.Thread, error) {
 	th, err := h.coordinator.ModifyThread(ctx, &appmail.ModifyThreadRequest{
@@ -541,6 +554,31 @@ func mapDomainAttachmentsToProto(attachments []domainmail.AttachmentMeta) []*mai
 	return protoAtts
 }
 
+func mapDomainThreadSummaryToProto(s *domainmail.ThreadSummary, thread *domainmail.Thread) *mailv1.ThreadSummary {
+	if s == nil {
+		return nil
+	}
+	flowRunID := ""
+	if s.FlowRunID != nil {
+		flowRunID = *s.FlowRunID
+	}
+	isStale := thread != nil && s.IsStale(thread)
+
+	return &mailv1.ThreadSummary{
+		ThreadId:      s.ThreadID,
+		Language:      s.Language,
+		Tldr:          s.TLDR,
+		KeyPoints:     s.KeyPoints,
+		ActionItems:   s.ActionItems,
+		LastMessageId: s.LastMessageID,
+		LastMessageAt: timestamppb.New(s.LastMessageAt),
+		MessageCount:  int32(s.MessageCount),
+		IsStale:       isStale,
+		FlowRunId:     flowRunID,
+		UpdateTime:    timestamppb.New(s.UpdateTime),
+	}
+}
+
 func mapDomainThreadToProto(t *domainmail.Thread) *mailv1.Thread {
 	if t == nil {
 		return nil
@@ -579,6 +617,10 @@ func mapThreadProjectionToProto(proj *mailaggregator.ThreadProjection) *mailv1.T
 		return nil
 	}
 	pbThread := mapDomainThreadToProto(proj.Thread)
+
+	if proj.Summary != nil {
+		pbThread.Summary = mapDomainThreadSummaryToProto(proj.Summary, proj.Thread)
+	}
 
 	protoMessages := make([]*mailv1.Message, len(proj.Messages))
 	for i, mp := range proj.Messages {

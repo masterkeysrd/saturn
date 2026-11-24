@@ -19,27 +19,64 @@ import {
   Trash2,
   Star,
   CalendarPlus,
+  Mail,
   Reply,
   ReplyAll,
   Forward,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
+  CornerUpLeft,
   Download,
   Paperclip,
+  Sparkles,
+  RefreshCw,
 } from "lucide-react-native"
 import {
   useMailThread,
   useModifyThread,
+  useSummarizeMailThread,
   useTimezone,
   useI18n,
 } from "@saturn/hooks"
 import type { Message, Attachment } from "@saturn/api/saturn/mail/v1/mail"
-import { formatAttachmentBytes } from "@saturn/core"
+import {
+  formatAttachmentBytes,
+  computeHumanizedMailTimestamp,
+  partitionThreadMessagesForSuperCollapse,
+  type HumanizedMailTimestamp,
+} from "@saturn/core"
 import { getApiBaseUrl } from "@/lib/config"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { useToast } from "@/components/ui/toast"
 import { MessageWebView } from "@/components/mail/message-webview"
+import { ThreadAvatar } from "@/components/mail/thread-avatar"
+import type { TranslationKey } from "@saturn/i18n"
+
+function translateHumanizedMailTimestamp(
+  stamp: HumanizedMailTimestamp,
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+): string {
+  switch (stamp.kind) {
+    case "just_now":
+      return t("mail.threadTime.justNow")
+    case "minutes_ago":
+      return t("mail.threadTime.minutesAgo", { count: stamp.count })
+    case "hours_ago":
+      return stamp.count === 1
+        ? t("mail.threadTime.hourAgo")
+        : t("mail.threadTime.hoursAgo", { count: stamp.count })
+    case "today":
+      return t("common.today")
+    case "yesterday":
+      return t("common.yesterday")
+    case "days_ago":
+      return t("mail.threadTime.daysAgo", { count: stamp.count })
+    case "date_dmy":
+      return stamp.formatted
+  }
+}
 
 export default function MobileThreadReaderScreen() {
   const router = useRouter()
@@ -53,7 +90,44 @@ export default function MobileThreadReaderScreen() {
   const { mutate: modifyThread } = modifyMutation
   const toast = useToast()
   const tz = useTimezone()
-  const { t } = useI18n()
+  const { t, language } = useI18n()
+
+  const summarizeMutation = useSummarizeMailThread({
+    onError: () => {
+      toast.show({ title: t("mail.summary.failed"), type: "error" })
+    },
+  })
+  const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(false)
+
+  useEffect(() => {
+    setIsSummaryCollapsed(false)
+  }, [threadId])
+
+  const handleSummarize = () => {
+    if (!thread) return
+    haptics.light()
+    setIsSummaryCollapsed(false)
+    if (!thread.summary) {
+      summarizeMutation.mutate({
+        id: thread.id,
+        forceRegenerate: false,
+        language,
+      })
+    } else if (thread.summary.isStale) {
+      summarizeMutation.mutate({
+        id: thread.id,
+        forceRegenerate: true,
+        language,
+      })
+    }
+  }
+
+  const handleRegenerateSummary = () => {
+    if (!thread) return
+    haptics.light()
+    setIsSummaryCollapsed(false)
+    summarizeMutation.mutate({ id: thread.id, forceRegenerate: true, language })
+  }
 
   // Auto-mark conversation as read when opened
   const markedAsReadRef = useRef<Set<string>>(new Set())
@@ -77,25 +151,31 @@ export default function MobileThreadReaderScreen() {
   // Track which messages are collapsed/expanded
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [isMiddleUnfolded, setIsMiddleUnfolded] = useState(false)
+  const [detailsExpandedIds, setDetailsExpandedIds] = useState<Set<string>>(
+    new Set()
+  )
+
+  useEffect(() => {
+    setIsMiddleUnfolded(false)
+    setDetailsExpandedIds(new Set())
+  }, [threadId])
 
   const messages = useMemo(() => thread?.messages || [], [thread?.messages])
 
-  // By default, in short threads expand all; in long threads, expand the latest and any unread
+  // Gmail canvas: expand only the latest message plus any unread ones
   useEffect(() => {
-    if (messages.length > 0) {
-      if (messages.length <= 2) {
-        setExpandedIds(new Set(messages.map((m) => m.id)))
-      } else {
-        const initial = new Set<string>()
-        // Expand latest message
-        initial.add(messages[messages.length - 1].id)
-        // Expand unread messages
-        for (const m of messages) {
-          if (m.isUnread) initial.add(m.id)
-        }
-        setExpandedIds(initial)
-      }
+    if (messages.length === 0) return
+    if (messages.length === 1) {
+      setExpandedIds(new Set([messages[0].id]))
+      return
     }
+    const initial = new Set<string>()
+    initial.add(messages[messages.length - 1].id)
+    for (const m of messages) {
+      if (m.isUnread) initial.add(m.id)
+    }
+    setExpandedIds(initial)
   }, [messages])
 
   const toggleExpand = (id: string) => {
@@ -111,6 +191,32 @@ export default function MobileThreadReaderScreen() {
     })
   }
 
+  const toggleDetailsExpanded = (id: string) => {
+    haptics.selection()
+    setDetailsExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const humanizedTimeText = useCallback(
+    (date: string | undefined): string => {
+      if (!date) return ""
+      const stamp = computeHumanizedMailTimestamp(date, {
+        now: tz.now(),
+        timeZone: tz.timezone,
+      })
+      if (!stamp) return ""
+      return translateHumanizedMailTimestamp(stamp, t)
+    },
+    [t, tz]
+  )
+
   // Header quick actions
   const handleToggleStar = () => {
     if (!thread) return
@@ -119,6 +225,16 @@ export default function MobileThreadReaderScreen() {
       id: thread.id,
       req: { id: thread.id, isStarred: !thread.isStarred },
     })
+  }
+
+  const handleMarkUnread = () => {
+    if (!thread) return
+    haptics.medium()
+    modifyMutation.mutate({
+      id: thread.id,
+      req: { id: thread.id, isUnread: true },
+    })
+    router.back()
   }
 
   const handleArchive = () => {
@@ -301,6 +417,8 @@ export default function MobileThreadReaderScreen() {
         options={{
           headerShown: true,
           headerTitle: "",
+          headerStyle: { backgroundColor: colors.background },
+          headerShadowVisible: false,
           ...(Platform.OS === "ios"
             ? {
                 unstable_headerRightItems: () => [
@@ -315,6 +433,12 @@ export default function MobileThreadReaderScreen() {
                       ? "#eab308"
                       : colors.textPrimary,
                     onPress: handleToggleStar,
+                  },
+                  {
+                    type: "button",
+                    label: t("mail.threadHeader.markUnread"),
+                    icon: { type: "sfSymbol", name: "envelope" },
+                    onPress: handleMarkUnread,
                   },
                   {
                     type: "button",
@@ -345,6 +469,9 @@ export default function MobileThreadReaderScreen() {
                     <Pressable
                       testID="mobile-thread-action-star"
                       hitSlop={8}
+                      accessibilityLabel={
+                        thread.isStarred ? t("mail.unstar") : t("mail.star")
+                      }
                       onPress={handleToggleStar}
                       style={styles.headerBtn}
                     >
@@ -356,8 +483,19 @@ export default function MobileThreadReaderScreen() {
                     </Pressable>
 
                     <Pressable
+                      testID="mobile-thread-action-mark-unread"
+                      hitSlop={8}
+                      accessibilityLabel={t("mail.threadHeader.markUnread")}
+                      onPress={handleMarkUnread}
+                      style={styles.headerBtn}
+                    >
+                      <Mail size={19} color={colors.textMuted} />
+                    </Pressable>
+
+                    <Pressable
                       testID="mobile-thread-action-archive"
                       hitSlop={8}
+                      accessibilityLabel={t("mail.archive")}
                       onPress={handleArchive}
                       style={styles.headerBtn}
                     >
@@ -367,6 +505,7 @@ export default function MobileThreadReaderScreen() {
                     <Pressable
                       testID="mobile-thread-action-trash"
                       hitSlop={8}
+                      accessibilityLabel={t("common.delete")}
                       onPress={handleTrash}
                       style={styles.headerBtn}
                     >
@@ -377,6 +516,7 @@ export default function MobileThreadReaderScreen() {
                     <Pressable
                       testID="mobile-thread-action-create-event"
                       hitSlop={8}
+                      accessibilityLabel={t("mail.createEventShort")}
                       onPress={handleCreateEvent}
                       style={[styles.headerBtn, styles.createEventBtn]}
                     >
@@ -397,24 +537,188 @@ export default function MobileThreadReaderScreen() {
           <Text style={styles.subjectText}>
             {thread.subject || t("mail.noSubject")}
           </Text>
-          <Text style={styles.subjectMeta}>
-            {messages.length === 1
-              ? t("mail.messageSingle", { count: messages.length })
-              : t("mail.messagesCount", { count: messages.length })}
-          </Text>
+          <View style={styles.subjectMetaRow}>
+            <Pressable
+              testID="mobile-summarize-thread-btn"
+              onPress={handleSummarize}
+              hitSlop={8}
+              style={styles.summarizePill}
+            >
+              <Sparkles size={13} color={colors.brandSecondary} />
+              <Text style={styles.summarizePillText}>
+                {t("mail.summarize")}
+              </Text>
+            </Pressable>
+          </View>
         </View>
+
+        {/* In-Place AI Summary Card */}
+        {(Boolean(thread.summary) || summarizeMutation.isPending) && (
+          <View testID="mobile-thread-summary-card" style={styles.summaryCard}>
+            <View style={styles.summaryHeaderRow}>
+              <View style={styles.summaryHeaderLeft}>
+                <Sparkles size={14} color={colors.brandSecondary} />
+                <Text style={styles.summaryTitle}>
+                  {t("mail.summary.title")}
+                </Text>
+                {thread.summary?.isStale && !summarizeMutation.isPending && (
+                  <Pressable
+                    testID="mobile-summary-update-btn"
+                    onPress={handleRegenerateSummary}
+                    hitSlop={8}
+                    style={styles.stalePill}
+                  >
+                    <Text style={styles.stalePillText}>
+                      {t("mail.summary.staleBadge")} ·{" "}
+                      {t("mail.summary.updateSummary")}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+              <View style={styles.summaryHeaderRight}>
+                <Pressable
+                  testID="mobile-summary-regenerate-btn"
+                  onPress={handleRegenerateSummary}
+                  hitSlop={8}
+                  style={styles.summaryIconBtn}
+                >
+                  <RefreshCw
+                    size={14}
+                    color={colors.textMuted}
+                    style={
+                      summarizeMutation.isPending
+                        ? styles.spinningIcon
+                        : undefined
+                    }
+                  />
+                </Pressable>
+                <Pressable
+                  testID="mobile-summary-toggle-btn"
+                  onPress={() => {
+                    haptics.selection()
+                    setIsSummaryCollapsed((prev) => !prev)
+                  }}
+                  hitSlop={8}
+                  style={styles.summaryIconBtn}
+                >
+                  {isSummaryCollapsed ? (
+                    <ChevronDown size={15} color={colors.textMuted} />
+                  ) : (
+                    <ChevronUp size={15} color={colors.textMuted} />
+                  )}
+                </Pressable>
+              </View>
+            </View>
+
+            {summarizeMutation.isPending && !thread.summary && (
+              <View style={styles.summaryLoadingRow}>
+                <ActivityIndicator size="small" color={colors.brandSecondary} />
+                <Text style={styles.summaryLoadingText}>
+                  {t("mail.summary.summarizing")}
+                </Text>
+              </View>
+            )}
+
+            {!isSummaryCollapsed && thread.summary && (
+              <View style={styles.summaryBody}>
+                <Text style={styles.summaryTldr}>{thread.summary.tldr}</Text>
+
+                {thread.summary.keyPoints.length > 0 && (
+                  <View style={styles.summarySection}>
+                    <View style={styles.summarySectionDivider} />
+                    <Text style={styles.summarySectionTitle}>
+                      {t("mail.summary.keyPoints")}
+                    </Text>
+                    {thread.summary.keyPoints.map((point) => (
+                      <View key={point} style={styles.summaryBulletRow}>
+                        <Text style={styles.summaryBulletDot}>•</Text>
+                        <Text style={styles.summaryBulletText}>{point}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {thread.summary.actionItems.length > 0 && (
+                  <View style={styles.summarySection}>
+                    <View style={styles.summarySectionDivider} />
+                    <Text style={styles.summarySectionTitle}>
+                      {t("mail.summary.actionItems")}
+                    </Text>
+                    {thread.summary.actionItems.map((item, idx) => (
+                      <View
+                        key={item}
+                        style={[
+                          styles.actionItemRow,
+                          idx > 0 && styles.actionItemDivider,
+                        ]}
+                      >
+                        <ChevronRight size={13} color={colors.brandSecondary} />
+                        <Text style={styles.summaryBulletText}>{item}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Message Cards List */}
         <View style={styles.messagesList}>
-          {messages.map((msg, index) => {
+          {partitionThreadMessagesForSuperCollapse(
+            messages,
+            isMiddleUnfolded
+          ).map((segment) => {
+            if (segment.type === "folded") {
+              return (
+                <Pressable
+                  key={segment.key}
+                  testID="mobile-super-collapse-btn"
+                  accessibilityLabel={t(
+                    "mail.superCollapse.hiddenMessagesCount",
+                    {
+                      count: segment.count,
+                    }
+                  )}
+                  onPress={() => {
+                    haptics.selection()
+                    setIsMiddleUnfolded(true)
+                  }}
+                  style={styles.superCollapseRow}
+                >
+                  <View style={styles.superCollapseTrack}>
+                    <View style={styles.superCollapseHairline} />
+                    <View style={styles.stackedDeckLip} />
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => {
+                      haptics.selection()
+                      setIsMiddleUnfolded(true)
+                    }}
+                    style={styles.superCollapsePill}
+                  >
+                    <Text style={styles.superCollapsePillText}>
+                      {segment.count}
+                    </Text>
+                  </Pressable>
+                  <View style={styles.superCollapseTrack}>
+                    <View style={styles.superCollapseHairline} />
+                    <View style={styles.stackedDeckLip} />
+                  </View>
+                </Pressable>
+              )
+            }
+
+            const msg = segment.message
             const isExpanded = expandedIds.has(msg.id)
             const senderName =
               msg.from?.name || msg.from?.email || t("mail.unknown")
-            const timeStr = msg.sentAt ? tz.formatDateTime(msg.sentAt) : ""
-            const initials = senderName.slice(0, 2).toUpperCase()
+            const humanizedStamp = humanizedTimeText(msg.sentAt)
+            const detailsOpen = detailsExpandedIds.has(msg.id)
 
             if (!isExpanded) {
-              // Collapsed 1-line accordion row
+              // Collapsed 2-line accordion row (Gmail canvas)
               return (
                 <Pressable
                   key={msg.id}
@@ -422,17 +726,29 @@ export default function MobileThreadReaderScreen() {
                   onPress={() => toggleExpand(msg.id)}
                   style={styles.collapsedCard}
                 >
-                  <View style={styles.collapsedHeader}>
-                    <View style={styles.avatarTiny}>
-                      <Text style={styles.avatarTinyText}>{initials}</Text>
+                  <ThreadAvatar
+                    name={msg.from?.name}
+                    email={msg.from?.email}
+                    avatarUrl={msg.from?.avatarUrl}
+                    isVerified={msg.from?.isVerified}
+                    size={36}
+                  />
+                  <View style={styles.collapsedContent}>
+                    <View style={styles.collapsedTopRow}>
+                      {msg.isUnread && <View style={styles.unreadDot} />}
+                      <Text numberOfLines={1} style={styles.collapsedSender}>
+                        {senderName}
+                      </Text>
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <Paperclip size={13} color={colors.textMuted} />
+                      )}
+                      <Text style={styles.collapsedTimeText}>
+                        {humanizedStamp}
+                      </Text>
                     </View>
-                    <Text numberOfLines={1} style={styles.collapsedSender}>
-                      {senderName}
-                    </Text>
                     <Text numberOfLines={1} style={styles.collapsedSnippet}>
                       {msg.snippet || ""}
                     </Text>
-                    <ChevronRight size={15} color={colors.textMuted} />
                   </View>
                 </Pressable>
               )
@@ -450,25 +766,78 @@ export default function MobileThreadReaderScreen() {
                   onPress={() => toggleExpand(msg.id)}
                   style={styles.expandedHeader}
                 >
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{initials}</Text>
-                  </View>
+                  <ThreadAvatar
+                    name={msg.from?.name}
+                    email={msg.from?.email}
+                    avatarUrl={msg.from?.avatarUrl}
+                    isVerified={msg.from?.isVerified}
+                    size={36}
+                  />
 
                   <View style={styles.senderCol}>
                     <View style={styles.nameRow}>
                       <Text numberOfLines={1} style={styles.senderFullName}>
                         {senderName}
                       </Text>
-                      <Text style={styles.msgTimeText}>{timeStr}</Text>
+                      <Text style={styles.msgTimeText}>{humanizedStamp}</Text>
+                      <Pressable
+                        testID={`quick-reply-btn-${msg.id}`}
+                        hitSlop={8}
+                        accessibilityLabel={t("mail.reply")}
+                        onPress={(e) => {
+                          e.stopPropagation()
+                          handleReply("DRAFT_MODE_REPLY", msg)
+                        }}
+                        style={styles.quickReplyIconBtn}
+                      >
+                        <CornerUpLeft size={15} color={colors.textSecondary} />
+                      </Pressable>
                     </View>
-                    <Text numberOfLines={1} style={styles.recipientSubText}>
-                      {t("mail.toPrefix")}{" "}
-                      {msg.to?.map((t) => t.name || t.email).join(", ") ||
-                        t("mail.me")}
-                    </Text>
+                    <Pressable
+                      testID={`message-details-toggle-${msg.id}`}
+                      hitSlop={4}
+                      onPress={(e) => {
+                        e.stopPropagation()
+                        toggleDetailsExpanded(msg.id)
+                      }}
+                      style={styles.recipientRow}
+                    >
+                      <Text numberOfLines={1} style={styles.recipientSubText}>
+                        {t("mail.toPrefix")}{" "}
+                        {msg.to?.map((p) => p.name || p.email).join(", ") ||
+                          t("mail.me")}
+                      </Text>
+                      {detailsOpen ? (
+                        <ChevronUp size={13} color={colors.textMuted} />
+                      ) : (
+                        <ChevronDown size={13} color={colors.textMuted} />
+                      )}
+                    </Pressable>
+                    {detailsOpen && (
+                      <View style={styles.detailsBlock}>
+                        <Text style={styles.detailsLine}>
+                          {t("mail.threadHeader.fromLabel")}{" "}
+                          {msg.from?.name || ""}{" "}
+                          {msg.from?.email ? `<${msg.from.email}>` : ""}
+                        </Text>
+                        <Text style={styles.detailsLine}>
+                          {t("mail.threadHeader.toLabel")}{" "}
+                          {msg.to?.map((p) => p.name || p.email).join(", ") ||
+                            t("mail.me")}
+                        </Text>
+                        {msg.cc && msg.cc.length > 0 && (
+                          <Text style={styles.detailsLine}>
+                            {t("mail.threadHeader.ccLabel")}{" "}
+                            {msg.cc.map((p) => p.name || p.email).join(", ")}
+                          </Text>
+                        )}
+                        <Text style={styles.detailsLine}>
+                          {t("mail.threadHeader.dateLabel")}{" "}
+                          {msg.sentAt ? tz.formatDateTime(msg.sentAt) : ""}
+                        </Text>
+                      </View>
+                    )}
                   </View>
-
-                  <ChevronDown size={16} color={colors.textMuted} />
                 </Pressable>
 
                 {/* Message Body View */}
@@ -532,20 +901,6 @@ export default function MobileThreadReaderScreen() {
                     </View>
                   </View>
                 )}
-
-                {/* Message Quick Reply Button */}
-                <View style={styles.msgFooter}>
-                  <Pressable
-                    testID={`quick-reply-btn-${msg.id}`}
-                    onPress={() => handleReply("DRAFT_MODE_REPLY", msg)}
-                    style={styles.quickReplyBtn}
-                  >
-                    <Reply size={13} color={colors.textSecondary} />
-                    <Text style={styles.quickReplyBtnText}>
-                      {t("mail.reply")}
-                    </Text>
-                  </Pressable>
-                </View>
               </View>
             )
           })}
@@ -561,29 +916,33 @@ export default function MobileThreadReaderScreen() {
       >
         <Pressable
           testID="mobile-reply-btn"
+          accessibilityLabel={t("mail.reply")}
           onPress={() => handleReply("DRAFT_MODE_REPLY")}
-          style={styles.replyActionBarBtn}
+          style={styles.replyIconBtn}
         >
-          <Reply size={15} color={colors.textPrimary} />
-          <Text style={styles.replyActionBarText}>{t("mail.reply")}</Text>
+          <Reply size={17} color={colors.textPrimary} />
         </Pressable>
 
         <Pressable
           testID="mobile-reply-all-btn"
           onPress={() => handleReply("DRAFT_MODE_REPLY_ALL")}
-          style={styles.replyActionBarBtn}
+          style={styles.replyActionBtn}
         >
           <ReplyAll size={15} color={colors.textPrimary} />
-          <Text style={styles.replyActionBarText}>{t("mail.replyAll")}</Text>
+          <Text numberOfLines={1} style={styles.replyActionText}>
+            {t("mail.replyAll")}
+          </Text>
         </Pressable>
 
         <Pressable
           testID="mobile-forward-btn"
           onPress={() => handleReply("DRAFT_MODE_FORWARD")}
-          style={styles.replyActionBarBtn}
+          style={styles.replyActionBtn}
         >
           <Forward size={15} color={colors.textPrimary} />
-          <Text style={styles.replyActionBarText}>{t("mail.forward")}</Text>
+          <Text numberOfLines={1} style={styles.replyActionText}>
+            {t("mail.forward")}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -598,17 +957,22 @@ const createStyles = (t: SaturnMobileTheme) => ({
   headerRightActions: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
-    gap: 14,
-    paddingRight: 6,
+    gap: 2,
+    paddingRight: 4,
   },
+
   headerBtn: {
-    padding: 2,
+    width: 40,
+    height: 40,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    borderRadius: t.radius.sm,
   },
+
   createEventBtn: {
     backgroundColor: t.colors.primarySubtle,
-    borderRadius: t.radius.sm,
-    padding: 4,
   },
+
   centerContainer: {
     flex: 1,
     backgroundColor: t.colors.background,
@@ -640,28 +1004,201 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   subjectCard: {
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: t.colors.border,
-    backgroundColor: t.colors.surface,
+    paddingTop: 4,
+    paddingBottom: 8,
+    backgroundColor: t.colors.background,
   },
+
   subjectText: {
-    fontSize: 18,
+    fontSize: 20,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
+    lineHeight: 26,
+  },
+
+  subjectMetaRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "flex-end" as const,
+    marginTop: 6,
+  },
+
+  summarizePill: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 5,
+    minHeight: 32,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: t.colors.brandSecondarySubtle,
+    borderRadius: t.radius.full,
+  },
+  summarizePillText: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: t.colors.brandSecondary,
+  },
+  summaryCard: {
+    marginHorizontal: 12,
+    marginTop: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: t.colors.surface,
+    borderWidth: 1,
+    borderColor: t.colors.brandSecondarySubtle,
+    borderRadius: t.radius.lg,
+  },
+  summaryHeaderRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    gap: 8,
+  },
+  summaryHeaderLeft: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    flex: 1,
+    flexWrap: "wrap" as const,
+  },
+  summaryHeaderRight: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+  },
+  summaryTitle: {
+    fontSize: 12,
     fontWeight: "700" as const,
     color: t.colors.textPrimary,
-    lineHeight: 24,
   },
-  subjectMeta: {
+  stalePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: "rgba(245, 158, 11, 0.14)",
+    borderRadius: t.radius.full,
+  },
+  stalePillText: {
+    fontSize: 10,
+    fontWeight: "600" as const,
+    color: "#d97706",
+  },
+  summaryIconBtn: {
+    padding: 6,
+    borderRadius: t.radius.sm,
+  },
+  spinningIcon: {
+    opacity: 0.55,
+  },
+  summaryLoadingRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    marginTop: 10,
+  },
+  summaryLoadingText: {
     fontSize: 12,
     color: t.colors.textMuted,
-    marginTop: 4,
+  },
+  summaryBody: {
+    marginTop: 8,
+    gap: 8,
+  },
+  summaryTldr: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: t.colors.textPrimary,
+  },
+  summarySection: {
+    gap: 4,
+  },
+  summarySectionDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: t.colors.border,
+    marginBottom: 6,
+  },
+  summarySectionTitle: {
+    fontSize: 12,
+    fontWeight: "700" as const,
+    color: t.colors.textSecondary,
+    marginBottom: 2,
+  },
+  summaryBulletRow: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 6,
+  },
+  summaryBulletDot: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: t.colors.brandSecondary,
+  },
+  summaryBulletText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: t.colors.textSecondary,
+    flex: 1,
+  },
+  actionItemRow: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 6,
+    paddingVertical: 6,
+  },
+  actionItemDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: t.colors.border,
   },
   messagesList: {
     paddingVertical: 10,
     gap: 10,
   },
+  superCollapseRow: {
+    marginHorizontal: 12,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    paddingVertical: 6,
+  },
+  superCollapseTrack: {
+    flex: 1,
+    position: "relative" as const,
+    paddingVertical: 10,
+  },
+  superCollapseHairline: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: t.colors.border,
+  },
+  stackedDeckLip: {
+    position: "absolute" as const,
+    left: 0,
+    right: 0,
+    top: 4,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: t.colors.border,
+    opacity: 0.5,
+  },
+  superCollapsePill: {
+    minHeight: 32,
+    minWidth: 40,
+    paddingHorizontal: 14,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    borderWidth: 1,
+    borderColor: t.colors.borderStrong,
+    backgroundColor: t.colors.surface,
+    borderRadius: t.radius.full,
+  },
+  superCollapsePillText: {
+    fontSize: 12,
+    fontWeight: "700" as const,
+    fontVariant: ["tabular-nums"] as const,
+    color: t.colors.textSecondary,
+  },
   collapsedCard: {
     marginHorizontal: 12,
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
     backgroundColor: t.colors.surface,
@@ -669,35 +1206,40 @@ const createStyles = (t: SaturnMobileTheme) => ({
     borderColor: t.colors.border,
     borderRadius: t.radius.md,
   },
-  collapsedHeader: {
+  collapsedContent: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  collapsedTopRow: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
-    gap: 8,
+    gap: 6,
   },
-  avatarTiny: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: t.colors.surfaceElevated,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
+  unreadDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: t.colors.primary,
   },
-  avatarTinyText: {
-    fontSize: 9,
-    fontWeight: "700" as const,
-    color: t.colors.textSecondary,
-  },
-  collapsedSender: {
+  collapsedTimeText: {
     fontSize: 12,
+    fontVariant: ["tabular-nums"] as const,
+    color: t.colors.textMuted,
+  },
+
+  collapsedSender: {
+    flex: 1,
+    fontSize: 14,
     fontWeight: "600" as const,
     color: t.colors.textPrimary,
-    width: 90,
   },
+
   collapsedSnippet: {
-    fontSize: 12,
+    fontSize: 13,
     color: t.colors.textMuted,
-    flex: 1,
   },
+
   expandedCard: {
     marginHorizontal: 12,
     backgroundColor: t.colors.surface,
@@ -715,19 +1257,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     borderBottomColor: t.colors.border,
     gap: 10,
   },
-  avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: t.colors.primarySubtle,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-  },
-  avatarText: {
-    fontSize: 12,
-    fontWeight: "700" as const,
-    color: t.colors.primary,
-  },
+
   senderCol: {
     flex: 1,
     gap: 2,
@@ -735,28 +1265,57 @@ const createStyles = (t: SaturnMobileTheme) => ({
   nameRow: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
-    justifyContent: "space-between" as const,
+    gap: 6,
   },
+
   senderFullName: {
-    fontSize: 13,
-    fontWeight: "700" as const,
+    fontSize: 14,
+    fontWeight: "600" as const,
     color: t.colors.textPrimary,
     flex: 1,
-    marginRight: 6,
   },
+
   msgTimeText: {
-    fontSize: 11,
+    fontSize: 12,
+    fontVariant: ["tabular-nums"] as const,
     color: t.colors.textMuted,
   },
+  quickReplyIconBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    borderRadius: t.radius.sm,
+  },
+  recipientRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    paddingVertical: 2,
+  },
+  detailsBlock: {
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: t.colors.border,
+    gap: 3,
+  },
+  detailsLine: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: t.colors.textSecondary,
+  },
+
   recipientSubText: {
     fontSize: 11,
     color: t.colors.textMuted,
   },
   bodyWrapper: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: t.colors.border,
     backgroundColor: "#ffffff",
   },
+
   attachmentsSection: {
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -798,51 +1357,42 @@ const createStyles = (t: SaturnMobileTheme) => ({
     fontSize: 10,
     color: t.colors.textMuted,
   },
-  msgFooter: {
-    flexDirection: "row" as const,
-    justifyContent: "flex-end" as const,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: t.colors.border,
-    backgroundColor: t.colors.surface,
-  },
-  quickReplyBtn: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 4,
-    backgroundColor: t.colors.surfaceElevated,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: t.radius.sm,
-  },
-  quickReplyBtnText: {
-    fontSize: 12,
-    color: t.colors.textSecondary,
-    fontWeight: "500" as const,
-  },
+
   bottomActionBar: {
     backgroundColor: t.colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: t.colors.border,
     flexDirection: "row" as const,
     alignItems: "center" as const,
-    justifyContent: "space-around" as const,
-    paddingHorizontal: 16,
+    gap: 8,
+    paddingHorizontal: 12,
     paddingTop: 10,
   },
-  replyActionBarBtn: {
-    flexDirection: "row" as const,
+  replyIconBtn: {
+    width: 44,
+    height: 44,
+    shrink: 0,
     alignItems: "center" as const,
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: t.radius.sm,
+    justifyContent: "center" as const,
+    borderRadius: t.radius.md,
     backgroundColor: t.colors.surfaceHighlight,
   },
-  replyActionBarText: {
+  replyActionBtn: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 44,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 6,
+    paddingHorizontal: 10,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceHighlight,
+  },
+  replyActionText: {
     fontSize: 13,
     fontWeight: "600" as const,
     color: t.colors.textPrimary,
+    minWidth: 0,
   },
 })

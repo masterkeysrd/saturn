@@ -383,6 +383,60 @@ export interface Thread {
    * Chronological messages in the thread (populated on GetThread).
    */
   messages: Message[]
+  /**
+   * Built-in AI summary of the thread for the negotiated language (populated on GetThread).
+   */
+  summary?: ThreadSummary
+}
+
+/**
+ * ThreadSummary models a built-in AI-generated summary of an email thread conversation.
+ */
+export interface ThreadSummary {
+  /**
+   * Summarized thread identifier (mth_...).
+   */
+  threadId: string
+  /**
+   * Language tag the summary was generated in (e.g. "en", "es").
+   */
+  language: string
+  /**
+   * Concise plain-language summary paragraph.
+   */
+  tldr: string
+  /**
+   * Distinct key points extracted from the conversation.
+   */
+  keyPoints: string[]
+  /**
+   * Action items requested or implied by the conversation.
+   */
+  actionItems: string[]
+  /**
+   * Identifier of the latest message covered by the summary.
+   */
+  lastMessageId: string
+  /**
+   * Timestamp of the latest message covered by the summary.
+   */
+  lastMessageAt: string
+  /**
+   * Number of messages covered by the summary.
+   */
+  messageCount: number
+  /**
+   * Whether newer messages exist in the thread since this summary was generated.
+   */
+  isStale: boolean
+  /**
+   * Workflow run that produced this summary, when available.
+   */
+  flowRunId: string
+  /**
+   * Timestamp when the summary record was last updated.
+   */
+  updateTime: string
 }
 
 /**
@@ -593,6 +647,24 @@ export interface GetThreadRequest {
    * Thread identifier to retrieve.
    */
   id: string
+}
+
+/**
+ * Request to generate or refresh the AI summary of a thread.
+ */
+export interface SummarizeThreadRequest {
+  /**
+   * Thread identifier to summarize.
+   */
+  id: string
+  /**
+   * When true, regenerates the summary even if a fresh cached summary exists.
+   */
+  forceRegenerate: boolean
+  /**
+   * Optional summary language override ("en" or "es"), falling back to the negotiated request language.
+   */
+  language?: string
 }
 
 /**
@@ -944,6 +1016,37 @@ export function useGetThreadQuery(
   return useQuery<Thread, Error>({
     queryKey: [`/api/v1/mail/threads/${req.id}`, req],
     queryFn: () => getThread(req.id, req),
+    ...options,
+  })
+}
+
+/**
+ * Generates or refreshes the AI summary of an email thread.
+ */
+export async function summarizeThread(
+  id: string,
+  req: SummarizeThreadRequest
+): Promise<ThreadSummary> {
+  return request<ThreadSummary>({
+    method: "POST",
+    url: `/api/v1/mail/threads/${id}:summarize`,
+    data: req,
+  })
+}
+
+export function useSummarizeThreadMutation(
+  options?: UseMutationOptions<
+    ThreadSummary,
+    Error,
+    { id: string; req: SummarizeThreadRequest }
+  >
+) {
+  return useMutation<
+    ThreadSummary,
+    Error,
+    { id: string; req: SummarizeThreadRequest }
+  >({
+    mutationFn: ({ id, req }) => summarizeThread(id, req),
     ...options,
   })
 }

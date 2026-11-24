@@ -25,7 +25,10 @@ const RUN_STATUS_BADGE_KEYS: Record<
   cancelled: { variant: "default", labelKey: "workflows.runStatus.cancelled" },
 }
 
-type Translate = (key: TranslationKey, params?: Record<string, string | number>) => string
+type Translate = (
+  key: TranslationKey,
+  params?: Record<string, string | number>
+) => string
 
 function getRunStatusBadge(
   t: Translate,

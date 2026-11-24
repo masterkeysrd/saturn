@@ -106,6 +106,30 @@ func (t *TransactionalCoordinator) ModifyThread(ctx context.Context, req *Modify
 	return res, nil
 }
 
+// SaveThreadSummary executes next.SaveThreadSummary inside a database transaction.
+func (t *TransactionalCoordinator) SaveThreadSummary(ctx context.Context, req *SaveThreadSummaryRequest) (*domainmail.ThreadSummary, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.SaveThreadSummary(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (t *TransactionalCoordinator) SummarizeThread(ctx context.Context, req *SummarizeThreadRequest) (*domainmail.ThreadSummary, error) {
+	return t.next.SummarizeThread(ctx, req)
+}
+
 // BatchModifyThreads executes next.BatchModifyThreads inside a database transaction.
 func (t *TransactionalCoordinator) BatchModifyThreads(ctx context.Context, req *BatchModifyThreadsRequest) error {
 	ctx, tx, err := t.txr.Begin(ctx)

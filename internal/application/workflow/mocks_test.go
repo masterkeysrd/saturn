@@ -908,6 +908,9 @@ type CoordinatorMock struct {
 	// ExecuteFlowFunc mocks the ExecuteFlow method.
 	ExecuteFlowFunc func(ctx context.Context, req *ExecuteFlowRequest) (*workflow.FlowRun, error)
 
+	// ExecuteSystemFlowRawFunc mocks the ExecuteSystemFlowRaw method.
+	ExecuteSystemFlowRawFunc func(ctx context.Context, systemKey string, input map[string]any) (*workflow.FlowRun, error)
+
 	// InvokeWebhookTriggerFunc mocks the InvokeWebhookTrigger method.
 	InvokeWebhookTriggerFunc func(ctx context.Context, req *InvokeWebhookTriggerRequest) (*workflow.FlowRun, error)
 
@@ -959,6 +962,11 @@ type CoordinatorMock struct {
 			Ctx context.Context
 			Req *ExecuteFlowRequest
 		}
+		ExecuteSystemFlowRaw []struct {
+			Ctx       context.Context
+			SystemKey string
+			Input     map[string]any
+		}
 		InvokeWebhookTrigger []struct {
 			Ctx context.Context
 			Req *InvokeWebhookTriggerRequest
@@ -995,6 +1003,7 @@ type CoordinatorMock struct {
 	lockDisableFlow           sync.RWMutex
 	lockResetFlow             sync.RWMutex
 	lockExecuteFlow           sync.RWMutex
+	lockExecuteSystemFlowRaw  sync.RWMutex
 	lockInvokeWebhookTrigger  sync.RWMutex
 	lockTestFlow              sync.RWMutex
 	lockGenerateFlow          sync.RWMutex
@@ -1214,6 +1223,36 @@ func (mock *CoordinatorMock) ExecuteFlowCalls() []struct {
 	mock.lockExecuteFlow.RLock()
 	defer mock.lockExecuteFlow.RUnlock()
 	return mock.calls.ExecuteFlow
+}
+
+// ExecuteSystemFlowRaw calls ExecuteSystemFlowRawFunc.
+func (mock *CoordinatorMock) ExecuteSystemFlowRaw(ctx context.Context, systemKey string, input map[string]any) (*workflow.FlowRun, error) {
+	if mock.ExecuteSystemFlowRawFunc == nil {
+		panic("CoordinatorMock.ExecuteSystemFlowRawFunc: method is nil but Coordinator.ExecuteSystemFlowRaw was just called")
+	}
+	mock.lockExecuteSystemFlowRaw.Lock()
+	mock.calls.ExecuteSystemFlowRaw = append(mock.calls.ExecuteSystemFlowRaw, struct {
+		Ctx       context.Context
+		SystemKey string
+		Input     map[string]any
+	}{
+		Ctx:       ctx,
+		SystemKey: systemKey,
+		Input:     input,
+	})
+	mock.lockExecuteSystemFlowRaw.Unlock()
+	return mock.ExecuteSystemFlowRawFunc(ctx, systemKey, input)
+}
+
+// ExecuteSystemFlowRawCalls returns all calls made to ExecuteSystemFlowRaw.
+func (mock *CoordinatorMock) ExecuteSystemFlowRawCalls() []struct {
+	Ctx       context.Context
+	SystemKey string
+	Input     map[string]any
+} {
+	mock.lockExecuteSystemFlowRaw.RLock()
+	defer mock.lockExecuteSystemFlowRaw.RUnlock()
+	return mock.calls.ExecuteSystemFlowRaw
 }
 
 // InvokeWebhookTrigger calls InvokeWebhookTriggerFunc.

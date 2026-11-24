@@ -1,5 +1,5 @@
-import React, { useRef, useState } from "react"
-import { View, Text, StyleSheet, Pressable, Image } from "react-native"
+import React, { useRef } from "react"
+import { View, Text, StyleSheet, Pressable } from "react-native"
 import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from "react-native-gesture-handler/ReanimatedSwipeable"
@@ -15,7 +15,6 @@ import {
   MailOpen,
   Star,
   Paperclip,
-  Check,
 } from "lucide-react-native"
 import type { Thread } from "@saturn/api/saturn/mail/v1/mail"
 import { formatThreadParticipants, parseDate } from "@saturn/core"
@@ -23,6 +22,7 @@ import { useTimezone, useI18n } from "@saturn/hooks"
 import type { TranslationKey } from "@saturn/i18n"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
+import { ThreadAvatar } from "./thread-avatar"
 
 export interface SwipeableThreadRowProps {
   thread: Thread
@@ -57,99 +57,6 @@ function formatRelativeTime(
     return tz.format(date, { weekday: "short" })
   }
   return tz.format(date, { month: "short", day: "numeric" })
-}
-
-const PALETTE_COLORS = [
-  { bg: "#312e81", text: "#c7d2fe" }, // Indigo
-  { bg: "#064e3b", text: "#a7f3d0" }, // Emerald
-  { bg: "#4c1d95", text: "#ddd6fe" }, // Violet
-  { bg: "#78350f", text: "#fde68a" }, // Amber
-  { bg: "#881337", text: "#fecdd3" }, // Rose
-  { bg: "#0c4a6e", text: "#bae6fd" }, // Sky
-  { bg: "#134e4a", text: "#99f6e4" }, // Teal
-  { bg: "#7c2d12", text: "#fed7aa" }, // Orange
-]
-
-function getPalette(seed: string) {
-  let hash = 0
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash << 5) - hash + seed.charCodeAt(i)
-    hash |= 0
-  }
-  const idx = Math.abs(hash) % PALETTE_COLORS.length
-  return PALETTE_COLORS[idx]
-}
-
-function getInitials(name?: string, email?: string): string {
-  const cleanName = (name || "").trim()
-  if (cleanName) {
-    const parts = cleanName.split(/\s+/).filter(Boolean)
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase()
-    }
-    return cleanName.slice(0, 2).toUpperCase()
-  }
-  if (email) {
-    return email.charAt(0).toUpperCase()
-  }
-  return "U"
-}
-
-interface ThreadAvatarProps {
-  name?: string
-  email?: string
-  avatarUrl?: string
-  isVerified?: boolean
-  accountColor?: string
-}
-
-function ThreadAvatar({
-  name,
-  email,
-  avatarUrl,
-  isVerified,
-  accountColor,
-}: ThreadAvatarProps) {
-  const styles = useThemedStyles(createStyles)
-  const [imgError, setImgError] = useState(false)
-  const initials = getInitials(name, email)
-  const palette = getPalette(name || email || "sender")
-  const showImage = Boolean(avatarUrl && !imgError)
-
-  return (
-    <View
-      testID="mobile-sender-avatar"
-      style={[
-        styles.avatarWrapper,
-        accountColor ? { borderColor: accountColor } : null,
-      ]}
-    >
-      {showImage ? (
-        <Image
-          source={{ uri: avatarUrl }}
-          onError={() => setImgError(true)}
-          style={styles.avatarImage}
-          resizeMode="contain"
-        />
-      ) : (
-        <View style={[styles.avatarFallback, { backgroundColor: palette.bg }]}>
-          <Text style={[styles.avatarInitialsText, { color: palette.text }]}>
-            {initials}
-          </Text>
-        </View>
-      )}
-
-      {/* Verified Organization Checkmark Badge */}
-      {isVerified && (
-        <View
-          testID="mobile-avatar-verified-badge"
-          style={styles.verifiedCheckBadge}
-        >
-          <Check size={8} color="#ffffff" strokeWidth={3} />
-        </View>
-      )}
-    </View>
-  )
 }
 
 interface LeftSwipeActionProps {
@@ -472,45 +379,6 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   rowPressed: {
     backgroundColor: t.colors.surfaceHighlight,
-  },
-  avatarWrapper: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 1.5,
-    borderColor: "transparent",
-    position: "relative" as const,
-    marginTop: 2,
-  },
-  avatarImage: {
-    width: "100%" as const,
-    height: "100%" as const,
-    borderRadius: 19,
-    backgroundColor: "#ffffff",
-  },
-  avatarFallback: {
-    width: "100%" as const,
-    height: "100%" as const,
-    borderRadius: 19,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-  },
-  avatarInitialsText: {
-    fontSize: 13,
-    fontWeight: "700" as const,
-  },
-  verifiedCheckBadge: {
-    position: "absolute" as const,
-    bottom: -1,
-    right: -1,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#2563eb",
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    borderWidth: 1.5,
-    borderColor: t.colors.surface,
   },
   contentArea: {
     flex: 1,

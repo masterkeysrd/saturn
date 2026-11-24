@@ -254,7 +254,7 @@ describe("Phase 2 Web Finance Views", () => {
     fireEvent.click(screen.getByRole("combobox"))
 
     const searchInput = await screen.findByPlaceholderText(
-      /Search code, name, or symbol/i
+      /Search currency code or name/i
     )
     fireEvent.change(searchInput, { target: { value: "Dominican" } })
 

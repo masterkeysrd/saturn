@@ -652,88 +652,6 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	s.ConnectorOAuthMgr = oauthManager
 	s.CalendarCoordinator = calendarCoordinator
 
-	// Wire Mail service
-	mailMailboxStore := mailstorage.NewMailboxStore(dbClient)
-	mailThreadStore := mailstorage.NewThreadStore(dbClient)
-	mailMessageStore := mailstorage.NewMessageStore(dbClient)
-	mailDraftStore := mailstorage.NewDraftStore(dbClient)
-	mailSyncStateStore := mailstorage.NewSyncStateStore(dbClient)
-
-	mailDomainService := domainmail.NewService(domainmail.Dependencies{
-		MailboxStore:   mailMailboxStore,
-		ThreadStore:    mailThreadStore,
-		MessageStore:   mailMessageStore,
-		DraftStore:     mailDraftStore,
-		SyncStateStore: mailSyncStateStore,
-	})
-
-	externalMailProviders := map[string]domainmail.ExternalMailProvider{
-		"google": googleProvider,
-	}
-
-	hmacSecret, err := crypto.DeriveSubkey(cfg.Security.EncryptionKey, "saturn-mail-attachment-hmac-v1", 32)
-	if err != nil {
-		return fmt.Errorf("derive mail attachment hmac key: %w", err)
-	}
-
-	mailCoordinator := mailapp.NewLoggingCoordinator(
-		mailapp.NewTransactionalCoordinator(
-			mailapp.NewCoordinator(mailapp.Dependencies{
-				DomainService:     mailDomainService,
-				MailboxStore:      mailMailboxStore,
-				ThreadStore:       mailThreadStore,
-				MessageStore:      mailMessageStore,
-				DraftStore:        mailDraftStore,
-				SyncStateStore:    mailSyncStateStore,
-				AccountStore:      connectorStore,
-				TokenManager:      tokenManager,
-				ExternalProviders: externalMailProviders,
-				Events:            edgePublisher,
-				HMACSecret:        hmacSecret,
-			}),
-			dbClient,
-		),
-		appLogger,
-	)
-
-	mailAggregator := mailaggregator.NewService(
-		mailMailboxStore,
-		mailThreadStore,
-		mailMessageStore,
-		mailDraftStore,
-		connectorStore,
-		tokenManager,
-		externalMailProviders,
-		hmacSecret,
-	)
-
-	mailHandler := mailgrpc.NewHandler(mailCoordinator, mailAggregator)
-	mailv1.RegisterMailServiceServer(s.grpc, mailHandler)
-
-	mcpmail.NewHandler(mcpmail.Dependencies{
-		Aggregator:    mailAggregator,
-		Coordinator:   mailCoordinator,
-		SpaceSettings: spaceCoordinator,
-	}).Register(mcpServer.Registry())
-
-	attachmentHandler := mailhttp.NewAttachmentHandler(
-		mailMessageStore,
-		connectorStore,
-		tokenManager,
-		externalMailProviders,
-		mailCoordinator,
-		sharedAuthenticator,
-		hmacSecret,
-	)
-
-	transportscheduler.RegisterMailJobs(schedulerEngine, mailCoordinator)
-	if err := transportscheduler.RegisterMailSchedules(ctx, schedulerEngine); err != nil {
-		return fmt.Errorf("register mail schedules: %w", err)
-	}
-
-	s.MailCoordinator = mailCoordinator
-	s.AttachmentHandler = attachmentHandler
-
 	// Wire Platform Workflow Engine, domain plugins, coordinator, aggregator & transports
 	workflowRegistry := workflow.NewRegistry()
 	event.RegisterWorkflowTriggerTopics(workflowRegistry)
@@ -747,14 +665,6 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		CalendarStore: calendarStore,
 		EventStore:    eventStore,
 		DomainService: calendarDomainService,
-	})
-	mailapp.RegisterWorkflows(workflowRegistry, mailapp.WorkflowDependencies{
-		Coordinator:       mailCoordinator,
-		MessageStore:      mailMessageStore,
-		MailboxStore:      mailMailboxStore,
-		AccountStore:      connectorStore,
-		TokenManager:      tokenManager,
-		ExternalProviders: externalMailProviders,
 	})
 
 	workflowTriggerStore := workflow.NewTriggerStore(dbClient)
@@ -794,6 +704,103 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		),
 		appLogger,
 	)
+
+	// Wire Mail service (after the workflow coordinator so the summarize
+	// system flow executor can be wired non-nil into the mail coordinator).
+	mailMailboxStore := mailstorage.NewMailboxStore(dbClient)
+	mailThreadStore := mailstorage.NewThreadStore(dbClient)
+	mailMessageStore := mailstorage.NewMessageStore(dbClient)
+	mailDraftStore := mailstorage.NewDraftStore(dbClient)
+	mailSyncStateStore := mailstorage.NewSyncStateStore(dbClient)
+	mailThreadSummaryStore := mailstorage.NewThreadSummaryStore(dbClient)
+
+	mailDomainService := domainmail.NewService(domainmail.Dependencies{
+		MailboxStore:   mailMailboxStore,
+		ThreadStore:    mailThreadStore,
+		MessageStore:   mailMessageStore,
+		DraftStore:     mailDraftStore,
+		SyncStateStore: mailSyncStateStore,
+	})
+
+	externalMailProviders := map[string]domainmail.ExternalMailProvider{
+		"google": googleProvider,
+	}
+
+	hmacSecret, err := crypto.DeriveSubkey(cfg.Security.EncryptionKey, "saturn-mail-attachment-hmac-v1", 32)
+	if err != nil {
+		return fmt.Errorf("derive mail attachment hmac key: %w", err)
+	}
+
+	mailCoordinator := mailapp.NewLoggingCoordinator(
+		mailapp.NewTransactionalCoordinator(
+			mailapp.NewCoordinator(mailapp.Dependencies{
+				DomainService:     mailDomainService,
+				MailboxStore:      mailMailboxStore,
+				ThreadStore:       mailThreadStore,
+				MessageStore:      mailMessageStore,
+				DraftStore:        mailDraftStore,
+				SyncStateStore:    mailSyncStateStore,
+				SummaryStore:      mailThreadSummaryStore,
+				AccountStore:      connectorStore,
+				TokenManager:      tokenManager,
+				ExternalProviders: externalMailProviders,
+				Events:            edgePublisher,
+				SummarizeFlow:     workflow.BindSystemFlow(workflowCoordinator, mailapp.SummarizeThreadFlowKey),
+				HMACSecret:        hmacSecret,
+			}),
+			dbClient,
+		),
+		appLogger,
+	)
+
+	mailapp.RegisterWorkflows(workflowRegistry, mailapp.WorkflowDependencies{
+		Coordinator:       mailCoordinator,
+		MessageStore:      mailMessageStore,
+		MailboxStore:      mailMailboxStore,
+		ThreadStore:       mailThreadStore,
+		AccountStore:      connectorStore,
+		TokenManager:      tokenManager,
+		ExternalProviders: externalMailProviders,
+	})
+
+	mailAggregator := mailaggregator.NewService(
+		mailMailboxStore,
+		mailThreadStore,
+		mailMessageStore,
+		mailDraftStore,
+		mailThreadSummaryStore,
+		connectorStore,
+		tokenManager,
+		externalMailProviders,
+		hmacSecret,
+	)
+
+	mailHandler := mailgrpc.NewHandler(mailCoordinator, mailAggregator)
+	mailv1.RegisterMailServiceServer(s.grpc, mailHandler)
+
+	mcpmail.NewHandler(mcpmail.Dependencies{
+		Aggregator:    mailAggregator,
+		Coordinator:   mailCoordinator,
+		SpaceSettings: spaceCoordinator,
+	}).Register(mcpServer.Registry())
+
+	attachmentHandler := mailhttp.NewAttachmentHandler(
+		mailMessageStore,
+		connectorStore,
+		tokenManager,
+		externalMailProviders,
+		mailCoordinator,
+		sharedAuthenticator,
+		hmacSecret,
+	)
+
+	transportscheduler.RegisterMailJobs(schedulerEngine, mailCoordinator)
+	if err := transportscheduler.RegisterMailSchedules(ctx, schedulerEngine); err != nil {
+		return fmt.Errorf("register mail schedules: %w", err)
+	}
+
+	s.MailCoordinator = mailCoordinator
+	s.AttachmentHandler = attachmentHandler
 
 	workflowAggregator := workflowaggregator.NewService(workflowaggregator.Dependencies{
 		Workflow: workflowService,

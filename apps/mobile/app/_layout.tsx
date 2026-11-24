@@ -83,11 +83,18 @@ function modalCloseHeaderOptions(iconColor: string, closeLabel: string) {
       }
 }
 
-function LocalizedRootStack({ colors }: { colors: ReturnType<typeof useTheme>["colors"] }) {
+function LocalizedRootStack({
+  colors,
+}: {
+  colors: ReturnType<typeof useTheme>["colors"]
+}) {
   const { resolvedMode } = useTheme()
   const { t } = useI18n()
 
-  const modalClose = modalCloseHeaderOptions(colors.textMuted, t("common.close"))
+  const modalClose = modalCloseHeaderOptions(
+    colors.textMuted,
+    t("common.close")
+  )
   const modalScreenOptions = (headerTitle: string, close = false) => ({
     presentation: "modal" as const,
     headerTitle,
@@ -100,7 +107,8 @@ function LocalizedRootStack({ colors }: { colors: ReturnType<typeof useTheme>["c
   })
 
   const headerTitleKeys: Record<string, TranslationKey> = {
-    "modal/add-transaction": "finance.transactions.create.mobile.newTransaction",
+    "modal/add-transaction":
+      "finance.transactions.create.mobile.newTransaction",
     "modal/switch-space": "space.switchTitle",
     "server-settings": "settings.server.title",
     "modal/create-space": "settings.spaces.mobile.createHeader",
@@ -147,7 +155,10 @@ function LocalizedRootStack({ colors }: { colors: ReturnType<typeof useTheme>["c
       />
       <Stack.Screen
         name="modal/switch-space"
-        options={modalScreenOptions(t(headerTitleKeys["modal/switch-space"]), true)}
+        options={modalScreenOptions(
+          t(headerTitleKeys["modal/switch-space"]),
+          true
+        )}
       />
       <Stack.Screen
         name="server-settings"

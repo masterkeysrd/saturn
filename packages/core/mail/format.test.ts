@@ -14,6 +14,8 @@ import {
   stripHtmlToPlainText,
   linkifyEmailsInHtml,
   prepareUnifiedDraftHtml,
+  computeHumanizedMailTimestamp,
+  partitionThreadMessagesForSuperCollapse,
 } from "./format"
 import { restoreRemoteImageSrc, sanitizeEmailHtml } from "./html"
 
@@ -588,5 +590,263 @@ describe("sanitizeEmailHtml security hardening", () => {
       'srcset="https://i.pinimg.com/236x/pin.jpg 1x, https://i.pinimg.com/474x/pin.jpg 2x"'
     )
     expect(restored).toContain('background="https://i.pinimg.com/bg.jpg"')
+  })
+})
+
+describe("computeHumanizedMailTimestamp", () => {
+  const now = new Date("2026-03-05T12:00:00Z")
+
+  it("returns null for invalid or empty dates", () => {
+    const cases: Array<{ label: string; input: unknown }> = [
+      { label: "empty string", input: "" },
+      { label: "null", input: null },
+      { label: "undefined", input: undefined },
+      { label: "garbage string", input: "not-a-date" },
+      { label: "NaN timestamp", input: Number.NaN },
+    ]
+    for (const { label, input } of cases) {
+      expect(
+        computeHumanizedMailTimestamp(input as never, {
+          now,
+          timeZone: "UTC",
+        }),
+        label
+      ).toBeNull()
+    }
+  })
+
+  it("buckets recent elapsed times into just_now / minutes_ago / hours_ago", () => {
+    const tests: Array<{
+      name: string
+      iso: string
+      expected: { kind: string; count?: number }
+    }> = [
+      {
+        name: "30 seconds ago",
+        iso: "2026-03-05T11:59:30Z",
+        expected: { kind: "just_now" },
+      },
+      {
+        name: "5 minutes ago",
+        iso: "2026-03-05T11:55:00Z",
+        expected: { kind: "minutes_ago", count: 5 },
+      },
+      {
+        name: "59 minutes ago",
+        iso: "2026-03-05T11:01:00Z",
+        expected: { kind: "minutes_ago", count: 59 },
+      },
+      {
+        name: "1 hour ago",
+        iso: "2026-03-05T11:00:00Z",
+        expected: { kind: "hours_ago", count: 1 },
+      },
+      {
+        name: "10 hours ago",
+        iso: "2026-03-05T02:00:00Z",
+        expected: { kind: "hours_ago", count: 10 },
+      },
+    ]
+    for (const { name, iso, expected } of tests) {
+      expect(
+        computeHumanizedMailTimestamp(iso, { now, timeZone: "UTC" }),
+        name
+      ).toEqual(expected)
+    }
+  })
+
+  it("returns today for >10 hours ago on the same calendar day in tz", () => {
+    expect(
+      computeHumanizedMailTimestamp("2026-03-05T00:30:00Z", {
+        now,
+        timeZone: "UTC",
+      })
+    ).toEqual({ kind: "today" })
+  })
+
+  it("returns yesterday for calendar day -1", () => {
+    expect(
+      computeHumanizedMailTimestamp("2026-03-04T23:50:00Z", {
+        now,
+        timeZone: "UTC",
+      })
+    ).toEqual({ kind: "yesterday" })
+  })
+
+  it("returns days_ago for calendar days -2 through -7", () => {
+    const tests: Array<{ days: number; count: number }> = [
+      { days: 2, count: 2 },
+      { days: 4, count: 4 },
+      { days: 7, count: 7 },
+    ]
+    for (const { days, count } of tests) {
+      const iso = new Date(
+        now.getTime() - days * 86_400_000 - 3_600_000
+      ).toISOString()
+      expect(
+        computeHumanizedMailTimestamp(iso, { now, timeZone: "UTC" }),
+        `${days} days ago`
+      ).toEqual({ kind: "days_ago", count })
+    }
+  })
+
+  it("falls back to day/month/year formatting beyond 7 days and for future dates", () => {
+    const tests: Array<{
+      name: string
+      iso: string
+      formatted: string
+    }> = [
+      {
+        name: "10 days ago",
+        iso: "2026-02-23T10:00:00Z",
+        formatted: "23/2/2026",
+      },
+      {
+        name: "last year",
+        iso: "2025-03-05T09:00:00Z",
+        formatted: "5/3/2025",
+      },
+      {
+        name: "future date",
+        iso: "2026-03-08T10:00:00Z",
+        formatted: "8/3/2026",
+      },
+    ]
+    for (const { name, iso, formatted } of tests) {
+      expect(
+        computeHumanizedMailTimestamp(iso, { now, timeZone: "UTC" }),
+        name
+      ).toEqual({ kind: "date_dmy", formatted })
+    }
+  })
+
+  it("respects the viewer timezone for calendar day boundaries", () => {
+    // 2026-03-05T03:00:00Z is 2026-03-04 23:00 locally in Santo Domingo (UTC-4)
+    const tzNow = new Date("2026-03-05T22:00:00Z")
+    expect(
+      computeHumanizedMailTimestamp("2026-03-05T03:00:00Z", {
+        now: tzNow,
+        timeZone: "UTC",
+      })
+    ).toEqual({ kind: "today" })
+    expect(
+      computeHumanizedMailTimestamp("2026-03-05T03:00:00Z", {
+        now: tzNow,
+        timeZone: "America/Santo_Domingo",
+      })
+    ).toEqual({ kind: "yesterday" })
+  })
+})
+
+describe("partitionThreadMessagesForSuperCollapse", () => {
+  const makeMessages = (n: number, unreadIds: string[] = []) =>
+    Array.from({ length: n }, (_, i) => ({
+      id: `msg_${i + 1}`,
+      isUnread: unreadIds.includes(`msg_${i + 1}`),
+    }))
+
+  it("returns every message when unfolded or thread is shorter than 5", () => {
+    const messages = makeMessages(4)
+    const tests = [
+      {
+        name: "4 messages folded",
+        input: [messages, false] as const,
+        expectedLength: 4,
+      },
+      {
+        name: "6 messages unfolded",
+        input: [makeMessages(6), true] as const,
+        expectedLength: 6,
+      },
+      {
+        name: "0 messages",
+        input: [messages.slice(0, 0), false] as const,
+        expectedLength: 0,
+      },
+    ]
+    for (const { name, input, expectedLength } of tests) {
+      const segments = partitionThreadMessagesForSuperCollapse(
+        input[0],
+        input[1]
+      )
+      expect(segments, name).toHaveLength(expectedLength)
+      expect(
+        segments.every((s) => s.type === "message"),
+        name
+      ).toBe(true)
+    }
+  })
+
+  it("keeps first, last 2, and folds contiguous read middle runs of 2+", () => {
+    const segments = partitionThreadMessagesForSuperCollapse(
+      makeMessages(6),
+      false
+    )
+    expect(segments.map((s) => s.type)).toEqual([
+      "message",
+      "folded",
+      "message",
+      "message",
+    ])
+    if (segments[1].type !== "folded") throw new Error("expected folded")
+    expect(segments[1].count).toBe(3)
+    expect(segments[1].messages.map((m) => m.id)).toEqual([
+      "msg_2",
+      "msg_3",
+      "msg_4",
+    ])
+    expect(segments[1].key).toBe("folded-msg_2-msg_4")
+    if (segments[0].type !== "message") throw new Error("expected message")
+    expect(segments[0].index).toBe(0)
+    if (segments[2].type !== "message") throw new Error("expected message")
+    expect(segments[2].index).toBe(4)
+    if (segments[3].type !== "message") throw new Error("expected message")
+    expect(segments[3].index).toBe(5)
+  })
+
+  it("never folds unread middle messages, splitting runs around them", () => {
+    const segments = partitionThreadMessagesForSuperCollapse(
+      makeMessages(8, ["msg_3"]),
+      false
+    )
+    // Kept: msg_1 (first), msg_3 (unread), msg_7/msg_8 (last 2).
+    // Middle runs: [msg_2] length 1 renders directly; [msg_4..msg_6] folds.
+    expect(segments.map((s) => s.type)).toEqual([
+      "message",
+      "message",
+      "message",
+      "folded",
+      "message",
+      "message",
+    ])
+    const fold = segments[3]
+    if (fold.type !== "folded") throw new Error("expected folded segment")
+    expect(fold.count).toBe(3)
+    expect(fold.messages.map((m) => m.id)).toEqual(["msg_4", "msg_5", "msg_6"])
+    expect(fold.messages.some((m) => m.isUnread)).toBe(false)
+  })
+
+  it("renders a single middle read message directly instead of a divider", () => {
+    // 5 messages, msg_2 read, msg_3 unread: middle run [msg_2] has length 1
+    const segments = partitionThreadMessagesForSuperCollapse(
+      makeMessages(5, ["msg_3"]),
+      false
+    )
+    expect(segments.every((s) => s.type === "message")).toBe(true)
+    expect(
+      segments.map((s) => (s.type === "message" ? s.message.id : ""))
+    ).toEqual(["msg_1", "msg_2", "msg_3", "msg_4", "msg_5"])
+  })
+
+  it("preserves original indices for all message segments", () => {
+    const segments = partitionThreadMessagesForSuperCollapse(
+      makeMessages(7, ["msg_2"]),
+      false
+    )
+    const messageSegments = segments.filter((s) => s.type === "message")
+    for (const seg of messageSegments) {
+      if (seg.type !== "message") continue
+      expect(seg.message.id).toBe(`msg_${seg.index + 1}`)
+    }
   })
 })

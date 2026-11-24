@@ -14,8 +14,14 @@ import {
   stripHtmlToPlainText,
   isMailAccountReauthRequired,
   filterReauthMailAccounts,
+  computeHumanizedMailTimestamp,
+  partitionThreadMessagesForSuperCollapse,
 } from "@saturn/core"
 import { TimezoneProvider } from "@saturn/hooks"
+import {
+  getSenderInitials,
+  getSenderPalette,
+} from "../components/mail/thread-avatar"
 import { buildMobileEditorDocumentHtml } from "../components/mail/email-editor-html"
 import {
   buildMobileMessageDocumentHtml,
@@ -473,24 +479,64 @@ describe("Mobile Mail Feature Logic & Component Unit Tests", () => {
     })
 
     it("extracts 1-2 letter initials cleanly for mobile avatar fallback", () => {
-      function getInitials(name?: string, email?: string): string {
-        const cleanName = (name || "").trim()
-        if (cleanName) {
-          const parts = cleanName.split(/\s+/).filter(Boolean)
-          if (parts.length >= 2) {
-            return (parts[0][0] + parts[1][0]).toUpperCase()
-          }
-          return cleanName.slice(0, 2).toUpperCase()
-        }
-        if (email) {
-          return email.charAt(0).toUpperCase()
-        }
-        return "U"
-      }
+      expect(getSenderInitials("Domex Expreso", "info@domex.do")).toBe("DE")
+      expect(getSenderInitials("Saturn", "saturn@corp.com")).toBe("SA")
+      expect(getSenderInitials("", "support@stripe.com")).toBe("S")
+    })
 
-      expect(getInitials("Domex Expreso", "info@domex.do")).toBe("DE")
-      expect(getInitials("Saturn", "saturn@corp.com")).toBe("SA")
-      expect(getInitials("", "support@stripe.com")).toBe("S")
+    it("assigns a deterministic sender palette color for the same seed", () => {
+      expect(getSenderPalette("partner@example.com")).toBe(
+        getSenderPalette("partner@example.com")
+      )
+      expect(getSenderPalette("partner@example.com")).toHaveProperty("bg")
+      expect(getSenderPalette("partner@example.com")).toHaveProperty("text")
+    })
+
+    it("partitions long threads into [First] ── [N] ── [Last 2] super-collapse segments", () => {
+      const messages = Array.from({ length: 6 }, (_, i) => ({
+        id: `msg_${i + 1}`,
+        isUnread: false,
+      }))
+      const segments = partitionThreadMessagesForSuperCollapse(messages, false)
+      expect(segments.map((s) => s.type)).toEqual([
+        "message",
+        "folded",
+        "message",
+        "message",
+      ])
+      const folded = segments[1]
+      if (folded.type !== "folded") throw new Error("expected folded segment")
+      expect(folded.count).toBe(3)
+
+      // Unfolding the deck renders every message in collapsed row state
+      const unfoldedSegments = partitionThreadMessagesForSuperCollapse(
+        messages,
+        true
+      )
+      expect(unfoldedSegments).toHaveLength(6)
+      expect(unfoldedSegments.every((s) => s.type === "message")).toBe(true)
+    })
+
+    it("humanizes thread timestamps copy-free for localized rendering", () => {
+      const now = new Date("2026-03-05T12:00:00Z")
+      expect(
+        computeHumanizedMailTimestamp("2026-03-05T11:58:00Z", {
+          now,
+          timeZone: "UTC",
+        })
+      ).toEqual({ kind: "minutes_ago", count: 2 })
+      expect(
+        computeHumanizedMailTimestamp("2026-03-03T10:00:00Z", {
+          now,
+          timeZone: "UTC",
+        })
+      ).toEqual({ kind: "days_ago", count: 2 })
+      expect(translate("en", "mail.threadTime.minutesAgo", { count: 2 })).toBe(
+        "2 min ago"
+      )
+      expect(translate("es", "mail.threadTime.daysAgo", { count: 2 })).toBe(
+        "hace 2 días"
+      )
     })
   })
 
