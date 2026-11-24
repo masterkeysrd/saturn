@@ -97,10 +97,14 @@ export function ChangePasswordSettings() {
     setShowConfirm(false)
   }
 
+  const handleCancel = () => {
+    handleResetForm()
+    setIsExpanded(false)
+  }
+
   const handleToggleExpand = () => {
     if (isExpanded) {
-      handleResetForm()
-      setIsExpanded(false)
+      handleCancel()
     } else {
       setIsExpanded(true)
     }
@@ -242,6 +246,16 @@ export function ChangePasswordSettings() {
       {isExpanded && (
         <form
           onSubmit={handleSubmit(onValid)}
+          onKeyDown={(e) => {
+            if (
+              e.key === "Escape" &&
+              !challengeModalOpen &&
+              !changePasswordMutation.isPending
+            ) {
+              e.stopPropagation()
+              handleCancel()
+            }
+          }}
           className="mt-6 max-w-xl animate-in space-y-5 border-t border-border/40 pt-5 duration-200 fade-in"
         >
           {error && (
@@ -400,7 +414,7 @@ export function ChangePasswordSettings() {
             <Button
               type="button"
               variant="ghost"
-              onClick={handleResetForm}
+              onClick={handleCancel}
               disabled={changePasswordMutation.isPending}
               className="cursor-pointer rounded-xl"
             >
