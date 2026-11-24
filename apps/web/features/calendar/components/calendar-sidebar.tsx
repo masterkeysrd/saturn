@@ -20,6 +20,7 @@ import {
   type ConnectedAccount,
 } from "@saturn/hooks"
 import {
+  formatLocalDateString,
   formatShortWeekday,
   getMonthMatrix,
   isMailAccountReauthRequired,
@@ -42,6 +43,8 @@ function CalendarRouterNavigateBridge({
 
 export interface CalendarSidebarProps {
   currentDate: Date
+  visibleDate?: Date
+  resetSeq?: number
   onSelectDate: (d: Date) => void
   onOpenCreateDialog: () => void
   showFinanceOverlay?: boolean
@@ -50,6 +53,8 @@ export interface CalendarSidebarProps {
 
 export function CalendarSidebar({
   currentDate,
+  visibleDate,
+  resetSeq = 0,
   onSelectDate,
   onOpenCreateDialog,
   showFinanceOverlay = false,
@@ -109,31 +114,47 @@ export function CalendarSidebar({
     [canManageSpace, initiateOAuthMutation, t]
   )
 
-  // Mini jumper month state
+  // Mini jumper month state (synced to visible/current month via derived override)
   const currentParts = tz.parts(currentDate) || {
     year: 2026,
     month: 10,
     day: 20,
   }
-  const [jumperYear, setJumperYear] = useState(currentParts.year)
-  const [jumperMonth, setJumperMonth] = useState(currentParts.month)
+  const todayDateStr = formatLocalDateString(tz.now(), tz.timezone)
+  const syncedParts = tz.parts(visibleDate ?? currentDate) || currentParts
+  const jumperBaseKey = `${syncedParts.year}-${syncedParts.month}-${resetSeq}`
+  const [jumperOverride, setJumperOverride] = useState<{
+    baseKey: string
+    year: number
+    month: number
+  } | null>(null)
+  const jumperYear =
+    jumperOverride?.baseKey === jumperBaseKey
+      ? jumperOverride.year
+      : syncedParts.year
+  const jumperMonth =
+    jumperOverride?.baseKey === jumperBaseKey
+      ? jumperOverride.month
+      : syncedParts.month
 
   const handlePrevMonth = () => {
-    if (jumperMonth === 1) {
-      setJumperMonth(12)
-      setJumperYear((y) => y - 1)
-    } else {
-      setJumperMonth((m) => m - 1)
-    }
+    const nextMonth = jumperMonth === 1 ? 12 : jumperMonth - 1
+    const nextYear = jumperMonth === 1 ? jumperYear - 1 : jumperYear
+    setJumperOverride({
+      baseKey: jumperBaseKey,
+      year: nextYear,
+      month: nextMonth,
+    })
   }
 
   const handleNextMonth = () => {
-    if (jumperMonth === 12) {
-      setJumperMonth(1)
-      setJumperYear((y) => y + 1)
-    } else {
-      setJumperMonth((m) => m + 1)
-    }
+    const nextMonth = jumperMonth === 12 ? 1 : jumperMonth + 1
+    const nextYear = jumperMonth === 12 ? jumperYear + 1 : jumperYear
+    setJumperOverride({
+      baseKey: jumperBaseKey,
+      year: nextYear,
+      month: nextMonth,
+    })
   }
 
   const weekStartsOn = tz.weekStartsOn ?? 0
@@ -243,6 +264,11 @@ export function CalendarSidebar({
             <div key={wIdx} className="grid grid-cols-7 gap-0.5">
               {week.map((cell: MonthDayCell) => {
                 const isSelected = cell.dateString === selectedDateStr
+                const isPastCell = Boolean(
+                  todayDateStr &&
+                  cell.dateString < todayDateStr &&
+                  !cell.isToday
+                )
                 return (
                   <button
                     key={cell.dateString}
@@ -250,10 +276,12 @@ export function CalendarSidebar({
                     data-testid={`mini-day-${cell.dateString}`}
                     onClick={() => onSelectDate(cell.date)}
                     className={cn(
-                      "flex h-6 w-full items-center justify-center rounded text-[11px] font-medium transition",
+                      "flex h-6 w-full cursor-pointer items-center justify-center rounded text-[11px] font-medium transition",
                       cell.isCurrentMonth
-                        ? "text-foreground"
-                        : "text-muted-foreground/60",
+                        ? isPastCell
+                          ? "text-muted-foreground/75"
+                          : "text-foreground"
+                        : "text-muted-foreground/45",
                       cell.isToday &&
                         "font-bold text-primary ring-1 ring-primary/40",
                       isSelected

@@ -51,7 +51,10 @@ import {
   useListScheduledTransactionsQuery,
   type ScheduledTransaction,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
-import { useOptionalSpacePermissions } from "@/features/space/use-space"
+import {
+  useActiveSpaceContext,
+  useOptionalSpacePermissions,
+} from "@/features/space/use-space"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import { ConfirmTransactionSheet } from "@/features/finance/components/confirm-transaction-sheet"
 import { CalendarSidebar } from "./components/calendar-sidebar"
@@ -74,6 +77,14 @@ import { cn } from "@/lib/utils"
 export type CalendarViewType = "month" | "week" | "day" | "agenda"
 
 const VALID_CALENDAR_VIEWS = new Set<string>(["month", "week", "day", "agenda"])
+
+function getUrlCalendarView(): CalendarViewType | undefined {
+  if (typeof window === "undefined") return undefined
+  const param = new URLSearchParams(window.location.search).get("view")
+  return param && VALID_CALENDAR_VIEWS.has(param)
+    ? (param as CalendarViewType)
+    : undefined
+}
 
 function CalendarSearchParamsSync({
   onApplyParams,
@@ -108,6 +119,7 @@ export function CalendarView() {
   const tz = useTimezone()
   const { t } = useI18n()
   const { spaceId, isWritable } = useOptionalSpacePermissions()
+  const { userPreferences, updateUserPreferences } = useActiveSpaceContext()
   const { data: calendarsData } = useCalendars()
   const calendars = useMemo(
     () => calendarsData?.calendars || [],
@@ -129,24 +141,30 @@ export function CalendarView() {
     }
   }, [calendarsData, ensureDefaultMutation])
 
-  // Active view state
-  const [activeView, setActiveView] = useState<CalendarViewType>("month")
+  // Active view state: URL ?view= > userPreferences.calendar.webView > "week"
+  const prefWebView: CalendarViewType =
+    userPreferences?.calendar?.webView &&
+    VALID_CALENDAR_VIEWS.has(userPreferences.calendar.webView)
+      ? (userPreferences.calendar.webView as CalendarViewType)
+      : "week"
+  const [viewOverride, setViewOverride] = useState<CalendarViewType | null>(
+    () => getUrlCalendarView() ?? null
+  )
+  const activeView: CalendarViewType = viewOverride ?? prefWebView
+
   // Active focal date
   const [currentDate, setCurrentDate] = useState<Date>(() => tz.now())
+  const [agendaVisibleOverride, setAgendaVisibleOverride] = useState<{
+    baseKey: string
+    date: Date
+  } | null>(null)
+
   // Sidebar rail visibility
   const [sidebarOpen, setSidebarOpen] = useState(true)
   // Scheduled Bills & Paydays overlay toggle
   const [showFinanceOverlay, setShowFinanceOverlay] = useState<boolean>(() =>
     readCalendarFinanceOverlayPref()
   )
-
-  const handleToggleFinanceOverlay = useCallback(() => {
-    setShowFinanceOverlay((prev) => {
-      const next = !prev
-      writeCalendarFinanceOverlayPref(next)
-      return next
-    })
-  }, [])
 
   // Event Dialog state
   const [eventDialogOpen, setEventDialogOpen] = useState(false)
@@ -183,13 +201,48 @@ export function CalendarView() {
   const [selectedScheduledTxn, setSelectedScheduledTxn] =
     useState<ScheduledTransaction | null>(null)
   const [confirmSheetOpen, setConfirmSheetOpen] = useState(false)
+  const [todayResetSeq, setTodayResetSeq] = useState(0)
+
+  const focalDateStr = formatLocalDateString(currentDate, tz.timezone)
+  const agendaBaseKey = `${activeView}|${focalDateStr}|${todayResetSeq}`
+  const agendaVisibleDate =
+    activeView === "agenda" && agendaVisibleOverride?.baseKey === agendaBaseKey
+      ? agendaVisibleOverride.date
+      : null
+  const effectiveHeaderDate =
+    activeView === "agenda" && agendaVisibleDate
+      ? agendaVisibleDate
+      : currentDate
+
+  const handleChangeView = useCallback(
+    (nextView: CalendarViewType) => {
+      setViewOverride(nextView)
+      void updateUserPreferences({ calendar: { webView: nextView } }, [
+        "calendar.web_view",
+      ]).catch(() => {})
+    },
+    [updateUserPreferences]
+  )
+
+  const handleAgendaVisibleDateChange = useCallback(
+    (date: Date) => {
+      setAgendaVisibleOverride({ baseKey: agendaBaseKey, date })
+    },
+    [agendaBaseKey]
+  )
+
+  const handleToggleFinanceOverlay = useCallback(() => {
+    setShowFinanceOverlay((prev) => {
+      const next = !prev
+      writeCalendarFinanceOverlayPref(next)
+      return next
+    })
+  }, [])
 
   // Active calendars filter
   const enabledCalendarIds = useMemo(() => {
     return calendars.filter((c) => c.isEnabled).map((c) => c.id)
   }, [calendars])
-
-  const focalDateStr = formatLocalDateString(currentDate, tz.timezone)
 
   useRegisterCopilotView({
     viewId: "calendar.schedule",
@@ -249,11 +302,10 @@ export function CalendarView() {
       return { rangeStart: start, rangeEnd: end }
     }
 
-    // Agenda: 30 days window from current day
-    const start = tz.startOfDay(currentDate).toISOString()
-    const end = new Date(
-      tz.startOfDay(currentDate).getTime() + 30 * 86_400_000
-    ).toISOString()
+    // Agenda: starts strictly at currentDate (no past dates unless currentDate is set in the past), +90 days forward
+    const baseDayStart = tz.startOfDay(currentDate).getTime()
+    const start = new Date(baseDayStart).toISOString()
+    const end = new Date(baseDayStart + 90 * 86_400_000).toISOString()
     return { rangeStart: start, rangeEnd: end }
   }, [activeView, currentDate, tz])
 
@@ -339,6 +391,8 @@ export function CalendarView() {
   // Navigation handlers
   const handleToday = useCallback(() => {
     setCurrentDate(tz.now())
+    setAgendaVisibleOverride(null)
+    setTodayResetSeq((seq) => seq + 1)
   }, [tz])
 
   const handlePrev = useCallback(() => {
@@ -369,76 +423,36 @@ export function CalendarView() {
     }
   }, [activeView, currentDate, tz])
 
-  // Header title label
+  // Header title label — Month + Year across all 4 views (or "Sep – Oct 2026" on cross-month weeks)
   const headerTitle = useMemo(() => {
-    if (activeView === "month") {
-      return tz.formatMonth(currentDate)
-    }
-
     if (activeView === "week") {
-      const days = getWeekDays(currentDate, {
+      const days = getWeekDays(effectiveHeaderDate, {
         weekStartsOn: tz.weekStartsOn ?? 0,
         timeZone: tz.timezone,
         locale: tz.locale || "en-US",
       })
-      const first = days[0].date
-      const last = days[6].date
-      const p1 = tz.parts(first)
-      const p2 = tz.parts(last)
-      const nowParts = tz.parts(tz.now())
-      const isCurrentYear =
-        p1 &&
-        nowParts &&
-        p1.year === nowParts.year &&
-        p2?.year === nowParts.year
+      if (days.length > 0) {
+        const first = days[0].date
+        const last = days[days.length - 1].date
+        const p1 = tz.parts(first)
+        const p2 = tz.parts(last)
 
-      if (p1 && p2 && p1.year === p2.year && p1.month === p2.month) {
-        const isEs = (tz.locale || "").startsWith("es")
-        const monthName = tz.format(first, { month: "long" })
-        const monthCap = monthName
-          ? monthName.charAt(0).toUpperCase() + monthName.slice(1)
-          : ""
-        if (isEs) {
-          return isCurrentYear
-            ? `${p1.day} – ${p2.day} de ${monthName}`
-            : `${p1.day} – ${p2.day} de ${monthName} de ${p1.year}`
+        if (p1 && p2 && (p1.year !== p2.year || p1.month !== p2.month)) {
+          const m1 = tz.format(first, { month: "short" })
+          const m2 = tz.format(last, { month: "short" })
+          const m1Cap = m1 ? m1.charAt(0).toUpperCase() + m1.slice(1) : ""
+          const m2Cap = m2 ? m2.charAt(0).toUpperCase() + m2.slice(1) : ""
+          if (p1.year !== p2.year) {
+            return `${m1Cap} ${p1.year} – ${m2Cap} ${p2.year}`
+          }
+          return `${m1Cap} – ${m2Cap} ${p2.year}`
         }
-        return isCurrentYear
-          ? `${monthCap} ${p1.day} – ${p2.day}`
-          : `${monthCap} ${p1.day} – ${p2.day}, ${p1.year}`
+        return tz.formatMonth(first)
       }
-
-      const isEs = (tz.locale || "").startsWith("es")
-      const m1 = tz.format(first, { month: "short" })
-      const m2 = tz.format(last, { month: "short" })
-      const m1Cap = m1 ? m1.charAt(0).toUpperCase() + m1.slice(1) : ""
-      const m2Cap = m2 ? m2.charAt(0).toUpperCase() + m2.slice(1) : ""
-      if (isEs) {
-        return isCurrentYear
-          ? `${p1?.day} ${m1Cap} – ${p2?.day} ${m2Cap}`
-          : `${p1?.day} ${m1Cap} ${p1?.year} – ${p2?.day} ${m2Cap} ${p2?.year}`
-      }
-      return isCurrentYear
-        ? `${m1Cap} ${p1?.day} – ${m2Cap} ${p2?.day}`
-        : `${m1Cap} ${p1?.day}, ${p1?.year} – ${m2Cap} ${p2?.day}, ${p2?.year}`
     }
 
-    if (activeView === "day") {
-      const nowParts = tz.parts(tz.now())
-      const isCurrentYear = nowParts
-        ? currentDate.getFullYear() === nowParts.year
-        : true
-      const dayStr = tz.format(currentDate, {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        year: isCurrentYear ? undefined : "numeric",
-      })
-      return dayStr ? dayStr.charAt(0).toUpperCase() + dayStr.slice(1) : ""
-    }
-
-    return tz.formatMonth(currentDate)
-  }, [activeView, currentDate, tz])
+    return tz.formatMonth(effectiveHeaderDate)
+  }, [activeView, effectiveHeaderDate, tz])
 
   // Open create event dialog from slot click
   const handleSelectSlot = useCallback((dateStr: string, timeStr?: string) => {
@@ -629,22 +643,22 @@ export function CalendarView() {
         case "d":
         case "D":
           e.preventDefault()
-          setActiveView("day")
+          handleChangeView("day")
           break
         case "w":
         case "W":
           e.preventDefault()
-          setActiveView("week")
+          handleChangeView("week")
           break
         case "m":
         case "M":
           e.preventDefault()
-          setActiveView("month")
+          handleChangeView("month")
           break
         case "a":
         case "A":
           e.preventDefault()
-          setActiveView("agenda")
+          handleChangeView("agenda")
           break
         case "c":
         case "C":
@@ -678,6 +692,7 @@ export function CalendarView() {
     previewOccurrence,
     handleEditFromPreview,
     handleToday,
+    handleChangeView,
     handleOpenNewEvent,
     handlePrev,
     handleNext,
@@ -695,7 +710,7 @@ export function CalendarView() {
               setCurrentDate(tz.startOfDay(date))
             }
             if (view) {
-              setActiveView(view)
+              setViewOverride(view)
             }
           }}
         />
@@ -705,7 +720,12 @@ export function CalendarView() {
         <div className="hidden h-full md:flex">
           <CalendarSidebar
             currentDate={currentDate}
-            onSelectDate={setCurrentDate}
+            visibleDate={effectiveHeaderDate}
+            resetSeq={todayResetSeq}
+            onSelectDate={(d) => {
+              setCurrentDate(d)
+              setAgendaVisibleOverride(null)
+            }}
             onOpenCreateDialog={handleOpenNewEvent}
             showFinanceOverlay={showFinanceOverlay}
             onToggleFinanceOverlay={handleToggleFinanceOverlay}
@@ -804,7 +824,7 @@ export function CalendarView() {
               <button
                 type="button"
                 data-testid="view-tab-month"
-                onClick={() => setActiveView("month")}
+                onClick={() => handleChangeView("month")}
                 className={cn(
                   "rounded-md px-3 py-1.5 transition",
                   activeView === "month"
@@ -817,7 +837,7 @@ export function CalendarView() {
               <button
                 type="button"
                 data-testid="view-tab-week"
-                onClick={() => setActiveView("week")}
+                onClick={() => handleChangeView("week")}
                 className={cn(
                   "rounded-md px-3 py-1.5 transition",
                   activeView === "week"
@@ -830,7 +850,7 @@ export function CalendarView() {
               <button
                 type="button"
                 data-testid="view-tab-day"
-                onClick={() => setActiveView("day")}
+                onClick={() => handleChangeView("day")}
                 className={cn(
                   "rounded-md px-3 py-1.5 transition",
                   activeView === "day"
@@ -843,7 +863,7 @@ export function CalendarView() {
               <button
                 type="button"
                 data-testid="view-tab-agenda"
-                onClick={() => setActiveView("agenda")}
+                onClick={() => handleChangeView("agenda")}
                 className={cn(
                   "rounded-md px-3 py-1.5 transition",
                   activeView === "agenda"
@@ -880,7 +900,7 @@ export function CalendarView() {
               financeItems={financeItems}
               onSelectDate={(d) => {
                 setCurrentDate(d)
-                setActiveView("day")
+                setViewOverride("day")
               }}
               onSelectSlot={handleSelectSlot}
               onSelectOccurrence={handleSelectOccurrence}
@@ -892,11 +912,12 @@ export function CalendarView() {
           {activeView === "week" && (
             <WeekView
               currentDate={currentDate}
+              resetSeq={todayResetSeq}
               occurrences={occurrences}
               financeItems={financeItems}
               onSelectDate={(d) => {
                 setCurrentDate(d)
-                setActiveView("day")
+                setViewOverride("day")
               }}
               onSelectSlot={handleSelectSlot}
               onSelectOccurrence={handleSelectOccurrence}
@@ -908,6 +929,7 @@ export function CalendarView() {
           {activeView === "day" && (
             <DayView
               currentDate={currentDate}
+              resetSeq={todayResetSeq}
               occurrences={occurrences}
               financeItems={financeItems}
               onSelectSlot={handleSelectSlot}
@@ -920,12 +942,14 @@ export function CalendarView() {
           {activeView === "agenda" && (
             <AgendaView
               currentDate={currentDate}
+              resetSeq={todayResetSeq}
               occurrences={occurrences}
               financeItems={financeItems}
               onSelectOccurrence={handleSelectOccurrence}
               onEditOccurrence={handleEditFromPreview}
               onSelectFinanceItem={handleSelectFinanceItem}
               onOpenCreateDialog={handleOpenNewEvent}
+              onVisibleDateChange={handleAgendaVisibleDateChange}
             />
           )}
         </div>
@@ -935,6 +959,7 @@ export function CalendarView() {
       <EventPreviewPopover
         occurrence={previewOccurrence}
         anchorEl={previewAnchor}
+        canEdit={isWritable}
         onOpenChange={(open) => {
           if (!open) {
             setPreviewOccurrence(null)

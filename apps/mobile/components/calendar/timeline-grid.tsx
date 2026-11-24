@@ -4,20 +4,26 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  StyleSheet,
   type RefreshControlProps,
 } from "react-native"
 import {
   getHourSlots,
   computeTimedEventLayout,
+  formatDateWithTimezone,
   formatLocalDateString,
   getTimezoneParts,
   parseDate,
   type HourSlot,
 } from "@saturn/core"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../lib/theme"
 import { useI18n, useTimezone } from "@saturn/hooks"
-import { haptics } from "@/lib/haptics"
+import { haptics } from "../../lib/haptics"
 import { formatEventTime } from "./calendar-utils"
 
 const HOUR_HEIGHT = 60
@@ -129,17 +135,27 @@ export function TimelineGrid({
           </Text>
         </View>
         <View style={styles.daysHeaderContainer}>
-          {days.map((dayStr) => {
+          {days.map((dayStr, colIndex) => {
             const [y, m, d] = dayStr.split("-").map(Number)
             const noonUtc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
-            const weekday = new Intl.DateTimeFormat(tz.locale || "en-US", {
-              weekday: "short",
-              timeZone,
-            }).format(noonUtc)
+            const weekday = !isNaN(noonUtc.getTime())
+              ? formatDateWithTimezone(
+                  noonUtc,
+                  timeZone,
+                  { weekday: "short" },
+                  tz.locale || "en-US"
+                )
+              : ""
             const isToday = dayStr === todayStr
 
             return (
-              <View key={dayStr} style={styles.dayHeaderCol}>
+              <View
+                key={dayStr}
+                style={[
+                  styles.dayHeaderCol,
+                  colIndex > 0 && styles.dayGridColBorder,
+                ]}
+              >
                 <Text
                   style={[
                     styles.dayHeaderWeekday,
@@ -176,10 +192,16 @@ export function TimelineGrid({
             <Text style={styles.allDayLabelText}>{t("calendar.allDay")}</Text>
           </View>
           <View style={styles.allDayColumnsContainer}>
-            {days.map((dayStr) => {
+            {days.map((dayStr, colIndex) => {
               const dayAllDay = allDayByDay.get(dayStr) || []
               return (
-                <View key={dayStr} style={styles.allDayCol}>
+                <View
+                  key={dayStr}
+                  style={[
+                    styles.allDayCol,
+                    colIndex > 0 && styles.dayGridColBorder,
+                  ]}
+                >
                   {dayAllDay.map((occ) => {
                     const color = occ.color || colors.primary
                     return (
@@ -364,7 +386,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     width: TIME_COL_WIDTH,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    borderRightWidth: 1,
+    borderRightWidth: StyleSheet.hairlineWidth,
     borderRightColor: t.colors.border,
     paddingVertical: 6,
   },
@@ -424,7 +446,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     width: TIME_COL_WIDTH,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    borderRightWidth: 1,
+    borderRightWidth: StyleSheet.hairlineWidth,
     borderRightColor: t.colors.border,
     paddingHorizontal: 4,
   },
@@ -436,11 +458,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
   allDayColumnsContainer: {
     flex: 1,
     flexDirection: "row" as const,
-    paddingVertical: 4,
   },
   allDayCol: {
     flex: 1,
     paddingHorizontal: 4,
+    paddingVertical: 4,
     gap: 3,
   },
   allDayPill: {
@@ -465,7 +487,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   timeLabelsColumn: {
     width: TIME_COL_WIDTH,
-    borderRightWidth: 1,
+    borderRightWidth: StyleSheet.hairlineWidth,
     borderRightColor: t.colors.border,
   },
   hourSlotLabel: {
@@ -489,7 +511,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     position: "relative" as const,
   },
   dayGridColBorder: {
-    borderLeftWidth: 1,
+    borderLeftWidth: StyleSheet.hairlineWidth,
     borderLeftColor: t.colors.border,
   },
   hourLine: {

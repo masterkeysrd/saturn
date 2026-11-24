@@ -1,7 +1,9 @@
 import {
+  formatDateWithTimezone,
   formatLocalDateString,
   getTimezoneParts,
   parseDate,
+  sanitizeTimezone,
   type DateInput,
 } from "@saturn/core"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
@@ -11,6 +13,47 @@ export interface CalendarDateSection {
   dateString: string // "YYYY-MM-DD"
   isToday: boolean
   data: EventOccurrence[]
+}
+
+function extractValidDateKey(
+  raw: string | undefined,
+  timeZone: string
+): string {
+  if (!raw) return ""
+  const trimmed = raw.trim()
+  if (!trimmed) return ""
+
+  const leadingYmd = /^(\d{4})-(\d{2})-(\d{2})(?:$|[T\s])/.exec(trimmed)
+  if (leadingYmd) {
+    const y = Number(leadingYmd[1])
+    const m = Number(leadingYmd[2])
+    const d = Number(leadingYmd[3])
+    const check = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+    if (
+      !isNaN(check.getTime()) &&
+      check.getUTCFullYear() === y &&
+      check.getUTCMonth() + 1 === m &&
+      check.getUTCDate() === d
+    ) {
+      if (trimmed.length === 10) {
+        return trimmed
+      }
+    }
+  }
+
+  const parsed = parseDate(trimmed)
+  if (parsed && !isNaN(parsed.getTime())) {
+    const local = formatLocalDateString(parsed, timeZone)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(local)) {
+      return local
+    }
+  }
+
+  if (leadingYmd) {
+    return `${leadingYmd[1]}-${leadingYmd[2]}-${leadingYmd[3]}`
+  }
+
+  return ""
 }
 
 /**
@@ -24,7 +67,8 @@ export function groupEventsByDate(
 ): CalendarDateSection[] {
   if (!events || events.length === 0) return []
 
-  const todayStr = formatLocalDateString(new Date(), timeZone)
+  const tz = sanitizeTimezone(timeZone)
+  const todayStr = formatLocalDateString(new Date(), tz)
 
   // Map to hold events by date string
   const dateMap = new Map<string, EventOccurrence[]>()
@@ -32,15 +76,20 @@ export function groupEventsByDate(
   // Helper to extract the local dateString for an occurrence
   const getDateKey = (occ: EventOccurrence): string => {
     if (occ.isAllDay && occ.startDate) {
-      return occ.startDate
+      const fromStartDate = extractValidDateKey(occ.startDate, tz)
+      if (fromStartDate) return fromStartDate
     }
     if (occ.startTime) {
       const parsed = parseDate(occ.startTime)
-      if (parsed) {
-        const local = formatLocalDateString(parsed, timeZone)
-        if (local) return local
+      if (parsed && !isNaN(parsed.getTime())) {
+        const local = formatLocalDateString(parsed, tz)
+        if (/^\d{4}-\d{2}-\d{2}$/.test(local)) return local
       }
-      return occ.startTime.slice(0, 10)
+      const fallback = extractValidDateKey(occ.startTime, tz)
+      if (fallback) return fallback
+    }
+    if (occ.startDate) {
+      return extractValidDateKey(occ.startDate, tz)
     }
     return ""
   }
@@ -62,6 +111,7 @@ export function groupEventsByDate(
   )
 
   const sections: CalendarDateSection[] = []
+  const nowParts = getTimezoneParts(new Date(), tz)
 
   for (const dateKey of sortedKeys) {
     const dayEvents = dateMap.get(dateKey) || []
@@ -70,8 +120,8 @@ export function groupEventsByDate(
     dayEvents.sort((a, b) => {
       if (a.isAllDay && !b.isAllDay) return -1
       if (!a.isAllDay && b.isAllDay) return 1
-      const aTime = a.startTime ? new Date(a.startTime).getTime() : 0
-      const bTime = b.startTime ? new Date(b.startTime).getTime() : 0
+      const aTime = a.startTime ? (parseDate(a.startTime)?.getTime() ?? 0) : 0
+      const bTime = b.startTime ? (parseDate(b.startTime)?.getTime() ?? 0) : 0
       if (aTime !== bTime) return aTime - bTime
       return (a.instanceId || a.eventId).localeCompare(
         b.instanceId || b.eventId
@@ -80,18 +130,27 @@ export function groupEventsByDate(
 
     const [y, m, d] = dateKey.split("-").map(Number)
     const noonUtc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
-    const nowParts = getTimezoneParts(new Date(), timeZone)
+    if (isNaN(noonUtc.getTime())) continue
+
     const isCurrentYear = nowParts ? y === nowParts.year : true
-    const rawTitle = new Intl.DateTimeFormat(locale, {
+    const titleOpts: Intl.DateTimeFormatOptions = {
       weekday: "long",
       month: "long",
       day: "numeric",
-      year: isCurrentYear ? undefined : "numeric",
-      timeZone,
-    }).format(noonUtc)
+      timeZone: tz,
+    }
+    if (!isCurrentYear) {
+      titleOpts.year = "numeric"
+    }
+    let rawTitle = ""
+    try {
+      rawTitle = new Intl.DateTimeFormat(locale, titleOpts).format(noonUtc)
+    } catch {
+      rawTitle = formatDateWithTimezone(noonUtc, tz, titleOpts, locale)
+    }
     const title = rawTitle
       ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1)
-      : ""
+      : dateKey
 
     sections.push({
       title,
@@ -145,22 +204,40 @@ export function formatEventTime(
   }
   if (!occ.startTime) return ""
 
-  const timeFormatter = new Intl.DateTimeFormat(locale, {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone,
-  })
-
+  const tz = sanitizeTimezone(timeZone)
   const sDate = parseDate(occ.startTime)
   const eDate = occ.endTime ? parseDate(occ.endTime) : null
 
-  if (!sDate) return ""
+  if (!sDate || isNaN(sDate.getTime())) return ""
 
-  const startFormatted = timeFormatter.format(sDate)
-  if (!eDate) return startFormatted
-
-  const endFormatted = timeFormatter.format(eDate)
-  return `${startFormatted} – ${endFormatted}`
+  let startFormatted = ""
+  try {
+    const timeFormatter = new Intl.DateTimeFormat(locale, {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: tz,
+    })
+    startFormatted = timeFormatter.format(sDate).replace(/\u202f/g, " ")
+    if (!eDate || isNaN(eDate.getTime())) return startFormatted
+    const endFormatted = timeFormatter.format(eDate).replace(/\u202f/g, " ")
+    return `${startFormatted} – ${endFormatted}`
+  } catch {
+    startFormatted = formatDateWithTimezone(
+      sDate,
+      tz,
+      { hour: "numeric", minute: "2-digit" },
+      locale
+    ).replace(/\u202f/g, " ")
+    if (!startFormatted) return ""
+    if (!eDate || isNaN(eDate.getTime())) return startFormatted
+    const endFormatted = formatDateWithTimezone(
+      eDate,
+      tz,
+      { hour: "numeric", minute: "2-digit" },
+      locale
+    ).replace(/\u202f/g, " ")
+    return endFormatted ? `${startFormatted} – ${endFormatted}` : startFormatted
+  }
 }
 
 /**
@@ -181,4 +258,107 @@ export function findSelfAttendee<T extends { email?: string | null }>(
   return attendees.find((a) =>
     normalizedSet.has((a.email ?? "").trim().toLowerCase())
   )
+}
+
+export function toInclusiveCalendarEndDate(
+  endDateStr: string,
+  startDateStr: string
+): string {
+  if (
+    !endDateStr ||
+    endDateStr <= startDateStr ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(endDateStr)
+  ) {
+    return startDateStr
+  }
+  const [y, m, d] = endDateStr.split("-").map(Number)
+  const prev = new Date(Date.UTC(y, m - 1, d - 1, 12, 0, 0))
+  const py = String(prev.getUTCFullYear()).padStart(4, "0")
+  const pm = String(prev.getUTCMonth() + 1).padStart(2, "0")
+  const pd = String(prev.getUTCDate()).padStart(2, "0")
+  return `${py}-${pm}-${pd}`
+}
+
+export type DuplicateEventRouteParams = {
+  calendarId: string
+  initialTitle: string
+  initialDescription: string
+  initialLocation: string
+  initialIsAllDay: "true" | "false"
+  initialDate: string
+  initialEndDate: string
+  initialStartTime: string
+  initialEndTime: string
+  initialTimezone: string
+  initialMeetUrl: string
+  initialAttendees?: string
+}
+
+export function buildDuplicateEventParams(
+  occ: EventOccurrence,
+  fallbackTimeZone: string,
+  fallbackDate: Date = new Date()
+): DuplicateEventRouteParams {
+  const targetTz = occ.timezone || fallbackTimeZone
+  const fallbackDateStr = formatLocalDateString(fallbackDate, targetTz)
+
+  let initialDate = fallbackDateStr
+  let initialEndDate = fallbackDateStr
+  let initialStartTime = "09:00"
+  let initialEndTime = "10:00"
+
+  if (occ.isAllDay) {
+    initialDate = occ.startDate || fallbackDateStr
+    initialEndDate = toInclusiveCalendarEndDate(
+      occ.endDate || initialDate,
+      initialDate
+    )
+  } else {
+    const startParsed = occ.startTime ? parseDate(occ.startTime) : null
+    const endParsed = occ.endTime ? parseDate(occ.endTime) : null
+
+    if (startParsed) {
+      initialDate = formatLocalDateString(startParsed, targetTz)
+      const sParts = getTimezoneParts(startParsed, targetTz)
+      if (sParts) {
+        initialStartTime = `${String(sParts.hour).padStart(2, "0")}:${String(sParts.minute).padStart(2, "0")}`
+      }
+    }
+
+    if (endParsed) {
+      initialEndDate = formatLocalDateString(endParsed, targetTz)
+      const eParts = getTimezoneParts(endParsed, targetTz)
+      if (eParts) {
+        initialEndTime = `${String(eParts.hour).padStart(2, "0")}:${String(eParts.minute).padStart(2, "0")}`
+      }
+    } else {
+      initialEndDate = initialDate
+    }
+  }
+
+  const serializedAttendees =
+    occ.attendees && occ.attendees.length > 0
+      ? JSON.stringify(
+          occ.attendees.map((a) => ({
+            email: a.email,
+            displayName: a.displayName,
+            isOptional: a.isOptional,
+          }))
+        )
+      : undefined
+
+  return {
+    calendarId: occ.calendarId || "",
+    initialTitle: occ.title || "",
+    initialDescription: occ.description || "",
+    initialLocation: occ.location || "",
+    initialIsAllDay: occ.isAllDay ? "true" : "false",
+    initialDate,
+    initialEndDate,
+    initialStartTime,
+    initialEndTime,
+    initialTimezone: targetTz,
+    initialMeetUrl: occ.meetUrl || "",
+    ...(serializedAttendees ? { initialAttendees: serializedAttendees } : {}),
+  }
 }

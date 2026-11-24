@@ -36,7 +36,7 @@ import {
 } from "./storage"
 import { haptics } from "./haptics"
 import { clearPersistedQueryCache } from "./query-persister"
-import { setPendingWorkflowDraft } from "@/components/workflows/workflow-draft-store"
+import { setPendingWorkflowDraft } from "../components/workflows/workflow-draft-store"
 
 const USER_PREFERENCES_QUERY_KEY = [
   "/api/v1/identity/users/me/preferences",
@@ -66,6 +66,24 @@ function sanitizeStoredPreferences(
   }
 }
 
+export type CalendarMobileViewPreference =
+  "agenda" | "day" | "three_day" | "week" | "month"
+
+function normalizeCalendarMobileView(
+  value?: string | null
+): CalendarMobileViewPreference {
+  switch (value) {
+    case "agenda":
+    case "day":
+    case "three_day":
+    case "week":
+    case "month":
+      return value
+    default:
+      return "agenda"
+  }
+}
+
 export interface SpaceContextType {
   spaces: Space[]
   activeSpace: Space | null
@@ -80,11 +98,15 @@ export interface SpaceContextType {
   hourCycle: HourCycle
   weekStartsOn: WeekStartsOn
   mailAutoLoadRemoteContent: boolean
+  calendarMobileView: CalendarMobileViewPreference
   updateRegionalPreferences: (
     patch: Partial<StoredUserPreferences["regional"]>
   ) => Promise<void>
   updateMailPreferences: (
     patch: Partial<StoredUserPreferences["mail"]>
+  ) => Promise<void>
+  updateCalendarPreferences: (
+    patch: Partial<StoredUserPreferences["calendar"]>
   ) => Promise<void>
   switchSpace: (spaceId: string) => Promise<void>
   refetchSpaces: () => void
@@ -259,6 +281,35 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
     [applyUserPreferencesUpdate]
   )
 
+  const updateCalendarPreferences = useCallback(
+    async (patch: Partial<StoredUserPreferences["calendar"]>) => {
+      const previous = userPrefsRef.current
+      const next = sanitizeStoredPreferences(
+        {
+          ...previous,
+          calendar: {
+            webView:
+              patch.webView !== undefined
+                ? patch.webView
+                : previous.calendar.webView,
+            mobileView:
+              patch.mobileView !== undefined
+                ? patch.mobileView
+                : previous.calendar.mobileView,
+          },
+        },
+        previous.regional.locale
+      )
+
+      const paths: string[] = []
+      if (patch.webView !== undefined) paths.push("calendar.web_view")
+      if (patch.mobileView !== undefined) paths.push("calendar.mobile_view")
+
+      await applyUserPreferencesUpdate(next, paths)
+    },
+    [applyUserPreferencesUpdate]
+  )
+
   // Query spaces for authenticated user
   const {
     data: spacesData,
@@ -377,8 +428,12 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
         hourCycle: userPrefs.regional.hourCycle,
         weekStartsOn: userPrefs.regional.weekStartsOn,
         mailAutoLoadRemoteContent: userPrefs.mail.autoLoadRemoteContent,
+        calendarMobileView: normalizeCalendarMobileView(
+          userPrefs.calendar.mobileView
+        ),
         updateRegionalPreferences,
         updateMailPreferences,
+        updateCalendarPreferences,
         switchSpace,
         refetchSpaces,
       }}

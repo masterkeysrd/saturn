@@ -1,6 +1,7 @@
 import { useMemo, useRef, useEffect } from "react"
 import { useI18n, useTimezone } from "@saturn/hooks"
 import {
+  formatShortWeekday,
   getHourSlots,
   computeTimedEventLayout,
   computeMultiDayBannerRows,
@@ -15,6 +16,7 @@ import { Video, MapPin, ArrowDownLeft, ArrowUpRight } from "lucide-react"
 
 export interface DayViewProps {
   currentDate: Date
+  resetSeq?: number
   occurrences: EventOccurrence[]
   financeItems?: CalendarFinanceItem[]
   onSelectSlot: (dateStr: string, timeStr: string) => void
@@ -28,6 +30,7 @@ export interface DayViewProps {
 
 export function DayView({
   currentDate,
+  resetSeq = 0,
   occurrences,
   financeItems = [],
   onSelectSlot,
@@ -38,9 +41,18 @@ export function DayView({
   const tz = useTimezone()
   const { t } = useI18n()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const timedGridRef = useRef<HTMLDivElement>(null)
 
   const dateStr = formatLocalDateString(currentDate, tz.timezone)
   const isToday = tz.isToday(currentDate)
+  const rawShortWeekday = formatShortWeekday(
+    currentDate,
+    tz.timezone,
+    tz.locale
+  )
+  const dayNameLabel = rawShortWeekday
+    ? rawShortWeekday.charAt(0).toUpperCase() + rawShortWeekday.slice(1)
+    : ""
 
   const hourSlots = useMemo(() => getHourSlots(), [])
 
@@ -83,151 +95,140 @@ export function DayView({
   const currentMinutes = nowParts ? nowParts.hour * 60 + nowParts.minute : 0
   const currentTimeTopPct = Number(((currentMinutes / 1440) * 100).toFixed(3))
 
-  // Auto-scroll to 8:00 AM on initial mount
+  // Auto-scroll to 8:00 AM on initial mount and when clicking Today
   useEffect(() => {
-    if (scrollContainerRef.current) {
-      const targetScroll =
-        (scrollContainerRef.current.scrollHeight * 8) / 24 - 40
-      scrollContainerRef.current.scrollTop = targetScroll
+    if (scrollContainerRef.current && timedGridRef.current) {
+      const targetScroll = (timedGridRef.current.offsetHeight * 8) / 24 - 40
+      scrollContainerRef.current.scrollTop = Math.max(0, targetScroll)
     }
-  }, [])
+  }, [resetSeq])
 
   return (
     <div
       data-testid="day-view-container"
       className="flex flex-1 flex-col overflow-hidden bg-background select-none"
     >
-      {/* Sticky Header: Day Title & All-day banner section */}
-      <div className="z-20 shrink-0 border-b border-border/50 bg-background/95 backdrop-blur">
-        <div className="grid grid-cols-[72px_1fr]">
-          <div className="flex items-center justify-center border-r border-border/30 py-2 text-[10px] font-medium text-muted-foreground">
-            {tz.timezone.split("/").pop()?.replace(/_/g, " ")}
-          </div>
-          <div className="flex items-center gap-3 px-4 py-2">
-            <span
+      {/* Unified Scrollable Viewport (Sticky Header + Timed Grid share exact width) */}
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
+        {/* Sticky Header: Day column & All-day banner section */}
+        <div className="sticky top-0 z-30 border-b border-border/50 bg-background/95 backdrop-blur">
+          <div className="grid grid-cols-[72px_minmax(0,1fr)]">
+            <div className="flex items-end justify-center border-r border-border/30 pb-2 text-[10px] font-medium text-muted-foreground">
+              {tz.timezone.split("/").pop()?.replace(/_/g, " ")}
+            </div>
+            <div
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold",
-                isToday
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "bg-muted text-foreground"
+                "flex min-w-0 flex-col items-center py-2 transition",
+                isToday && "bg-primary/5"
               )}
             >
-              {tz.parts(currentDate)?.day}
-            </span>
-            <div>
-              <div className="text-sm font-semibold text-foreground">
-                {(() => {
-                  const raw = tz.format(currentDate, { weekday: "long" })
-                  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : ""
-                })()}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {(() => {
-                  const nowParts = tz.parts(tz.now())
-                  const isCurrentYear = nowParts
-                    ? currentDate.getFullYear() === nowParts.year
-                    : true
-                  const raw = tz.format(currentDate, {
-                    month: "long",
-                    day: "numeric",
-                    year: isCurrentYear ? undefined : "numeric",
-                  })
-                  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : ""
-                })()}
-              </div>
+              <span className="text-[11px] font-medium text-muted-foreground">
+                {dayNameLabel}
+              </span>
+              <span
+                className={cn(
+                  "mt-0.5 flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold transition",
+                  isToday
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-foreground"
+                )}
+              >
+                {tz.parts(currentDate)?.day}
+              </span>
             </div>
           </div>
-        </div>
 
-        {/* All-Day Events & Scheduled Finance Section */}
-        {(bannerLayout.totalRows > 0 ||
-          financeItems.some((f) => f.dateKey === dateStr)) && (
-          <div className="grid grid-cols-[72px_1fr] border-t border-border/30">
-            <div className="flex items-center justify-center border-r border-border/30 text-[10px] font-medium text-muted-foreground">
-              {t("calendar.allDay")}
-            </div>
-            <div className="flex flex-col">
-              {bannerLayout.totalRows > 0 && (
-                <div
-                  className="relative p-1"
-                  style={{ height: `${bannerLayout.totalRows * 24 + 4}px` }}
-                >
-                  {bannerLayout.items.map((item) => {
-                    const occ = (
-                      item.event as unknown as { occurrence: EventOccurrence }
-                    ).occurrence
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        data-testid={`banner-${item.id}`}
-                        onClick={(e) =>
-                          onSelectOccurrence(occ, e.currentTarget)
-                        }
-                        onDoubleClick={(e) => {
-                          e.stopPropagation()
-                          onEditOccurrence?.(occ)
-                        }}
-                        style={{
-                          top: `${2 + item.rowIndex * 24}px`,
-                          backgroundColor: occ.color || "#3b82f6",
-                        }}
-                        className="absolute right-2 left-2 z-10 flex h-5 items-center truncate rounded-md px-2 text-[11px] font-semibold text-white shadow-2xs transition hover:brightness-110"
-                      >
-                        <span className="truncate">
-                          {occ.title || t("calendar.noTitle")}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-
-              {financeItems.some((f) => f.dateKey === dateStr) && (
-                <div className="flex flex-wrap gap-1.5 px-2 py-1.5">
-                  {financeItems
-                    .filter((f) => f.dateKey === dateStr)
-                    .map((fin) => {
-                      const isIncome = fin.type === "INCOME"
+          {/* All-Day Events & Scheduled Finance Section */}
+          {(bannerLayout.totalRows > 0 ||
+            financeItems.some((f) => f.dateKey === dateStr)) && (
+            <div className="grid grid-cols-[72px_minmax(0,1fr)] border-t border-border/30">
+              <div className="flex items-center justify-center border-r border-border/30 text-[10px] font-medium text-muted-foreground">
+                {t("calendar.allDay")}
+              </div>
+              <div className="flex min-w-0 flex-col">
+                {bannerLayout.totalRows > 0 && (
+                  <div
+                    className="relative p-1"
+                    style={{ height: `${bannerLayout.totalRows * 24 + 4}px` }}
+                  >
+                    {bannerLayout.items.map((item) => {
+                      const occ = (
+                        item.event as unknown as { occurrence: EventOccurrence }
+                      ).occurrence
                       return (
                         <button
-                          key={fin.id}
+                          key={item.id}
                           type="button"
-                          data-testid={`finance-pill-${fin.id}`}
-                          onClick={() =>
-                            onSelectFinanceItem?.(fin.scheduledTransaction)
+                          data-testid={`banner-${item.id}`}
+                          onClick={(e) =>
+                            onSelectOccurrence(occ, e.currentTarget)
                           }
-                          className={cn(
-                            "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition hover:brightness-95",
-                            isIncome
-                              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                              : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300"
-                          )}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation()
+                            onEditOccurrence?.(occ)
+                          }}
+                          style={{
+                            top: `${2 + item.rowIndex * 24}px`,
+                            backgroundColor: occ.color || "#3b82f6",
+                          }}
+                          className="absolute right-2 left-2 z-10 flex h-5 items-center truncate rounded-md px-2 text-[11px] font-semibold text-white shadow-2xs transition hover:brightness-110"
                         >
-                          {isIncome ? (
-                            <ArrowUpRight className="size-3.5 shrink-0" />
-                          ) : (
-                            <ArrowDownLeft className="size-3.5 shrink-0" />
-                          )}
-                          <span>{fin.title}</span>
-                          <MoneyAmount
-                            cents={fin.amountCents}
-                            currency={fin.currency}
-                            size="sm"
-                          />
+                          <span className="truncate">
+                            {occ.title || t("calendar.noTitle")}
+                          </span>
                         </button>
                       )
                     })}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+                  </div>
+                )}
 
-      {/* Scrollable Timed Grid (00:00 - 24:00) */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
-        <div className="relative grid min-h-[1152px] grid-cols-[72px_1fr]">
+                {financeItems.some((f) => f.dateKey === dateStr) && (
+                  <div className="flex flex-wrap gap-1.5 px-2 py-1.5">
+                    {financeItems
+                      .filter((f) => f.dateKey === dateStr)
+                      .map((fin) => {
+                        const isIncome = fin.type === "INCOME"
+                        return (
+                          <button
+                            key={fin.id}
+                            type="button"
+                            data-testid={`finance-pill-${fin.id}`}
+                            onClick={() =>
+                              onSelectFinanceItem?.(fin.scheduledTransaction)
+                            }
+                            className={cn(
+                              "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition hover:brightness-95",
+                              isIncome
+                                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                            )}
+                          >
+                            {isIncome ? (
+                              <ArrowUpRight className="size-3.5 shrink-0" />
+                            ) : (
+                              <ArrowDownLeft className="size-3.5 shrink-0" />
+                            )}
+                            <span>{fin.title}</span>
+                            <MoneyAmount
+                              cents={fin.amountCents}
+                              currency={fin.currency}
+                              size="sm"
+                            />
+                          </button>
+                        )
+                      })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Timed Grid (00:00 - 24:00) */}
+        <div
+          ref={timedGridRef}
+          className="relative z-0 grid grid-cols-[72px_minmax(0,1fr)]"
+        >
           {/* Time gutter */}
           <div className="relative border-r border-border/30 select-none">
             {hourSlots.map((slot) => (
@@ -247,7 +248,10 @@ export function DayView({
           {/* Day Column with Timed Events */}
           <div
             data-testid={`day-column-${dateStr}`}
-            className={cn("relative h-full", isToday && "bg-primary/[0.015]")}
+            className={cn(
+              "relative h-full min-w-0",
+              isToday && "bg-primary/[0.015]"
+            )}
           >
             {/* Hour horizontal grid lines */}
             {hourSlots.map((slot) => (
@@ -262,7 +266,7 @@ export function DayView({
             {isToday && (
               <div
                 data-testid="current-time-indicator"
-                className="pointer-events-none absolute right-0 left-0 z-30 flex items-center"
+                className="pointer-events-none absolute right-0 left-0 z-20 flex items-center"
                 style={{ top: `${currentTimeTopPct}%` }}
               >
                 <div className="-ml-1.5 h-2.5 w-2.5 rounded-full bg-rose-500 shadow-xs" />

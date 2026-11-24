@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from "react-native"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -25,6 +26,7 @@ import {
   useEnsureDefaultCalendar,
   useConnectedAccounts,
   useSyncConnectedAccount,
+  useDeleteEvent,
 } from "@saturn/hooks"
 import {
   formatLocalDateString,
@@ -32,23 +34,54 @@ import {
   isMailAccountReauthRequired,
   parseDate,
 } from "@saturn/core"
-import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
-import { SpaceAvatarButton, AIHeaderButton } from "@/components/app-header"
-import { QuickCaptureFab } from "@/components/ui/quick-capture-sheet"
-import { useSpace } from "@/lib/space-context"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
+import type {
+  EventOccurrence,
+  RecurrenceScope,
+} from "@saturn/api/saturn/calendar/v1/calendar"
+import {
+  SpaceAvatarButton,
+  AIHeaderButton,
+} from "../../../components/app-header"
+import { AppBottomSheet } from "../../../components/ui/bottom-sheet"
+import { QuickCaptureFab } from "../../../components/ui/quick-capture-sheet"
+import { useToast } from "../../../components/ui/toast"
+import { useSpace } from "../../../lib/space-context"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../../lib/theme"
+import { haptics } from "../../../lib/haptics"
 import {
   DateStrip,
   stepCalendarStripDate,
-} from "@/components/calendar/date-strip"
-import { TimelineGrid } from "@/components/calendar/timeline-grid"
-import { AgendaList } from "@/components/calendar/agenda-list"
-import { CalendarFilterSheet } from "@/components/calendar/calendar-filter-sheet"
-import { EventPreviewSheet } from "@/components/calendar/event-preview-sheet"
-import { getConsecutiveDays } from "@/components/calendar/calendar-utils"
+} from "../../../components/calendar/date-strip"
+import { TimelineGrid } from "../../../components/calendar/timeline-grid"
+import { AgendaList } from "../../../components/calendar/agenda-list"
+import { CalendarFilterSheet } from "../../../components/calendar/calendar-filter-sheet"
+import { EventPreviewSheet } from "../../../components/calendar/event-preview-sheet"
+import {
+  buildDuplicateEventParams,
+  getConsecutiveDays,
+} from "../../../components/calendar/calendar-utils"
 
-export type MobileCalendarViewMode = "agenda" | "day" | "three_day"
+export type MobileCalendarViewMode = "agenda" | "day" | "three_day" | "month"
+
+export function resolveMobileCalendarViewMode(
+  pref?: string | null
+): MobileCalendarViewMode {
+  switch (pref) {
+    case "agenda":
+    case "day":
+    case "three_day":
+    case "month":
+      return pref
+    case "week":
+      return "three_day"
+    default:
+      return "agenda"
+  }
+}
 
 export default function CalendarScreen() {
   const router = useRouter()
@@ -57,36 +90,51 @@ export default function CalendarScreen() {
   const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
-  const { activeSpaceRole } = useSpace()
+  const toast = useToast()
+  const { activeSpaceRole, calendarMobileView, updateCalendarPreferences } =
+    useSpace()
   const isViewer = activeSpaceRole === "viewer"
 
-  // Active view mode: Agenda, 1-Day, 3-Day
-  const [viewMode, setViewMode] = useState<MobileCalendarViewMode>("agenda")
+  // Active view mode: Agenda, 1-Day, 3-Day, Month (persisted per user preferences)
+  const [viewMode, setViewMode] = useState<MobileCalendarViewMode>(() =>
+    resolveMobileCalendarViewMode(calendarMobileView)
+  )
+
+  useEffect(() => {
+    setViewMode(resolveMobileCalendarViewMode(calendarMobileView))
+  }, [calendarMobileView])
 
   // Date strip expanded (month matrix) vs collapsed (week strip)
   const [isStripExpanded, setIsStripExpanded] = useState(false)
 
-  // Current focal date
+  // Current focal date and transient Agenda scroll header date
   const [currentDate, setCurrentDate] = useState<Date>(() => tz.now())
+  const [agendaVisibleDate, setAgendaVisibleDate] = useState<Date | null>(null)
+  const [todayResetSeq, setTodayResetSeq] = useState(0)
 
-  // Selected occurrence for preview bottom sheet
+  // Selected occurrence for preview bottom sheet & recurrence delete sheet
   const [selectedOccurrence, setSelectedOccurrence] = useState<
+    EventOccurrence | undefined
+  >(undefined)
+  const [pendingDeleteOccurrence, setPendingDeleteOccurrence] = useState<
     EventOccurrence | undefined
   >(undefined)
 
   // Bottom sheet references
   const filterSheetRef = useRef<BottomSheet>(null)
   const previewSheetRef = useRef<BottomSheet>(null)
+  const deleteScopeSheetRef = useRef<BottomSheet>(null)
 
   // Pull to refresh state
   const [refreshing, setRefreshing] = useState(false)
 
-  // Calendars query
+  // Calendars query & event deletion
   const { data: calendarsData } = useCalendars()
   const calendars = useMemo(
     () => calendarsData?.calendars || [],
     [calendarsData]
   )
+  const deleteEventMutation = useDeleteEvent()
 
   // Ensure default calendar if workspace has none
   const ensureDefaultMutation = useEnsureDefaultCalendar()
@@ -106,21 +154,21 @@ export default function CalendarScreen() {
     return calendars.filter((c) => c.isEnabled).map((c) => c.id)
   }, [calendars])
 
-  // Compute viewport range around active month
+  // Compute viewport range around active month (widened for smooth Agenda cross-month scroll)
   const { rangeStart, rangeEnd } = useMemo(() => {
     const parts = getTimezoneParts(currentDate, tz.timezone)
     if (!parts) {
       const now = new Date()
       return {
-        rangeStart: new Date(now.getTime() - 14 * 86400000).toISOString(),
-        rangeEnd: new Date(now.getTime() + 60 * 86400000).toISOString(),
+        rangeStart: new Date(now.getTime() - 45 * 86400000).toISOString(),
+        rangeEnd: new Date(now.getTime() + 75 * 86400000).toISOString(),
       }
     }
     const startNoon = new Date(
-      Date.UTC(parts.year, parts.month - 1, parts.day - 20, 12, 0, 0)
+      Date.UTC(parts.year, parts.month - 1, parts.day - 45, 12, 0, 0)
     )
     const endNoon = new Date(
-      Date.UTC(parts.year, parts.month - 1, parts.day + 40, 12, 0, 0)
+      Date.UTC(parts.year, parts.month - 1, parts.day + 75, 12, 0, 0)
     )
     return {
       rangeStart: tz.startOfDay(startNoon).toISOString(),
@@ -195,16 +243,26 @@ export default function CalendarScreen() {
     }
   }, [connectedData, syncAccountMutation, refetchEvents])
 
-  // Mode switching
+  // Mode switching (persisted to user preferences)
   const handleModeSwitch = (mode: MobileCalendarViewMode) => {
     haptics.selection()
     setViewMode(mode)
+    setAgendaVisibleDate(null)
+    void updateCalendarPreferences({ mobileView: mode }).catch(() => {})
+  }
+
+  // Select date from DateStrip
+  const handleSelectDate = (date: Date) => {
+    setAgendaVisibleDate(null)
+    setCurrentDate(date)
   }
 
   // Jump to Today
   const handleJumpToToday = () => {
     haptics.selection()
+    setAgendaVisibleDate(null)
     setCurrentDate(tz.now())
+    setTodayResetSeq((seq) => seq + 1)
   }
 
   // Toggle month matrix vs week strip
@@ -216,10 +274,22 @@ export default function CalendarScreen() {
   // Step week or month via compact ‹ / › buttons
   const handleStepDate = (direction: "prev" | "next") => {
     haptics.light()
+    setAgendaVisibleDate(null)
     setCurrentDate((prev) =>
-      stepCalendarStripDate(prev, tz.timezone, direction, isStripExpanded)
+      stepCalendarStripDate(
+        prev,
+        tz.timezone,
+        direction,
+        isStripExpanded || viewMode === "month"
+      )
     )
   }
+
+  const handleAgendaVisibleDateChange = useCallback((dateString: string) => {
+    const [y, m, d] = dateString.split("-").map(Number)
+    if (!y || !m || !d) return
+    setAgendaVisibleDate(new Date(Date.UTC(y, m - 1, d, 12, 0, 0)))
+  }, [])
 
   // Open filter sheet
   const handleOpenFilters = () => {
@@ -267,6 +337,85 @@ export default function CalendarScreen() {
     })
   }
 
+  // Duplicate occurrence into a new unsaved event draft
+  const handleDuplicateOccurrence = (occ: EventOccurrence) => {
+    previewSheetRef.current?.close()
+    if (isViewer) return
+    haptics.light()
+    const duplicateParams = buildDuplicateEventParams(
+      occ,
+      tz.timezone,
+      currentDate
+    )
+    router.push({
+      pathname: "/modal/manage-event",
+      params: duplicateParams,
+    })
+  }
+
+  const executeDeleteOccurrence = async (
+    occ: EventOccurrence,
+    scope: RecurrenceScope
+  ) => {
+    deleteScopeSheetRef.current?.close()
+    previewSheetRef.current?.close()
+    setPendingDeleteOccurrence(undefined)
+    haptics.heavy()
+    try {
+      await deleteEventMutation.mutateAsync({
+        id: occ.eventId,
+        req: {
+          id: occ.eventId,
+          recurrenceScope: scope,
+          targetStartTime: occ.isAllDay ? "" : occ.startTime || "",
+          targetStartDate: occ.isAllDay ? occ.startDate || "" : "",
+        },
+      })
+      setSelectedOccurrence(undefined)
+      haptics.success()
+      toast.show({
+        type: "success",
+        title: t("calendar.eventDeleted"),
+      })
+    } catch (err: unknown) {
+      haptics.error()
+      toast.show({
+        type: "error",
+        title: t("calendar.deleteFailed"),
+        message:
+          err instanceof Error
+            ? err.message
+            : t("calendar.couldNotDeleteEvent"),
+      })
+    }
+  }
+
+  // Delete occurrence (recurrence-aware)
+  const handleDeleteOccurrence = (occ: EventOccurrence) => {
+    if (isViewer) return
+    const isRecurring = Boolean(occ.masterId || occ.isException)
+    if (isRecurring) {
+      previewSheetRef.current?.close()
+      setPendingDeleteOccurrence(occ)
+      deleteScopeSheetRef.current?.expand()
+      return
+    }
+
+    Alert.alert(
+      t("calendar.deleteEvent"),
+      t("calendar.deleteEventSimpleConfirm"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: () =>
+            void executeDeleteOccurrence(occ, "RECURRENCE_SCOPE_UNSPECIFIED"),
+        },
+      ]
+    )
+  }
+
   // Consecutive days for Day / 3-Day
   const timelineDays = useMemo(() => {
     if (viewMode === "day") {
@@ -279,6 +428,30 @@ export default function CalendarScreen() {
     return []
   }, [viewMode, currentDate, tz.timezone])
 
+  const selectedDateString = useMemo(
+    () => formatLocalDateString(currentDate, tz.timezone),
+    [currentDate, tz.timezone]
+  )
+
+  const selectedDayOccurrences = useMemo(() => {
+    if (viewMode !== "month" || !selectedDateString) return []
+    return occurrences.filter((occ) => {
+      if (occ.isAllDay) {
+        const sDate = occ.startDate || ""
+        const eDate = occ.endDate || sDate
+        if (eDate > sDate) {
+          return selectedDateString >= sDate && selectedDateString < eDate
+        }
+        return selectedDateString === sDate
+      }
+      if (!occ.startTime) return false
+      const p = parseDate(occ.startTime)
+      return p
+        ? formatLocalDateString(p, tz.timezone) === selectedDateString
+        : false
+    })
+  }, [viewMode, occurrences, selectedDateString, tz.timezone])
+
   const refreshControl = (
     <RefreshControl
       refreshing={refreshing}
@@ -288,18 +461,21 @@ export default function CalendarScreen() {
     />
   )
 
-  const activeMonthTitle = useMemo(() => {
-    if (!currentDate) return ""
+  const headerFocalDate =
+    viewMode === "agenda" && agendaVisibleDate ? agendaVisibleDate : currentDate
 
-    if (currentDate.getFullYear() !== tz.now().getFullYear()) {
-      return tz.formatMonth(currentDate)
+  const activeMonthTitle = useMemo(() => {
+    if (!headerFocalDate) return ""
+
+    if (headerFocalDate.getFullYear() !== tz.now().getFullYear()) {
+      return tz.formatMonth(headerFocalDate)
     }
 
-    return tz.formatMonth(currentDate, {
+    return tz.formatMonth(headerFocalDate, {
       month: "long",
       year: undefined,
     })
-  }, [currentDate, tz])
+  }, [headerFocalDate, tz])
 
   return (
     <View style={styles.container}>
@@ -421,12 +597,33 @@ export default function CalendarScreen() {
               testID="calendar-mode-3day"
             >
               <Text
+                numberOfLines={1}
                 style={[
                   styles.segmentBtnText,
                   viewMode === "three_day" && styles.segmentBtnTextActive,
                 ]}
               >
                 {t("calendar.threeDay")}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => handleModeSwitch("month")}
+              style={[
+                styles.segmentBtn,
+                viewMode === "month" && styles.segmentBtnActive,
+              ]}
+              testID="calendar-mode-month"
+            >
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.segmentBtnText,
+                  viewMode === "month" && styles.segmentBtnTextActive,
+                ]}
+              >
+                {t("calendar.month")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -439,7 +636,7 @@ export default function CalendarScreen() {
               testID="calendar-strip-prev"
               accessibilityRole="button"
               accessibilityLabel={
-                isStripExpanded
+                isStripExpanded || viewMode === "month"
                   ? t("calendar.prevMonth")
                   : t("calendar.prevWeek")
               }
@@ -453,7 +650,7 @@ export default function CalendarScreen() {
               testID="calendar-strip-next"
               accessibilityRole="button"
               accessibilityLabel={
-                isStripExpanded
+                isStripExpanded || viewMode === "month"
                   ? t("calendar.nextMonth")
                   : t("calendar.nextWeek")
               }
@@ -464,14 +661,14 @@ export default function CalendarScreen() {
         </View>
       </View>
 
-      {/* Collapsible Date Strip (Synchronized with currentDate) */}
+      {/* Collapsible Date Strip (Always expanded in Month mode) */}
       <DateStrip
         selectedDate={currentDate}
         timeZone={tz.timezone}
         locale={tz.locale}
         weekStartsOn={tz.weekStartsOn}
-        isExpanded={isStripExpanded}
-        onSelectDate={setCurrentDate}
+        isExpanded={viewMode === "month" || isStripExpanded}
+        onSelectDate={handleSelectDate}
         eventsByDate={eventsByDate}
       />
 
@@ -485,11 +682,26 @@ export default function CalendarScreen() {
           <AgendaList
             occurrences={occurrences}
             timeZone={tz.timezone}
+            focusDate={selectedDateString}
+            resetSeq={todayResetSeq}
             onSelectOccurrence={handleSelectOccurrence}
+            onVisibleDateChange={handleAgendaVisibleDateChange}
             onOpenCreate={() => handleOpenCreateEvent()}
             refreshControl={refreshControl}
             canCreate={!isViewer}
           />
+        ) : viewMode === "month" ? (
+          <View style={styles.monthListContainer} testID="calendar-month-view">
+            <AgendaList
+              occurrences={selectedDayOccurrences}
+              timeZone={tz.timezone}
+              focusDate={selectedDateString}
+              onSelectOccurrence={handleSelectOccurrence}
+              onOpenCreate={() => handleOpenCreateEvent()}
+              refreshControl={refreshControl}
+              canCreate={!isViewer}
+            />
+          </View>
         ) : (
           <TimelineGrid
             days={timelineDays}
@@ -523,8 +735,92 @@ export default function CalendarScreen() {
         timeZone={tz.timezone}
         canEdit={!isViewer}
         onEdit={handleEditOccurrence}
+        onDuplicate={handleDuplicateOccurrence}
+        onDelete={handleDeleteOccurrence}
         onClose={() => setSelectedOccurrence(undefined)}
       />
+
+      {/* Recurring Event Delete Scope Sheet */}
+      <AppBottomSheet
+        ref={deleteScopeSheetRef}
+        title={t("calendar.deleteEvent")}
+        snapPoints={["42%"]}
+        onClose={() => setPendingDeleteOccurrence(undefined)}
+      >
+        <View style={styles.scopeContainer}>
+          <Text style={styles.scopePromptText}>
+            {t("calendar.recurringDeletePrompt")}
+          </Text>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              if (pendingDeleteOccurrence) {
+                void executeDeleteOccurrence(
+                  pendingDeleteOccurrence,
+                  "RECURRENCE_SCOPE_THIS_EVENT"
+                )
+              }
+            }}
+            style={styles.scopeButton}
+            testID="calendar-delete-scope-this"
+          >
+            <Text style={styles.scopeButtonText}>
+              {t("calendar.thisEventOnly")}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              if (pendingDeleteOccurrence) {
+                void executeDeleteOccurrence(
+                  pendingDeleteOccurrence,
+                  "RECURRENCE_SCOPE_THIS_AND_FOLLOWING"
+                )
+              }
+            }}
+            style={styles.scopeButton}
+            testID="calendar-delete-scope-following"
+          >
+            <Text style={styles.scopeButtonText}>
+              {t("calendar.thisAndFollowingEvents")}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              if (pendingDeleteOccurrence) {
+                void executeDeleteOccurrence(
+                  pendingDeleteOccurrence,
+                  "RECURRENCE_SCOPE_ALL_EVENTS"
+                )
+              }
+            }}
+            style={[styles.scopeButton, styles.scopeButtonDestructive]}
+            testID="calendar-delete-scope-all"
+          >
+            <Text style={styles.scopeButtonDestructiveText}>
+              {t("calendar.allEventsInSeries")}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              deleteScopeSheetRef.current?.close()
+              setPendingDeleteOccurrence(undefined)
+            }}
+            style={styles.scopeCancelButton}
+            testID="calendar-delete-scope-cancel"
+          >
+            <Text style={styles.scopeCancelButtonText}>
+              {t("common.cancel")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </AppBottomSheet>
     </View>
   )
 }
@@ -602,7 +898,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flex: 1,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    paddingHorizontal: 10,
+    paddingHorizontal: 6,
     paddingVertical: 6,
     borderRadius: t.radius.xs,
   },
@@ -610,7 +906,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     backgroundColor: t.colors.primary,
   },
   segmentBtnText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: "600" as const,
     color: t.colors.textMuted,
   },
@@ -656,9 +952,55 @@ const createStyles = (t: SaturnMobileTheme) => ({
   viewContainer: {
     flex: 1,
   },
+  monthListContainer: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     alignItems: "center" as const,
     justifyContent: "center" as const,
+  },
+  scopeContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+    gap: 10,
+  },
+  scopePromptText: {
+    fontSize: 14,
+    color: t.colors.textSecondary,
+    marginBottom: 4,
+  },
+  scopeButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+  },
+  scopeButtonDestructive: {
+    borderColor: t.colors.destructive,
+    backgroundColor: t.colors.destructiveSubtle,
+  },
+  scopeButtonText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
+  },
+  scopeButtonDestructiveText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: t.colors.destructive,
+  },
+  scopeCancelButton: {
+    paddingVertical: 11,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    borderRadius: t.radius.md,
+  },
+  scopeCancelButtonText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
 })

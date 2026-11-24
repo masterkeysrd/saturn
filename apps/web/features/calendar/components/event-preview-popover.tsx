@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils"
 export interface EventPreviewPopoverProps {
   occurrence: EventOccurrence | null
   anchorEl?: HTMLElement | null
+  canEdit?: boolean
   onOpenChange: (open: boolean) => void
   onEdit: (occurrence: EventOccurrence) => void
   onDuplicate?: (occurrence: EventOccurrence) => void
@@ -79,6 +80,7 @@ function getRsvpMeta(
 export function EventPreviewPopover({
   occurrence,
   anchorEl,
+  canEdit = true,
   onOpenChange,
   onEdit,
   onDuplicate,
@@ -183,7 +185,49 @@ export function EventPreviewPopover({
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-0.5">
+            {canEdit && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                data-testid="preview-edit-event-btn"
+                onClick={() => onEdit(occurrence)}
+                aria-label={t("common.edit")}
+                title={t("common.edit")}
+                className="cursor-pointer text-muted-foreground hover:text-foreground"
+              >
+                <Pencil className="size-3.5" />
+              </Button>
+            )}
+            {canEdit && onDuplicate && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                data-testid="preview-duplicate-event-btn"
+                onClick={() => onDuplicate(occurrence)}
+                aria-label={t("calendar.duplicate")}
+                title={t("calendar.duplicate")}
+                className="cursor-pointer text-muted-foreground hover:text-foreground"
+              >
+                <Copy className="size-3.5" />
+              </Button>
+            )}
+            {canEdit && onDelete && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                data-testid="preview-delete-event-btn"
+                onClick={() => onDelete(occurrence)}
+                aria-label={t("common.delete")}
+                title={t("common.delete")}
+                className="cursor-pointer text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            )}
             {occurrence.eventId && (
               <CopilotAttachButton
                 item={{
@@ -210,7 +254,8 @@ export function EventPreviewPopover({
               variant="ghost"
               size="icon-xs"
               onClick={() => onOpenChange(false)}
-              aria-label={t("calendar.closePreview")}
+              aria-label={t("common.close")}
+              title={t("common.close")}
               className="cursor-pointer text-muted-foreground hover:text-foreground"
             >
               <X className="size-3.5" />
@@ -305,60 +350,6 @@ export function EventPreviewPopover({
               {occurrence.description}
             </p>
           )}
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 bg-popover px-4 py-2.5">
-          <div className="flex shrink-0 items-center gap-1">
-            {onDuplicate && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                data-testid="preview-duplicate-event-btn"
-                onClick={() => onDuplicate(occurrence)}
-                className="shrink-0 cursor-pointer gap-1 px-2 whitespace-nowrap text-muted-foreground hover:text-foreground"
-                title={t("calendar.duplicateEvent")}
-              >
-                <Copy className="size-3.5" />
-                <span>{t("calendar.duplicate")}</span>
-              </Button>
-            )}
-            {onDelete && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                data-testid="preview-delete-event-btn"
-                onClick={() => onDelete(occurrence)}
-                className="shrink-0 cursor-pointer gap-1 px-2 whitespace-nowrap text-destructive hover:bg-destructive/10 hover:text-destructive"
-                title={t("calendar.deleteEvent")}
-              >
-                <Trash2 className="size-3.5" />
-                <span>{t("common.delete")}</span>
-              </Button>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              className="shrink-0 cursor-pointer whitespace-nowrap"
-            >
-              {t("common.close")}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              data-testid="preview-edit-event-btn"
-              onClick={() => onEdit(occurrence)}
-              className="shrink-0 cursor-pointer gap-1.5 whitespace-nowrap"
-            >
-              <Pencil className="size-3.5" />
-              <span>{t("common.edit")}</span>
-            </Button>
-          </div>
         </div>
       </PopoverContent>
     </Popover>

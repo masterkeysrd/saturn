@@ -8,6 +8,9 @@ import * as hooks from "@saturn/hooks"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
 import * as financeApi from "@saturn/api/gen/saturn/finance/v1/finance"
 
+const mockUpdateUserPreferences = vi.fn()
+let mockWebViewPref: string | undefined = "week"
+
 vi.mock("@/features/space/use-space", async () => {
   const actual = await vi.importActual<
     typeof import("@/features/space/use-space")
@@ -19,6 +22,29 @@ vi.mock("@/features/space/use-space", async () => {
       spaceRole: "owner",
       isWritable: true,
       canManageSpace: true,
+    }),
+    useActiveSpaceContext: () => ({
+      activeSpace: null,
+      spaceId: "sp_1",
+      spaceName: "Personal",
+      spaceRole: "owner",
+      timezone: "UTC",
+      userPreferences: {
+        regional: {
+          locale: "en-US",
+          hourCycle: "h12",
+          weekStartsOn: 0,
+        },
+        mail: { autoLoadRemoteContent: false },
+        calendar: {
+          webView: mockWebViewPref ?? "week",
+          mobileView: "agenda",
+        },
+      },
+      updateUserPreferences: mockUpdateUserPreferences,
+      switchSpace: vi.fn(),
+      clearActiveSpace: vi.fn(),
+      isLoading: false,
     }),
   }
 })
@@ -163,9 +189,27 @@ const mockTz = {
   timezone: "UTC",
   locale: "en-US",
   now: () => new Date("2026-10-20T12:00:00Z"),
-  format: (_d: DateInput, opts?: Intl.DateTimeFormatOptions) => {
-    if (opts?.weekday === "long") return "Tuesday"
-    return "October 20, 2026"
+  format: (d: DateInput, opts?: Intl.DateTimeFormatOptions) => {
+    const dt = new Date(d as string | number | Date)
+    if (opts?.weekday === "long") {
+      return new Intl.DateTimeFormat("en-US", {
+        weekday: "long",
+        timeZone: "UTC",
+      }).format(dt)
+    }
+    if (opts?.month === "short" && !opts?.day) {
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        ...(opts.year ? { year: opts.year } : {}),
+        timeZone: "UTC",
+      }).format(dt)
+    }
+    return new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(dt)
   },
   formatDate: () => "2026-10-20",
   formatTime: (d: DateInput) => {
@@ -177,7 +221,14 @@ const mockTz = {
     return `${dh}:${m} ${period}`
   },
   formatDateTime: () => "Oct 20, 2026, 12:00 PM",
-  formatMonth: () => "October 2026",
+  formatMonth: (d?: DateInput) => {
+    const dt = new Date((d || "2026-10-20T12:00:00Z") as string | number | Date)
+    return new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(dt)
+  },
   formatRelative: () => "today",
   startOfDay: (d?: DateInput) => {
     const dt = new Date((d || "2026-10-20T00:00:00Z") as string | number | Date)
@@ -279,6 +330,8 @@ describe("CalendarView Component", () => {
     vi.clearAllMocks()
     localStorage.clear()
     activeMockTz = mockTz
+    mockWebViewPref = "week"
+    mockUpdateUserPreferences.mockResolvedValue({})
     mockUseCalendars.mockReturnValue({
       data: { calendars: mockCalendars },
       isLoading: false,
@@ -314,28 +367,31 @@ describe("CalendarView Component", () => {
     }
   }
 
-  it("renders Calendar view with Month view by default and displays occurrences", () => {
+  it("renders Calendar view with Week view by default and displays occurrences", () => {
     render(<CalendarView />, { wrapper: createWrapper() })
 
     expect(screen.getByTestId("calendar-main-view")).toBeDefined()
-    expect(screen.getByTestId("month-view-container")).toBeDefined()
+    expect(screen.getByTestId("week-view-container")).toBeDefined()
     expect(screen.getByTestId("calendar-header-title").textContent).toContain(
       "October 2026"
     )
 
     // Multi-day banner for summit
     expect(screen.getByText("Saturn Summit")).toBeDefined()
-    // Timed standup pill
+    // Timed standup block
     expect(screen.getByText("Daily Standup")).toBeDefined()
   })
 
   it("switches views between Month, Week, Day, and Agenda", () => {
     render(<CalendarView />, { wrapper: createWrapper() })
 
-    // Switch to Week view
-    fireEvent.click(screen.getByTestId("view-tab-week"))
+    // Starts in Week view
     expect(screen.getByTestId("week-view-container")).toBeDefined()
-    expect(screen.queryByTestId("month-view-container")).toBeNull()
+
+    // Switch to Month view
+    fireEvent.click(screen.getByTestId("view-tab-month"))
+    expect(screen.getByTestId("month-view-container")).toBeDefined()
+    expect(screen.queryByTestId("week-view-container")).toBeNull()
 
     // Switch to Day view
     fireEvent.click(screen.getByTestId("view-tab-day"))
@@ -463,6 +519,7 @@ describe("CalendarView Component", () => {
   it("opens anchored event preview popover on click with Join Meeting, location, attendees, and Edit handoff", () => {
     render(<CalendarView />, { wrapper: createWrapper() })
 
+    fireEvent.click(screen.getByTestId("view-tab-month"))
     fireEvent.click(screen.getByTestId("event-pill-inst_standup"))
 
     const preview = screen.getByTestId("event-preview-popover")
@@ -491,6 +548,7 @@ describe("CalendarView Component", () => {
     render(<CalendarView />, { wrapper: createWrapper() })
 
     // Click on recurring event pill in Month view -> opens preview -> click Edit
+    fireEvent.click(screen.getByTestId("view-tab-month"))
     const recurringPill = screen.getByTestId("event-pill-inst_recurring_1")
     fireEvent.click(recurringPill)
     fireEvent.click(screen.getByTestId("preview-edit-event-btn"))
@@ -538,6 +596,7 @@ describe("CalendarView Component", () => {
 
     render(<CalendarView />, { wrapper: createWrapper() })
 
+    fireEvent.click(screen.getByTestId("view-tab-month"))
     const recurringPill = screen.getByTestId("event-pill-inst_recurring_1")
     fireEvent.click(recurringPill)
     fireEvent.click(screen.getByTestId("preview-edit-event-btn"))
@@ -656,6 +715,7 @@ describe("CalendarView Component", () => {
     render(<CalendarView />, { wrapper: createWrapper() })
 
     // Open recurring occurrence via preview -> Edit
+    fireEvent.click(screen.getByTestId("view-tab-month"))
     fireEvent.click(screen.getByTestId("event-pill-inst_recurring_1"))
     fireEvent.click(screen.getByTestId("preview-edit-event-btn"))
     expect(screen.getByText("Edit Event")).toBeDefined()
@@ -709,7 +769,7 @@ describe("CalendarView Component", () => {
       isLoading: false,
     })
 
-    render(<CalendarView />, { wrapper: createWrapper() })
+    const { unmount } = render(<CalendarView />, { wrapper: createWrapper() })
 
     expect(mockUseCalendarEvents).toHaveBeenCalledWith(
       expect.any(String),
@@ -718,6 +778,7 @@ describe("CalendarView Component", () => {
       expect.objectContaining({ enabled: false, hasLoadedCalendars: true })
     )
     expect(screen.queryByText("Daily Standup")).toBeNull()
+    unmount()
 
     // Now test +N more button navigates to Day view
     mockUseCalendars.mockReturnValue({
@@ -736,6 +797,7 @@ describe("CalendarView Component", () => {
     })
 
     render(<CalendarView />, { wrapper: createWrapper() })
+    fireEvent.click(screen.getByTestId("view-tab-month"))
     fireEvent.click(screen.getByTestId("month-more-2026-10-20"))
     expect(screen.getByTestId("day-view-container")).toBeDefined()
   })
@@ -809,6 +871,7 @@ describe("CalendarView Component", () => {
   it("opens EventDialog in edit mode on double-click and on 'e' while preview popover is open", () => {
     render(<CalendarView />, { wrapper: createWrapper() })
 
+    fireEvent.click(screen.getByTestId("view-tab-month"))
     // Double-click event pill jumps straight into Edit Event dialog
     fireEvent.doubleClick(screen.getByTestId("event-pill-inst_standup"))
     expect(screen.queryByTestId("event-preview-popover")).toBeNull()
@@ -834,6 +897,7 @@ describe("CalendarView Component", () => {
 
     render(<CalendarView />, { wrapper: createWrapper() })
 
+    fireEvent.click(screen.getByTestId("view-tab-month"))
     // Open preview -> click Duplicate -> opens Create Calendar Event pre-filled
     fireEvent.click(screen.getByTestId("event-pill-inst_standup"))
     fireEvent.click(screen.getByTestId("preview-duplicate-event-btn"))
@@ -1037,18 +1101,319 @@ describe("CalendarView Component", () => {
       "Crear evento"
     )
 
-    // Open an event preview popover and check Spanish actions
+    // Open an event preview popover and check Spanish icon-only header actions
+    fireEvent.click(screen.getByTestId("view-tab-month"))
     fireEvent.click(screen.getByTestId("event-pill-inst_standup"))
     const preview = screen.getByTestId("event-preview-popover")
     expect(preview).toBeDefined()
-    expect(screen.getByTestId("preview-edit-event-btn").textContent).toContain(
-      "Editar"
+    expect(
+      screen.getByTestId("preview-edit-event-btn").getAttribute("aria-label")
+    ).toBe("Editar")
+    expect(
+      screen
+        .getByTestId("preview-duplicate-event-btn")
+        .getAttribute("aria-label")
+    ).toBe("Duplicar")
+    expect(
+      screen.getByTestId("preview-delete-event-btn").getAttribute("aria-label")
+    ).toBe("Eliminar")
+    expect(preview.textContent).not.toContain("Editar")
+    expect(preview.textContent).not.toContain("Duplicar")
+    expect(preview.textContent).not.toContain("Eliminar")
+  })
+
+  it("DF-06: restores saved webView preference, persists view switches, and honors ?view= URL param", async () => {
+    mockWebViewPref = "agenda"
+    const { unmount } = render(<CalendarView />, { wrapper: createWrapper() })
+    expect(screen.getByTestId("agenda-view-container")).toBeDefined()
+
+    // Explicit tab click persists calendar.web_view
+    fireEvent.click(screen.getByTestId("view-tab-month"))
+    expect(screen.getByTestId("month-view-container")).toBeDefined()
+    expect(mockUpdateUserPreferences).toHaveBeenCalledWith(
+      { calendar: { webView: "month" } },
+      ["calendar.web_view"]
     )
+
+    // Keyboard shortcut persists calendar.web_view
+    fireEvent.keyDown(window, { key: "d" })
+    expect(screen.getByTestId("day-view-container")).toBeDefined()
+    expect(mockUpdateUserPreferences).toHaveBeenCalledWith(
+      { calendar: { webView: "day" } },
+      ["calendar.web_view"]
+    )
+    unmount()
+
+    // ?view= URL param overrides saved preference without overwriting it
+    mockUpdateUserPreferences.mockClear()
+    mockWebViewPref = "agenda"
+    render(
+      <MemoryRouter
+        initialEntries={["/space/sp_1/calendar?date=2026-10-20&view=month"]}
+      >
+        <CalendarView />
+      </MemoryRouter>,
+      { wrapper: createWrapper() }
+    )
+    await waitFor(() => {
+      expect(screen.getByTestId("month-view-container")).toBeDefined()
+    })
+    expect(mockUpdateUserPreferences).not.toHaveBeenCalled()
+  })
+
+  it("DF-04: aligns WeekView and DayView sticky headers inside the scroll container with minmax(0,1fr)", () => {
+    render(<CalendarView />, { wrapper: createWrapper() })
+
+    const weekContainer = screen.getByTestId("week-view-container")
+    const weekScroller = weekContainer.querySelector(".overflow-y-auto")
+    const weekStickyHeader = weekContainer.querySelector(".sticky.top-0")
+    expect(weekScroller).toBeTruthy()
+    expect(weekStickyHeader).toBeTruthy()
+    expect(weekScroller?.contains(weekStickyHeader as Node)).toBe(true)
+    expect(weekContainer.innerHTML).toContain("grid-cols-[72px_minmax(0,1fr)]")
+    expect(screen.getByTestId("banner-inst_conf").className).toContain(
+      "inset-x-0"
+    )
+
+    fireEvent.click(screen.getByTestId("view-tab-day"))
+    const dayContainer = screen.getByTestId("day-view-container")
+    const dayScroller = dayContainer.querySelector(".overflow-y-auto")
+    const dayStickyHeader = dayContainer.querySelector(".sticky.top-0")
+    expect(dayScroller).toBeTruthy()
+    expect(dayStickyHeader).toBeTruthy()
+    expect(dayScroller?.contains(dayStickyHeader as Node)).toBe(true)
+    expect(dayContainer.innerHTML).toContain("grid-cols-[72px_minmax(0,1fr)]")
+  })
+
+  it("DF-07 & DF-08: uses Month + Year toolbar title across all views, compact DayView header, and non-sticky deduplicated Agenda headers", async () => {
+    render(<CalendarView />, { wrapper: createWrapper() })
+
+    // Week view title
+    expect(screen.getByTestId("calendar-header-title").textContent).toBe(
+      "October 2026"
+    )
+
+    // Day view keeps Month + Year in toolbar and compact Weekday + Day badge in header
+    fireEvent.click(screen.getByTestId("view-tab-day"))
+    expect(screen.getByTestId("calendar-header-title").textContent).toBe(
+      "October 2026"
+    )
+    const dayStickyHeader = screen
+      .getByTestId("day-view-container")
+      .querySelector(".sticky.top-0")
+    expect(dayStickyHeader?.textContent).not.toContain("October 20")
+    expect(dayStickyHeader?.textContent).toContain("20")
+
+    // Agenda view removes sticky headers and never repeats day number 20 twice
+    fireEvent.click(screen.getByTestId("view-tab-agenda"))
+    expect(screen.getByTestId("calendar-header-title").textContent).toBe(
+      "October 2026"
+    )
+    const agendaContainer = screen.getByTestId("agenda-view-container")
+    expect(agendaContainer.querySelector(".sticky")).toBeNull()
+    const oct20Group = agendaContainer.querySelector(
+      '[data-date-key="2026-10-20"]'
+    )
+    expect(oct20Group).toBeTruthy()
+    const groupHeaderText =
+      oct20Group?.firstElementChild?.textContent?.trim() ?? ""
+    expect(groupHeaderText).toContain("20")
+    expect(groupHeaderText).toContain("Tuesday")
+    expect(groupHeaderText.match(/20/g)?.length).toBe(1)
+
+    // Cross-month week displays "Sep – Oct 2026"
+    render(
+      <MemoryRouter
+        initialEntries={["/space/sp_1/calendar?date=2026-09-30&view=week"]}
+      >
+        <CalendarView />
+      </MemoryRouter>,
+      { wrapper: createWrapper() }
+    )
+    await waitFor(() => {
+      const titles = screen.getAllByTestId("calendar-header-title")
+      expect(titles[titles.length - 1].textContent).toBe("Sep – Oct 2026")
+    })
+  })
+
+  it("DF-05: widens Agenda range to [-45, +75] days and updates header Month/Year on scroll without re-querying events", () => {
+    const crossMonthOccurrences: EventOccurrence[] = [
+      ...mockOccurrences,
+      {
+        ...mockOccurrences[0],
+        eventId: "ev_nov",
+        instanceId: "inst_nov",
+        title: "November Planning",
+        startTime: "2026-11-05T10:00:00Z",
+        endTime: "2026-11-05T11:00:00Z",
+      },
+    ]
+    mockUseCalendarEvents.mockReturnValue({
+      data: { occurrences: crossMonthOccurrences },
+      isLoading: false,
+    })
+
+    render(<CalendarView />, { wrapper: createWrapper() })
+    fireEvent.click(screen.getByTestId("view-tab-agenda"))
+
+    // Verify forward [startOfDay(currentDate), +90 days] Agenda window (no past dates unless currentDate is set in past)
+    const lastCall =
+      mockUseCalendarEvents.mock.calls[
+        mockUseCalendarEvents.mock.calls.length - 1
+      ]
+    const rangeStartBefore = lastCall[0] as string
+    const rangeEndBefore = lastCall[1] as string
+    const rangeStartMs = new Date(rangeStartBefore).getTime()
+    const rangeEndMs = new Date(rangeEndBefore).getTime()
+    const baseMs = mockTz.startOfDay("2026-10-20T12:00:00Z").getTime()
+    expect(rangeStartMs).toBe(baseMs)
+    expect(rangeEndMs).toBe(baseMs + 90 * 86_400_000)
+
+    const agendaContainer = screen.getByTestId("agenda-view-container")
+    // Oct 19 (past relative to Oct 20 Today) must NOT be rendered while on Today
     expect(
-      screen.getByTestId("preview-duplicate-event-btn").textContent
-    ).toContain("Duplicar")
-    expect(
-      screen.getByTestId("preview-delete-event-btn").textContent
-    ).toContain("Eliminar")
+      agendaContainer.querySelector('[data-date-key="2026-10-19"]')
+    ).toBeNull()
+
+    vi.spyOn(agendaContainer, "getBoundingClientRect").mockReturnValue({
+      top: 0,
+      bottom: 600,
+      left: 0,
+      right: 800,
+      width: 800,
+      height: 600,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+
+    const oct20El = agendaContainer.querySelector(
+      '[data-date-key="2026-10-20"]'
+    ) as HTMLElement
+    const nov05El = agendaContainer.querySelector(
+      '[data-date-key="2026-11-05"]'
+    ) as HTMLElement
+
+    vi.spyOn(oct20El, "getBoundingClientRect").mockReturnValue({
+      top: -150,
+      bottom: 0,
+      left: 0,
+      right: 800,
+      width: 800,
+      height: 150,
+      x: 0,
+      y: -150,
+      toJSON: () => ({}),
+    })
+    vi.spyOn(nov05El, "getBoundingClientRect").mockReturnValue({
+      top: 20,
+      bottom: 180,
+      left: 0,
+      right: 800,
+      width: 800,
+      height: 160,
+      x: 0,
+      y: 20,
+      toJSON: () => ({}),
+    })
+
+    fireEvent.scroll(agendaContainer)
+
+    expect(screen.getByTestId("calendar-header-title").textContent).toBe(
+      "November 2026"
+    )
+    // Must not re-key useCalendarEvents with a different date range
+    const lastCallAfterScroll =
+      mockUseCalendarEvents.mock.calls[
+        mockUseCalendarEvents.mock.calls.length - 1
+      ]
+    expect(lastCallAfterScroll[0]).toBe(rangeStartBefore)
+    expect(lastCallAfterScroll[1]).toBe(rangeEndBefore)
+
+    // Clicking Today resets header Month/Year back to October 2026 and scrolls back to top
+    agendaContainer.scrollTop = 280
+    fireEvent.click(screen.getByTestId("calendar-today-btn"))
+    expect(screen.getByTestId("calendar-header-title").textContent).toBe(
+      "October 2026"
+    )
+    expect(agendaContainer.scrollTop).toBe(0)
+  })
+
+  it("DF-10: renders dynamic week rows and budgeted shrink-0 +N more overflow pill in MonthView", () => {
+    const manyOccurrences = [1, 2, 3, 4, 5].map((idx) => ({
+      ...mockOccurrences[0],
+      eventId: `ev_overflow_${idx}`,
+      instanceId: `inst_overflow_${idx}`,
+      title: `Overflow Event ${idx}`,
+    }))
+    mockUseCalendarEvents.mockReturnValue({
+      data: { occurrences: manyOccurrences },
+      isLoading: false,
+    })
+
+    render(<CalendarView />, { wrapper: createWrapper() })
+    fireEvent.click(screen.getByTestId("view-tab-month"))
+
+    // October 2026 has 5 weeks -> dynamic gridTemplateRows instead of hardcoded grid-rows-6
+    const monthContainer = screen.getByTestId("month-view-container")
+    const grid = monthContainer.querySelector(".overflow-y-auto") as HTMLElement
+    expect(grid.style.gridTemplateRows).toBe("repeat(5, minmax(96px, 1fr))")
+
+    // With default 112px row height (3 slots total), 5 events render 2 pills + "+3 more"
+    const moreBtn = screen.getByTestId("month-more-2026-10-20")
+    expect(moreBtn.textContent).toBe("+3 more")
+    expect(moreBtn.className).toContain("shrink-0")
+    expect(moreBtn.className).toContain("h-5")
+    expect(moreBtn.className).toContain("leading-5")
+    expect(screen.queryByText("Overflow Event 3")).toBeNull()
+  })
+
+  it("hides past events on Today, renders past dates muted (not disabled) when selected, and jumps back to Today", () => {
+    const pastAndTodayOccurrences = [
+      {
+        ...mockOccurrences[0],
+        eventId: "ev_oct_early",
+        instanceId: "inst_oct_early",
+        title: "Early October Sync",
+        startTime: "2026-10-05T10:00:00Z",
+        endTime: "2026-10-05T11:00:00Z",
+      },
+      mockOccurrences[0], // 2026-10-20 (Today)
+    ]
+    mockUseCalendarEvents.mockReturnValue({
+      data: { occurrences: pastAndTodayOccurrences },
+      isLoading: false,
+    })
+
+    render(<CalendarView />, { wrapper: createWrapper() })
+    fireEvent.click(screen.getByTestId("view-tab-agenda"))
+
+    // 1. On Today (2026-10-20), past event (2026-10-05) is NOT shown
+    expect(screen.queryByText("Early October Sync")).toBeNull()
+    expect(screen.getByText("Daily Standup")).toBeDefined()
+
+    // 2. Past date cell in mini-calendar is muted but NOT disabled; clicking it shows muted interactive past group
+    const pastMiniCell = screen.getByTestId(
+      "mini-day-2026-10-05"
+    ) as HTMLButtonElement
+    expect(pastMiniCell.disabled).toBe(false)
+    expect(pastMiniCell.className).toContain("text-muted-foreground")
+    fireEvent.click(pastMiniCell)
+
+    const agendaContainer = screen.getByTestId("agenda-view-container")
+    const pastGroup = agendaContainer.querySelector(
+      '[data-date-key="2026-10-05"]'
+    ) as HTMLElement | null
+    expect(pastGroup).not.toBeNull()
+    expect(pastGroup?.getAttribute("data-past")).toBe("true")
+    expect(pastGroup?.className).toContain("opacity-60")
+    // Event in past group remains clickable (opens preview popover)
+    fireEvent.click(screen.getByText("Early October Sync"))
+    expect(screen.getByTestId("event-preview-popover")).toBeDefined()
+
+    // 3. Clicking Today moves back to Today and hides the past October 5 group again
+    fireEvent.click(screen.getByTestId("calendar-today-btn"))
+    expect(screen.queryByText("Early October Sync")).toBeNull()
+    expect(screen.getByText("Daily Standup")).toBeDefined()
   })
 })

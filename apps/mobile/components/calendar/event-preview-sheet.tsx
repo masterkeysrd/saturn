@@ -11,6 +11,8 @@ import {
   Check,
   X,
   HelpCircle,
+  Copy,
+  Trash2,
 } from "lucide-react-native"
 import {
   useRespondToEvent,
@@ -20,11 +22,15 @@ import {
   type EventOccurrence,
   type AttendeeResponseStatus,
 } from "@saturn/hooks"
-import { AppBottomSheet } from "@/components/ui/bottom-sheet"
-import { useToast } from "@/components/ui/toast"
-import { useAuth } from "@/lib/auth-context"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
+import { AppBottomSheet } from "../ui/bottom-sheet"
+import { useToast } from "../ui/toast"
+import { useAuth } from "../../lib/auth-context"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../lib/theme"
+import { haptics } from "../../lib/haptics"
 import { formatEventTime, findSelfAttendee } from "./calendar-utils"
 
 export interface EventPreviewSheetProps {
@@ -32,327 +38,402 @@ export interface EventPreviewSheetProps {
   timeZone: string
   canEdit?: boolean
   onEdit?: (occ: EventOccurrence) => void
+  onDuplicate?: (occ: EventOccurrence) => void
+  onDelete?: (occ: EventOccurrence) => void
   onClose?: () => void
 }
 
 export const EventPreviewSheet = forwardRef<
   BottomSheet,
   EventPreviewSheetProps
->(({ occurrence, timeZone, canEdit = true, onEdit, onClose }, ref) => {
-  const { colors } = useTheme()
-  const styles = useThemedStyles(createStyles)
-  const respondMutation = useRespondToEvent()
-  const { user } = useAuth()
-  const { t } = useI18n()
-  const tz = useTimezone()
-  const { data: accountsData } = useConnectedAccounts()
-  const toast = useToast()
+>(
+  (
+    {
+      occurrence,
+      timeZone,
+      canEdit = true,
+      onEdit,
+      onDuplicate,
+      onDelete,
+      onClose,
+    },
+    ref
+  ) => {
+    const { colors } = useTheme()
+    const styles = useThemedStyles(createStyles)
+    const respondMutation = useRespondToEvent()
+    const { user } = useAuth()
+    const { t } = useI18n()
+    const tz = useTimezone()
+    const { data: accountsData } = useConnectedAccounts()
+    const toast = useToast()
 
-  const selfEmails = useMemo(() => {
-    const emails: string[] = []
-    if (user?.email) emails.push(user.email)
-    for (const acc of accountsData?.accounts || []) {
-      if (acc.email) emails.push(acc.email)
+    const selfEmails = useMemo(() => {
+      const emails: string[] = []
+      if (user?.email) emails.push(user.email)
+      for (const acc of accountsData?.accounts || []) {
+        if (acc.email) emails.push(acc.email)
+      }
+      return emails
+    }, [user?.email, accountsData?.accounts])
+
+    const selfAttendee = useMemo(
+      () => findSelfAttendee(occurrence?.attendees, selfEmails),
+      [occurrence?.attendees, selfEmails]
+    )
+
+    const currentRsvp = selfAttendee?.responseStatus
+
+    const handleRespond = async (status: AttendeeResponseStatus) => {
+      if (!occurrence || !selfAttendee) return
+      haptics.selection()
+      try {
+        await respondMutation.mutateAsync({
+          id: occurrence.eventId,
+          response: status,
+        })
+        haptics.success()
+      } catch (err: unknown) {
+        haptics.error()
+        const message =
+          err instanceof Error ? err.message : t("calendar.rsvpFailedMessage")
+        toast.show({
+          title: t("calendar.rsvpFailed"),
+          message,
+          type: "error",
+        })
+      }
     }
-    return emails
-  }, [user?.email, accountsData?.accounts])
 
-  const selfAttendee = useMemo(
-    () => findSelfAttendee(occurrence?.attendees, selfEmails),
-    [occurrence?.attendees, selfEmails]
-  )
-
-  const currentRsvp = selfAttendee?.responseStatus
-
-  const handleRespond = async (status: AttendeeResponseStatus) => {
-    if (!occurrence || !selfAttendee) return
-    haptics.selection()
-    try {
-      await respondMutation.mutateAsync({
-        id: occurrence.eventId,
-        response: status,
-      })
-      haptics.success()
-    } catch (err: unknown) {
-      haptics.error()
-      const message =
-        err instanceof Error ? err.message : t("calendar.rsvpFailedMessage")
-      toast.show({
-        title: t("calendar.rsvpFailed"),
-        message,
-        type: "error",
-      })
+    const handleOpenMeet = () => {
+      if (!occurrence?.meetUrl) return
+      haptics.light()
+      Linking.openURL(occurrence.meetUrl).catch(() => {})
     }
-  }
 
-  const handleOpenMeet = () => {
-    if (!occurrence?.meetUrl) return
-    haptics.light()
-    Linking.openURL(occurrence.meetUrl).catch(() => {})
-  }
+    const handleClosePress = () => {
+      haptics.light()
+      if (typeof ref !== "function" && ref?.current?.close) {
+        ref.current.close()
+      }
+      onClose?.()
+    }
 
-  if (!occurrence) {
+    if (!occurrence) {
+      return (
+        <AppBottomSheet
+          ref={ref}
+          title={t("calendar.eventDetails")}
+          snapPoints={["45%"]}
+          onClose={onClose}
+        >
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              {t("calendar.noEventSelected")}
+            </Text>
+          </View>
+        </AppBottomSheet>
+      )
+    }
+
+    const eventColor = occurrence.color || colors.primary
+    const timeFormatted = formatEventTime(
+      occurrence,
+      timeZone,
+      tz.locale,
+      t("calendar.allDay")
+    )
+
     return (
       <AppBottomSheet
         ref={ref}
-        title={t("calendar.eventDetails")}
-        snapPoints={["45%"]}
+        title=""
+        snapPoints={["60%", "90%"]}
         onClose={onClose}
       >
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>{t("calendar.noEventSelected")}</Text>
-        </View>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Title & Calendar Banner */}
+          <View style={styles.headerSection}>
+            <View style={styles.headerTopRow}>
+              <View style={styles.calendarTagRow}>
+                <View
+                  style={[styles.calendarDot, { backgroundColor: eventColor }]}
+                />
+                <Text style={styles.calendarNameText}>
+                  {occurrence.calendarName || t("calendar.calendar")}
+                </Text>
+                {occurrence.isAllDay && (
+                  <View style={styles.allDayBadge}>
+                    <Text style={styles.allDayBadgeText}>
+                      {t("calendar.allDay")}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.headerActionsRow}>
+                {canEdit && onDuplicate && (
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      haptics.light()
+                      onDuplicate(occurrence)
+                    }}
+                    style={styles.headerActionButton}
+                    testID="event-duplicate-button"
+                    accessibilityRole="button"
+                    accessibilityLabel={t("calendar.duplicate")}
+                  >
+                    <Copy size={18} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                )}
+                {canEdit && onDelete && (
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      haptics.light()
+                      onDelete(occurrence)
+                    }}
+                    style={styles.headerActionButton}
+                    testID="event-delete-button"
+                    accessibilityRole="button"
+                    accessibilityLabel={t("common.delete")}
+                  >
+                    <Trash2 size={18} color={colors.destructive} />
+                  </TouchableOpacity>
+                )}
+                {onClose && (
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={handleClosePress}
+                    style={styles.headerActionButton}
+                    testID="event-close-button"
+                    accessibilityRole="button"
+                    accessibilityLabel={t("calendar.closePreview")}
+                  >
+                    <X size={18} color={colors.textMuted} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+            <Text style={styles.titleText}>
+              {occurrence.title || t("calendar.noTitle")}
+            </Text>
+          </View>
+
+          {/* Date & Time */}
+          <View style={styles.infoRow}>
+            <Clock size={16} color={colors.textMuted} />
+            <Text style={styles.infoText}>{timeFormatted}</Text>
+          </View>
+
+          {/* Location */}
+          {occurrence.location ? (
+            <View style={styles.infoRow}>
+              <MapPin size={16} color={colors.textMuted} />
+              <Text style={styles.infoText}>{occurrence.location}</Text>
+            </View>
+          ) : null}
+
+          {/* Video Conference Link */}
+          {occurrence.meetUrl ? (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleOpenMeet}
+              style={styles.meetButton}
+              testID="event-meet-button"
+            >
+              <Video size={16} color={colors.primary} />
+              <Text style={styles.meetButtonText} numberOfLines={1}>
+                {t("calendar.joinVideoCall")}
+              </Text>
+              <ExternalLink size={14} color={colors.primary} />
+            </TouchableOpacity>
+          ) : null}
+
+          {/* Description */}
+          {occurrence.description ? (
+            <View style={styles.descriptionSection}>
+              <Text style={styles.sectionLabel}>
+                {t("calendar.descriptionMobile")}
+              </Text>
+              <Text style={styles.descriptionText}>
+                {occurrence.description}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Attendees List */}
+          {occurrence.attendees && occurrence.attendees.length > 0 && (
+            <View style={styles.attendeesSection}>
+              <View style={styles.attendeesHeader}>
+                <Users size={16} color={colors.textMuted} />
+                <Text style={styles.sectionLabel}>
+                  {t("calendar.attendeesWithCount", {
+                    count: occurrence.attendees.length,
+                  })}
+                </Text>
+              </View>
+              <View style={styles.attendeesList}>
+                {occurrence.attendees.map((att, i) => {
+                  const initial = (att.displayName || att.email || "?")
+                    .slice(0, 1)
+                    .toUpperCase()
+                  return (
+                    <View key={att.email || i} style={styles.attendeeRow}>
+                      <View style={styles.attendeeAvatar}>
+                        <Text style={styles.attendeeAvatarText}>{initial}</Text>
+                      </View>
+                      <View style={styles.attendeeInfo}>
+                        <Text numberOfLines={1} style={styles.attendeeName}>
+                          {att.displayName || att.email}
+                        </Text>
+                        {att.displayName && att.email ? (
+                          <Text numberOfLines={1} style={styles.attendeeEmail}>
+                            {att.email}
+                          </Text>
+                        ) : null}
+                      </View>
+                      {att.isOrganizer && (
+                        <View style={styles.organizerBadge}>
+                          <Text style={styles.organizerBadgeText}>
+                            {t("calendar.hostBadge")}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )
+                })}
+              </View>
+            </View>
+          )}
+
+          {/* RSVP Action Bar */}
+          {selfAttendee && (
+            <View style={styles.rsvpSection} testID="event-rsvp-section">
+              <Text style={styles.sectionLabel}>{t("calendar.going")}</Text>
+              <View style={styles.rsvpButtonsRow}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    handleRespond("ATTENDEE_RESPONSE_STATUS_ACCEPTED")
+                  }
+                  style={[
+                    styles.rsvpBtn,
+                    currentRsvp === "ATTENDEE_RESPONSE_STATUS_ACCEPTED" &&
+                      styles.rsvpBtnAccepted,
+                  ]}
+                  testID="event-rsvp-yes"
+                >
+                  <Check
+                    size={14}
+                    color={
+                      currentRsvp === "ATTENDEE_RESPONSE_STATUS_ACCEPTED"
+                        ? colors.success
+                        : colors.textMuted
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.rsvpBtnText,
+                      currentRsvp === "ATTENDEE_RESPONSE_STATUS_ACCEPTED" &&
+                        styles.rsvpBtnTextAccepted,
+                    ]}
+                  >
+                    {t("calendar.rsvpYes")}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    handleRespond("ATTENDEE_RESPONSE_STATUS_TENTATIVE")
+                  }
+                  style={[
+                    styles.rsvpBtn,
+                    currentRsvp === "ATTENDEE_RESPONSE_STATUS_TENTATIVE" &&
+                      styles.rsvpBtnTentative,
+                  ]}
+                  testID="event-rsvp-maybe"
+                >
+                  <HelpCircle
+                    size={14}
+                    color={
+                      currentRsvp === "ATTENDEE_RESPONSE_STATUS_TENTATIVE"
+                        ? colors.warning
+                        : colors.textMuted
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.rsvpBtnText,
+                      currentRsvp === "ATTENDEE_RESPONSE_STATUS_TENTATIVE" &&
+                        styles.rsvpBtnTextTentative,
+                    ]}
+                  >
+                    {t("calendar.rsvpMaybe")}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    handleRespond("ATTENDEE_RESPONSE_STATUS_DECLINED")
+                  }
+                  style={[
+                    styles.rsvpBtn,
+                    currentRsvp === "ATTENDEE_RESPONSE_STATUS_DECLINED" &&
+                      styles.rsvpBtnDeclined,
+                  ]}
+                  testID="event-rsvp-no"
+                >
+                  <X
+                    size={14}
+                    color={
+                      currentRsvp === "ATTENDEE_RESPONSE_STATUS_DECLINED"
+                        ? colors.destructive
+                        : colors.textMuted
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.rsvpBtnText,
+                      currentRsvp === "ATTENDEE_RESPONSE_STATUS_DECLINED" &&
+                        styles.rsvpBtnTextDeclined,
+                    ]}
+                  >
+                    {t("calendar.rsvpNo")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Edit Button (if not viewer) */}
+          {canEdit && onEdit && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                haptics.light()
+                onEdit(occurrence)
+              }}
+              style={styles.editButton}
+              testID="event-edit-button"
+            >
+              <Edit3 size={16} color={colors.textPrimary} />
+              <Text style={styles.editButtonText}>
+                {t("calendar.editEvent")}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
       </AppBottomSheet>
     )
   }
-
-  const eventColor = occurrence.color || colors.primary
-  const timeFormatted = formatEventTime(
-    occurrence,
-    timeZone,
-    tz.locale,
-    t("calendar.allDay")
-  )
-
-  return (
-    <AppBottomSheet
-      ref={ref}
-      title=""
-      snapPoints={["60%", "90%"]}
-      onClose={onClose}
-    >
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Title & Calendar Banner */}
-        <View style={styles.headerSection}>
-          <View style={styles.calendarTagRow}>
-            <View
-              style={[styles.calendarDot, { backgroundColor: eventColor }]}
-            />
-            <Text style={styles.calendarNameText}>
-              {occurrence.calendarName || t("calendar.calendar")}
-            </Text>
-            {occurrence.isAllDay && (
-              <View style={styles.allDayBadge}>
-                <Text style={styles.allDayBadgeText}>
-                  {t("calendar.allDay")}
-                </Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.titleText}>
-            {occurrence.title || t("calendar.noTitle")}
-          </Text>
-        </View>
-
-        {/* Date & Time */}
-        <View style={styles.infoRow}>
-          <Clock size={16} color={colors.textMuted} />
-          <Text style={styles.infoText}>{timeFormatted}</Text>
-        </View>
-
-        {/* Location */}
-        {occurrence.location ? (
-          <View style={styles.infoRow}>
-            <MapPin size={16} color={colors.textMuted} />
-            <Text style={styles.infoText}>{occurrence.location}</Text>
-          </View>
-        ) : null}
-
-        {/* Video Conference Link */}
-        {occurrence.meetUrl ? (
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={handleOpenMeet}
-            style={styles.meetButton}
-            testID="event-meet-button"
-          >
-            <Video size={16} color={colors.primary} />
-            <Text style={styles.meetButtonText} numberOfLines={1}>
-              {t("calendar.joinVideoCall")}
-            </Text>
-            <ExternalLink size={14} color={colors.primary} />
-          </TouchableOpacity>
-        ) : null}
-
-        {/* Description */}
-        {occurrence.description ? (
-          <View style={styles.descriptionSection}>
-            <Text style={styles.sectionLabel}>
-              {t("calendar.descriptionMobile")}
-            </Text>
-            <Text style={styles.descriptionText}>{occurrence.description}</Text>
-          </View>
-        ) : null}
-
-        {/* Attendees List */}
-        {occurrence.attendees && occurrence.attendees.length > 0 && (
-          <View style={styles.attendeesSection}>
-            <View style={styles.attendeesHeader}>
-              <Users size={16} color={colors.textMuted} />
-              <Text style={styles.sectionLabel}>
-                {t("calendar.attendeesWithCount", {
-                  count: occurrence.attendees.length,
-                })}
-              </Text>
-            </View>
-            <View style={styles.attendeesList}>
-              {occurrence.attendees.map((att, i) => {
-                const initial = (att.displayName || att.email || "?")
-                  .slice(0, 1)
-                  .toUpperCase()
-                return (
-                  <View key={att.email || i} style={styles.attendeeRow}>
-                    <View style={styles.attendeeAvatar}>
-                      <Text style={styles.attendeeAvatarText}>{initial}</Text>
-                    </View>
-                    <View style={styles.attendeeInfo}>
-                      <Text numberOfLines={1} style={styles.attendeeName}>
-                        {att.displayName || att.email}
-                      </Text>
-                      {att.displayName && att.email ? (
-                        <Text numberOfLines={1} style={styles.attendeeEmail}>
-                          {att.email}
-                        </Text>
-                      ) : null}
-                    </View>
-                    {att.isOrganizer && (
-                      <View style={styles.organizerBadge}>
-                        <Text style={styles.organizerBadgeText}>
-                          {t("calendar.hostBadge")}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                )
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* RSVP Action Bar */}
-        {selfAttendee && (
-          <View style={styles.rsvpSection} testID="event-rsvp-section">
-            <Text style={styles.sectionLabel}>{t("calendar.going")}</Text>
-            <View style={styles.rsvpButtonsRow}>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() =>
-                  handleRespond("ATTENDEE_RESPONSE_STATUS_ACCEPTED")
-                }
-                style={[
-                  styles.rsvpBtn,
-                  currentRsvp === "ATTENDEE_RESPONSE_STATUS_ACCEPTED" &&
-                    styles.rsvpBtnAccepted,
-                ]}
-                testID="event-rsvp-yes"
-              >
-                <Check
-                  size={14}
-                  color={
-                    currentRsvp === "ATTENDEE_RESPONSE_STATUS_ACCEPTED"
-                      ? colors.success
-                      : colors.textMuted
-                  }
-                />
-                <Text
-                  style={[
-                    styles.rsvpBtnText,
-                    currentRsvp === "ATTENDEE_RESPONSE_STATUS_ACCEPTED" &&
-                      styles.rsvpBtnTextAccepted,
-                  ]}
-                >
-                  {t("calendar.rsvpYes")}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() =>
-                  handleRespond("ATTENDEE_RESPONSE_STATUS_TENTATIVE")
-                }
-                style={[
-                  styles.rsvpBtn,
-                  currentRsvp === "ATTENDEE_RESPONSE_STATUS_TENTATIVE" &&
-                    styles.rsvpBtnTentative,
-                ]}
-                testID="event-rsvp-maybe"
-              >
-                <HelpCircle
-                  size={14}
-                  color={
-                    currentRsvp === "ATTENDEE_RESPONSE_STATUS_TENTATIVE"
-                      ? colors.warning
-                      : colors.textMuted
-                  }
-                />
-                <Text
-                  style={[
-                    styles.rsvpBtnText,
-                    currentRsvp === "ATTENDEE_RESPONSE_STATUS_TENTATIVE" &&
-                      styles.rsvpBtnTextTentative,
-                  ]}
-                >
-                  {t("calendar.rsvpMaybe")}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() =>
-                  handleRespond("ATTENDEE_RESPONSE_STATUS_DECLINED")
-                }
-                style={[
-                  styles.rsvpBtn,
-                  currentRsvp === "ATTENDEE_RESPONSE_STATUS_DECLINED" &&
-                    styles.rsvpBtnDeclined,
-                ]}
-                testID="event-rsvp-no"
-              >
-                <X
-                  size={14}
-                  color={
-                    currentRsvp === "ATTENDEE_RESPONSE_STATUS_DECLINED"
-                      ? colors.destructive
-                      : colors.textMuted
-                  }
-                />
-                <Text
-                  style={[
-                    styles.rsvpBtnText,
-                    currentRsvp === "ATTENDEE_RESPONSE_STATUS_DECLINED" &&
-                      styles.rsvpBtnTextDeclined,
-                  ]}
-                >
-                  {t("calendar.rsvpNo")}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Edit Button (if not viewer) */}
-        {canEdit && onEdit && (
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => {
-              haptics.light()
-              onEdit(occurrence)
-            }}
-            style={styles.editButton}
-            testID="event-edit-button"
-          >
-            <Edit3 size={16} color={colors.textPrimary} />
-            <Text style={styles.editButtonText}>{t("calendar.editEvent")}</Text>
-          </TouchableOpacity>
-        )}
-      </ScrollView>
-    </AppBottomSheet>
-  )
-})
+)
 
 EventPreviewSheet.displayName = "EventPreviewSheet"
 
@@ -376,10 +457,31 @@ const createStyles = (t: SaturnMobileTheme) => ({
   headerSection: {
     gap: 6,
   },
+  headerTopRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    gap: 8,
+  },
+  headerActionsRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+  },
+  headerActionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    backgroundColor: t.colors.surfaceSubtle,
+  },
   calendarTagRow: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 6,
+    flex: 1,
+    minWidth: 0,
   },
   calendarDot: {
     width: 8,

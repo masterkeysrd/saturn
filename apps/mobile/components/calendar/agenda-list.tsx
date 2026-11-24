@@ -1,4 +1,10 @@
-import { useMemo } from "react"
+import {
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+  type ComponentProps,
+} from "react"
 import {
   View,
   Text,
@@ -7,6 +13,7 @@ import {
   TouchableOpacity,
   type RefreshControlProps,
 } from "react-native"
+import { formatLocalDateString } from "@saturn/core"
 import {
   Calendar as CalendarIcon,
   Video,
@@ -17,9 +24,13 @@ import {
 } from "lucide-react-native"
 import { useConnectedAccounts, useI18n, useTimezone } from "@saturn/hooks"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
-import { useAuth } from "@/lib/auth-context"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
+import { useAuth } from "../../lib/auth-context"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../lib/theme"
+import { haptics } from "../../lib/haptics"
 import {
   groupEventsByDate,
   formatEventTime,
@@ -27,10 +38,17 @@ import {
   type CalendarDateSection,
 } from "./calendar-utils"
 
+const AGENDA_VIEWABILITY_CONFIG = {
+  itemVisiblePercentThreshold: 20,
+}
+
 export interface AgendaListProps {
   occurrences: EventOccurrence[]
   timeZone: string
+  focusDate?: string
+  resetSeq?: number
   onSelectOccurrence: (occ: EventOccurrence) => void
+  onVisibleDateChange?: (dateString: string) => void
   onOpenCreate?: () => void
   refreshControl?: React.ReactElement<RefreshControlProps>
   canCreate?: boolean
@@ -39,7 +57,10 @@ export interface AgendaListProps {
 export function AgendaList({
   occurrences,
   timeZone,
+  focusDate,
+  resetSeq = 0,
   onSelectOccurrence,
+  onVisibleDateChange,
   onOpenCreate,
   refreshControl,
   canCreate = true,
@@ -50,6 +71,46 @@ export function AgendaList({
   const { t } = useI18n()
   const tz = useTimezone()
   const { data: accountsData } = useConnectedAccounts()
+  const sectionListRef =
+    useRef<SectionList<EventOccurrence, CalendarDateSection>>(null)
+  const onVisibleDateChangeRef = useRef(onVisibleDateChange)
+  const lastReportedMonthRef = useRef<string>("")
+  const lastScrolledFocusRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    onVisibleDateChangeRef.current = onVisibleDateChange
+  }, [onVisibleDateChange])
+
+  const onViewableItemsChanged = useCallback(
+    ({
+      viewableItems,
+    }: Parameters<
+      NonNullable<
+        ComponentProps<
+          typeof SectionList<EventOccurrence, CalendarDateSection>
+        >["onViewableItemsChanged"]
+      >
+    >[0]) => {
+      if (!viewableItems || viewableItems.length === 0) return
+      const topToken = viewableItems.find(
+        (token) =>
+          token.isViewable !== false &&
+          Boolean(
+            (token.section as CalendarDateSection | undefined)?.dateString
+          )
+      )
+      const dateString = (topToken?.section as CalendarDateSection | undefined)
+        ?.dateString
+      if (!dateString || dateString.length < 7) return
+      const monthPrefix = dateString.slice(0, 7)
+      if (monthPrefix !== lastReportedMonthRef.current) {
+        lastReportedMonthRef.current = monthPrefix
+        onVisibleDateChangeRef.current?.(dateString)
+      }
+    },
+    []
+  )
+
   const selfEmails = useMemo(() => {
     const emails: string[] = []
     if (user?.email) emails.push(user.email)
@@ -59,9 +120,59 @@ export function AgendaList({
     return emails
   }, [user, accountsData?.accounts])
 
+  const todayDateStr = useMemo(
+    () => formatLocalDateString(tz.now(), timeZone),
+    [tz, timeZone]
+  )
+
+  const targetFocusDate = useMemo(
+    () => focusDate || todayDateStr,
+    [focusDate, todayDateStr]
+  )
+
   const sections = useMemo<CalendarDateSection[]>(() => {
-    return groupEventsByDate(occurrences, timeZone, tz.locale)
-  }, [occurrences, timeZone, tz.locale])
+    const clampedOccurrences = targetFocusDate
+      ? occurrences.map((occ) =>
+          occ.isAllDay &&
+          occ.startDate &&
+          occ.startDate < targetFocusDate &&
+          occ.endDate &&
+          occ.endDate > targetFocusDate
+            ? { ...occ, startDate: targetFocusDate }
+            : occ
+        )
+      : occurrences
+    const allSections = groupEventsByDate(
+      clampedOccurrences,
+      timeZone,
+      tz.locale
+    )
+    return targetFocusDate
+      ? allSections.filter((s) => s.dateString >= targetFocusDate)
+      : allSections
+  }, [occurrences, timeZone, tz.locale, targetFocusDate])
+
+  useEffect(() => {
+    lastReportedMonthRef.current = ""
+    lastScrolledFocusRef.current = null
+  }, [targetFocusDate, resetSeq])
+
+  useEffect(() => {
+    if (sections.length === 0 || !targetFocusDate) return
+    const sig = `${targetFocusDate}|${resetSeq}`
+    if (lastScrolledFocusRef.current === sig) return
+    lastScrolledFocusRef.current = sig
+
+    const timer = setTimeout(() => {
+      sectionListRef.current?.scrollToLocation?.({
+        sectionIndex: 0,
+        itemIndex: 0,
+        animated: false,
+        viewOffset: 0,
+      })
+    }, 50)
+    return () => clearTimeout(timer)
+  }, [sections.length, targetFocusDate, resetSeq])
 
   if (sections.length === 0) {
     return (
@@ -99,6 +210,7 @@ export function AgendaList({
 
   return (
     <SectionList
+      ref={sectionListRef}
       sections={sections}
       keyExtractor={(item, index) =>
         item.instanceId || item.eventId || String(index)
@@ -107,11 +219,44 @@ export function AgendaList({
       stickySectionHeadersEnabled={true}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.listContent}
+      viewabilityConfig={AGENDA_VIEWABILITY_CONFIG}
+      onViewableItemsChanged={onViewableItemsChanged}
+      onScrollToIndexFailed={(info) => {
+        const responder = (
+          sectionListRef.current as unknown as {
+            getScrollResponder?: () => {
+              scrollTo?: (opts: { y: number; animated: boolean }) => void
+            }
+          } | null
+        )?.getScrollResponder?.()
+        if (responder?.scrollTo && info.averageItemLength > 0) {
+          responder.scrollTo({
+            y: Math.max(0, info.averageItemLength * info.index),
+            animated: false,
+          })
+          return
+        }
+        setTimeout(() => {
+          const fallbackSection = Math.min(
+            Math.max(0, info.highestMeasuredFrameIndex),
+            Math.max(0, sections.length - 1)
+          )
+          sectionListRef.current?.scrollToLocation?.({
+            sectionIndex: fallbackSection,
+            itemIndex: 0,
+            animated: false,
+            viewOffset: 0,
+          })
+        }, 100)
+      }}
       renderSectionHeader={({ section }) => {
         const d = section.dateString.split("-")[2]
+        const isPastDay = Boolean(
+          todayDateStr && section.dateString < todayDateStr
+        )
         return (
           <View
-            style={styles.sectionHeader}
+            style={[styles.sectionHeader, isPastDay && styles.pastSectionMuted]}
             testID={`agenda-section-${section.dateString}`}
           >
             <View
@@ -135,7 +280,10 @@ export function AgendaList({
           </View>
         )
       }}
-      renderItem={({ item: occ }) => {
+      renderItem={({ item: occ, section }) => {
+        const isPastDay = Boolean(
+          todayDateStr && section.dateString < todayDateStr
+        )
         const eventColor = occ.color || colors.primary
         const selfAttendee = findSelfAttendee(occ.attendees, selfEmails)
         const rsvpStatus = selfAttendee?.responseStatus
@@ -147,7 +295,7 @@ export function AgendaList({
               haptics.light()
               onSelectOccurrence(occ)
             }}
-            style={styles.itemRow}
+            style={[styles.itemRow, isPastDay && styles.pastSectionMuted]}
             testID={`agenda-item-${occ.instanceId || occ.eventId}`}
           >
             {/* Calendar color indicator strip */}
@@ -227,6 +375,9 @@ export function AgendaList({
 const createStyles = (t: SaturnMobileTheme) => ({
   listContent: {
     paddingBottom: 40,
+  },
+  pastSectionMuted: {
+    opacity: 0.6,
   },
   sectionHeader: {
     flexDirection: "row" as const,

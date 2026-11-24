@@ -41,8 +41,10 @@ const { mockSwitchSpace, mockToastShow, mockUseSpace } = vi.hoisted(() => {
     hourCycle: "h23" as const,
     weekStartsOn: 1 as const,
     mailAutoLoadRemoteContent: false,
+    calendarMobileView: "agenda" as const,
     updateRegionalPreferences: vi.fn(async () => undefined),
     updateMailPreferences: vi.fn(async () => undefined),
+    updateCalendarPreferences: vi.fn(async () => undefined),
     switchSpace: mockSwitchSpace,
     refetchSpaces: vi.fn(),
   }))

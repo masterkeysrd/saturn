@@ -1,7 +1,8 @@
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react"
 import { useI18n, useTimezone } from "@saturn/hooks"
 import {
+  formatLocalDateString,
   formatShortWeekday,
   getMonthMatrix,
   computeMultiDayBannerRows,
@@ -39,6 +40,8 @@ export function MonthView({
 }: MonthViewProps) {
   const tz = useTimezone()
   const { t } = useI18n()
+  const gridRef = useRef<HTMLDivElement>(null)
+  const [rowHeight, setRowHeight] = useState(112)
 
   const currentParts = tz.parts(currentDate) || {
     year: 2026,
@@ -52,9 +55,31 @@ export function MonthView({
     return getMonthMatrix(currentParts.year, currentParts.month, {
       weekStartsOn,
       timeZone: tz.timezone,
-      fixedWeeks: true,
+      fixedWeeks: false,
     })
   }, [currentParts.year, currentParts.month, tz.timezone, weekStartsOn])
+
+  const weeksCount = Math.max(4, weeks.length)
+
+  useEffect(() => {
+    const el = gridRef.current
+    if (!el) return
+
+    const updateHeight = () => {
+      if (el.clientHeight > 0) {
+        setRowHeight(el.clientHeight / weeksCount)
+      }
+    }
+
+    updateHeight()
+
+    if (typeof ResizeObserver === "undefined") return
+    const observer = new ResizeObserver(() => {
+      updateHeight()
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [weeksCount])
 
   // Partition occurrences into all-day/multi-day vs timed single-day
   const { allDayEvents, timedEvents } = useMemo(() => {
@@ -117,7 +142,13 @@ export function MonthView({
       </div>
 
       {/* Month Weeks Grid */}
-      <div className="grid flex-1 grid-rows-6 divide-y divide-border/30 overflow-y-auto">
+      <div
+        ref={gridRef}
+        style={{
+          gridTemplateRows: `repeat(${weeksCount}, minmax(96px, 1fr))`,
+        }}
+        className="grid flex-1 divide-y divide-border/30 overflow-y-auto"
+      >
         {weeks.map((week, wIdx) => {
           const weekDays = week.map((c) => c.dateString)
 
@@ -132,10 +163,17 @@ export function MonthView({
             weekDays
           )
 
+          const availPx = Math.max(44, rowHeight - 38)
+          const maxTotalSlots = Math.max(2, Math.floor(availPx / 22))
+          const afterBannerSlots = Math.max(
+            1,
+            maxTotalSlots - bannerLayout.totalRows
+          )
+
           return (
             <div
               key={wIdx}
-              className="relative grid grid-cols-7 divide-x divide-border/20"
+              className="relative grid min-w-0 grid-cols-7 divide-x divide-border/20"
             >
               {/* Day column background & cell container */}
               {week.map((cell: MonthDayCell) => {
@@ -150,6 +188,37 @@ export function MonthView({
                   (f) => f.dateKey === cell.dateString
                 )
 
+                const maxFinanceSlots = Math.min(2, afterBannerSlots)
+                let visibleFinance = cellFinance
+                let hiddenFinanceCount = 0
+                let financeRowsUsed = cellFinance.length
+
+                if (cellFinance.length > maxFinanceSlots) {
+                  const visCount =
+                    maxFinanceSlots >= 2 ? maxFinanceSlots - 1 : 0
+                  visibleFinance = cellFinance.slice(0, visCount)
+                  hiddenFinanceCount = cellFinance.length - visCount
+                  financeRowsUsed = visCount + 1
+                }
+
+                const usedAboveSlots = bannerLayout.totalRows + financeRowsUsed
+                const availTimedSlots = Math.max(
+                  1,
+                  maxTotalSlots - usedAboveSlots
+                )
+                const hasTimedOverflow = cellTimed.length > availTimedSlots
+                const visibleTimedCount = hasTimedOverflow
+                  ? availTimedSlots >= 2
+                    ? availTimedSlots - 1
+                    : 0
+                  : cellTimed.length
+                const visibleTimed = cellTimed.slice(0, visibleTimedCount)
+                const hiddenTimedCount = cellTimed.length - visibleTimedCount
+                const todayStr = formatLocalDateString(tz.now(), tz.timezone)
+                const isPastCell = Boolean(
+                  todayStr && cell.dateString < todayStr && !cell.isToday
+                )
+
                 return (
                   <div
                     key={cell.dateString}
@@ -160,14 +229,14 @@ export function MonthView({
                       }
                     }}
                     className={cn(
-                      "group relative flex min-h-[90px] cursor-pointer flex-col p-1.5 transition hover:bg-muted/10",
+                      "group relative flex min-h-0 min-w-0 cursor-pointer flex-col overflow-hidden p-1.5 transition hover:bg-muted/10",
                       !cell.isCurrentMonth &&
                         "bg-muted/15 text-muted-foreground/40",
                       cell.isWeekend && "bg-muted/5"
                     )}
                   >
                     {/* Day Number Header */}
-                    <div className="pointer-events-none flex items-center justify-between">
+                    <div className="pointer-events-none flex shrink-0 items-center justify-between">
                       <span className="text-[10px] text-muted-foreground/60 opacity-0 transition group-hover:opacity-100">
                         +
                       </span>
@@ -178,10 +247,12 @@ export function MonthView({
                           onSelectDate(cell.date)
                         }}
                         className={cn(
-                          "pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium transition",
+                          "pointer-events-auto flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-xs font-medium transition",
                           cell.isToday
                             ? "bg-primary font-bold text-primary-foreground shadow-xs"
-                            : "text-foreground hover:bg-muted"
+                            : isPastCell
+                              ? "text-muted-foreground/75 hover:bg-muted hover:text-foreground"
+                              : "text-foreground hover:bg-muted"
                         )}
                       >
                         {cell.day}
@@ -198,8 +269,8 @@ export function MonthView({
 
                     {/* Finance Bills & Paydays Pills */}
                     {cellFinance.length > 0 && (
-                      <div className="pointer-events-auto mt-1 flex flex-col gap-1">
-                        {cellFinance.slice(0, 2).map((fin) => {
+                      <div className="pointer-events-auto mt-1 flex shrink-0 flex-col gap-1">
+                        {visibleFinance.map((fin) => {
                           const isIncome = fin.type === "INCOME"
                           return (
                             <button
@@ -211,7 +282,7 @@ export function MonthView({
                                 onSelectFinanceItem?.(fin.scheduledTransaction)
                               }}
                               className={cn(
-                                "flex w-full items-center justify-between gap-1 rounded-md border px-1.5 py-0.5 text-left text-[11px] font-medium transition hover:brightness-95",
+                                "flex h-5 w-full shrink-0 items-center justify-between gap-1 rounded-md border px-1.5 text-left text-[11px] font-medium transition hover:brightness-95",
                                 isIncome
                                   ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
                                   : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300"
@@ -234,17 +305,17 @@ export function MonthView({
                             </button>
                           )
                         })}
-                        {cellFinance.length > 2 && (
+                        {hiddenFinanceCount > 0 && (
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
                               onSelectDate(cell.date)
                             }}
-                            className="pl-1 text-left text-[10px] font-medium text-muted-foreground hover:text-foreground"
+                            className="h-5 shrink-0 rounded-md px-1.5 text-left text-[11px] leading-5 font-semibold text-muted-foreground hover:bg-muted/40 hover:text-foreground hover:underline"
                           >
                             {t("calendar.moreBills", {
-                              count: cellFinance.length - 2,
+                              count: hiddenFinanceCount,
                             })}
                           </button>
                         )}
@@ -252,8 +323,8 @@ export function MonthView({
                     )}
 
                     {/* Timed Events List */}
-                    <div className="pointer-events-auto mt-1 flex flex-1 flex-col gap-1 overflow-hidden">
-                      {cellTimed.slice(0, 3).map((occ) => (
+                    <div className="pointer-events-auto mt-1 flex min-h-0 flex-1 flex-col gap-1">
+                      {visibleTimed.map((occ) => (
                         <button
                           key={occ.instanceId || occ.eventId}
                           type="button"
@@ -266,7 +337,7 @@ export function MonthView({
                             e.stopPropagation()
                             onEditOccurrence?.(occ)
                           }}
-                          className="flex w-full items-center justify-between gap-1 rounded px-1.5 py-0.5 text-left text-[11px] font-medium text-foreground transition hover:opacity-80"
+                          className="flex h-5 w-full shrink-0 items-center justify-between gap-1 rounded px-1.5 text-left text-[11px] font-medium text-foreground transition hover:opacity-80"
                           style={{
                             backgroundColor: `${occ.color || "#3b82f6"}22`,
                             borderLeft: `3px solid ${occ.color || "#3b82f6"}`,
@@ -284,7 +355,7 @@ export function MonthView({
                         </button>
                       ))}
 
-                      {cellTimed.length > 3 && (
+                      {hiddenTimedCount > 0 && (
                         <button
                           type="button"
                           data-testid={`month-more-${cell.dateString}`}
@@ -292,10 +363,10 @@ export function MonthView({
                             e.stopPropagation()
                             onSelectDate(cell.date)
                           }}
-                          className="pl-1 text-left text-[10px] font-semibold text-muted-foreground hover:text-foreground hover:underline"
+                          className="h-5 shrink-0 rounded-md px-1.5 text-left text-[11px] leading-5 font-semibold text-muted-foreground hover:bg-muted/40 hover:text-foreground hover:underline"
                         >
                           {t("calendar.moreEvents", {
-                            count: cellTimed.length - 3,
+                            count: hiddenTimedCount,
                           })}
                         </button>
                       )}
@@ -331,7 +402,7 @@ export function MonthView({
                       backgroundColor: occ.color || "#3b82f6",
                     }}
                     className={cn(
-                      "absolute z-10 flex h-5 items-center truncate px-2 text-[11px] font-semibold text-white shadow-2xs transition hover:brightness-110",
+                      "absolute inset-x-0 z-10 flex h-5 items-center truncate px-2 text-[11px] font-semibold text-white shadow-2xs transition hover:brightness-110",
                       item.isStart ? "ml-1 rounded-l-md" : "rounded-l-none",
                       item.isEnd ? "mr-1 rounded-r-md" : "rounded-r-none"
                     )}

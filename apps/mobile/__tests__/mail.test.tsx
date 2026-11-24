@@ -44,7 +44,9 @@ const {
   mockToastShow: vi.fn(),
   mockUseSpace: vi.fn(() => ({
     mailAutoLoadRemoteContent: false,
+    calendarMobileView: "agenda" as const,
     updateMailPreferences: vi.fn(async () => undefined),
+    updateCalendarPreferences: vi.fn(async () => undefined),
   })),
 }))
 
@@ -1090,7 +1092,9 @@ describe("Mobile Mail Feature Logic & Component Unit Tests", () => {
       mockToastShow.mockClear()
       mockUseSpace.mockReturnValue({
         mailAutoLoadRemoteContent: false,
+        calendarMobileView: "agenda" as const,
         updateMailPreferences: mockUpdateMailPreferences,
+        updateCalendarPreferences: vi.fn(async () => undefined),
       })
     })
 
@@ -1162,7 +1166,9 @@ describe("Mobile Mail Feature Logic & Component Unit Tests", () => {
     it("automatically loads remote images without banner when mailAutoLoadRemoteContent is true", () => {
       mockUseSpace.mockReturnValue({
         mailAutoLoadRemoteContent: true,
+        calendarMobileView: "agenda" as const,
         updateMailPreferences: mockUpdateMailPreferences,
+        updateCalendarPreferences: vi.fn(async () => undefined),
       })
 
       const htmlWithTracker =

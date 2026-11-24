@@ -60,10 +60,15 @@ export type ManageEventParams = {
   occurrenceEndDate?: string
   initialTitle?: string
   initialDescription?: string
+  initialLocation?: string
+  initialIsAllDay?: string
   initialStart?: string
   initialDate?: string
+  initialEndDate?: string
   initialStartTime?: string
   initialEndTime?: string
+  initialTimezone?: string
+  initialMeetUrl?: string
   initialAttendees?: string
   sourceMailMessageId?: string
   calendarId?: string
@@ -213,8 +218,12 @@ export default function ManageEventModal() {
   const [description, setDescription] = useState<string>(
     () => params.initialDescription || ""
   )
-  const [location, setLocation] = useState<string>("")
-  const [isAllDay, setIsAllDay] = useState<boolean>(false)
+  const [location, setLocation] = useState<string>(
+    () => params.initialLocation || ""
+  )
+  const [isAllDay, setIsAllDay] = useState<boolean>(
+    () => params.initialIsAllDay === "true"
+  )
 
   // Dates & Times
   const defaultDateStr = useMemo(() => {
@@ -244,6 +253,9 @@ export default function ManageEventModal() {
         params.occurrenceEndDate,
         params.occurrenceStartDate
       )
+    }
+    if (params.initialEndDate) {
+      return params.initialEndDate
     }
     if (params.occurrenceEndTime) {
       const p = parseDate(params.occurrenceEndTime)
@@ -296,10 +308,14 @@ export default function ManageEventModal() {
     return "10:00"
   })
 
-  const [eventTimezone, setEventTimezone] = useState<string>(tz.timezone)
+  const [eventTimezone, setEventTimezone] = useState<string>(
+    () => params.initialTimezone || tz.timezone
+  )
   const [recurrencePreset, setRecurrencePreset] =
     useState<RecurrenceFrequency>("none")
-  const [meetUrl, setMeetUrl] = useState<string>("")
+  const [meetUrl, setMeetUrl] = useState<string>(
+    () => params.initialMeetUrl || ""
+  )
   const [sourceMailMessageId, setSourceMailMessageId] = useState<string>(
     () => params.sourceMailMessageId || ""
   )

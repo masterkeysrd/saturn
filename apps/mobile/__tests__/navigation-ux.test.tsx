@@ -41,7 +41,9 @@ const { mockSwitchSpace, mockToastShow, mockUseSpace } = vi.hoisted(() => {
     canManageMembers: true,
     timezone: "UTC",
     mailAutoLoadRemoteContent: false,
+    calendarMobileView: "agenda" as const,
     updateMailPreferences: vi.fn(async () => undefined),
+    updateCalendarPreferences: vi.fn(async () => undefined),
     switchSpace: mockSwitchSpace,
     refetchSpaces: vi.fn(),
   }))
@@ -545,7 +547,9 @@ describe("Mobile Navigation UX, Tab Badges & Quick Capture", () => {
         canManageMembers: true,
         timezone: "UTC",
         mailAutoLoadRemoteContent: false,
+        calendarMobileView: "agenda" as const,
         updateMailPreferences: vi.fn(async () => undefined),
+        updateCalendarPreferences: vi.fn(async () => undefined),
         switchSpace: mockSwitchSpace,
         refetchSpaces: vi.fn(),
       })
@@ -615,7 +619,9 @@ describe("Mobile Navigation UX, Tab Badges & Quick Capture", () => {
         canManageMembers: true,
         timezone: "UTC",
         mailAutoLoadRemoteContent: false,
+        calendarMobileView: "agenda" as const,
         updateMailPreferences: vi.fn(async () => undefined),
+        updateCalendarPreferences: vi.fn(async () => undefined),
         switchSpace: mockSwitchSpace,
         refetchSpaces: vi.fn(),
       })

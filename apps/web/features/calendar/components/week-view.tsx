@@ -1,6 +1,7 @@
 import { useMemo, useRef, useEffect } from "react"
 import { useI18n, useTimezone } from "@saturn/hooks"
 import {
+  formatLocalDateString,
   getWeekDays,
   getHourSlots,
   computeTimedEventLayout,
@@ -16,6 +17,7 @@ import { Video, MapPin, ArrowDownLeft, ArrowUpRight } from "lucide-react"
 
 export interface WeekViewProps {
   currentDate: Date
+  resetSeq?: number
   occurrences: EventOccurrence[]
   financeItems?: CalendarFinanceItem[]
   onSelectDate: (d: Date) => void
@@ -30,6 +32,7 @@ export interface WeekViewProps {
 
 export function WeekView({
   currentDate,
+  resetSeq = 0,
   occurrences,
   financeItems = [],
   onSelectDate,
@@ -41,6 +44,7 @@ export function WeekView({
   const tz = useTimezone()
   const { t } = useI18n()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const timedGridRef = useRef<HTMLDivElement>(null)
 
   const weekDays = useMemo(() => {
     return getWeekDays(currentDate, {
@@ -86,178 +90,195 @@ export function WeekView({
   const currentMinutes = nowParts ? nowParts.hour * 60 + nowParts.minute : 0
   const currentTimeTopPct = Number(((currentMinutes / 1440) * 100).toFixed(3))
 
-  // Auto-scroll to 8:00 AM on initial mount
+  const todayDateStr = formatLocalDateString(tz.now(), tz.timezone)
+
+  // Auto-scroll to 8:00 AM on initial mount and when clicking Today
   useEffect(() => {
-    if (scrollContainerRef.current) {
-      // 8 AM out of 24 hours = 1/3 of scroll height
-      const targetScroll =
-        (scrollContainerRef.current.scrollHeight * 8) / 24 - 40
-      scrollContainerRef.current.scrollTop = targetScroll
+    if (scrollContainerRef.current && timedGridRef.current) {
+      // 8 AM out of 24 hours = 1/3 of timed grid height
+      const targetScroll = (timedGridRef.current.offsetHeight * 8) / 24 - 40
+      scrollContainerRef.current.scrollTop = Math.max(0, targetScroll)
     }
-  }, [])
+  }, [resetSeq])
 
   return (
     <div
       data-testid="week-view-container"
       className="flex flex-1 flex-col overflow-hidden bg-background select-none"
     >
-      {/* Sticky Header: Day columns & All-day banner section */}
-      <div className="z-20 shrink-0 border-b border-border/50 bg-background/95 backdrop-blur">
-        <div className="grid grid-cols-[72px_1fr]">
-          {/* Timezone label */}
-          <div className="flex items-end justify-center border-r border-border/30 pb-2 text-[10px] font-medium text-muted-foreground">
-            {tz.timezone.split("/").pop()?.replace(/_/g, " ")}
+      {/* Unified Scrollable Viewport (Sticky Header + Timed Grid share exact width) */}
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
+        {/* Sticky Header: Day columns & All-day banner section */}
+        <div className="sticky top-0 z-30 border-b border-border/50 bg-background/95 backdrop-blur">
+          <div className="grid grid-cols-[72px_minmax(0,1fr)]">
+            {/* Timezone label */}
+            <div className="flex items-end justify-center border-r border-border/30 pb-2 text-[10px] font-medium text-muted-foreground">
+              {tz.timezone.split("/").pop()?.replace(/_/g, " ")}
+            </div>
+
+            {/* 7 Day Headers */}
+            <div className="grid min-w-0 grid-cols-7 divide-x divide-border/20">
+              {weekDays.map((day: WeekDayHeader) => {
+                const isPastDay = Boolean(
+                  todayDateStr && day.dateString < todayDateStr && !day.isToday
+                )
+                return (
+                  <div
+                    key={day.dateString}
+                    className={cn(
+                      "flex min-w-0 cursor-pointer flex-col items-center py-2 transition hover:bg-muted/30",
+                      day.isToday && "bg-primary/5"
+                    )}
+                    onClick={() => onSelectDate(day.date)}
+                  >
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      {day.dayName
+                        ? day.dayName.charAt(0).toUpperCase() +
+                          day.dayName.slice(1)
+                        : ""}
+                    </span>
+                    <span
+                      className={cn(
+                        "mt-0.5 flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold transition",
+                        day.isToday
+                          ? "bg-primary text-primary-foreground shadow-xs"
+                          : isPastDay
+                            ? "text-muted-foreground/75"
+                            : "text-foreground"
+                      )}
+                    >
+                      {day.dayNumber}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
           </div>
 
-          {/* 7 Day Headers */}
-          <div className="grid grid-cols-7 divide-x divide-border/20">
-            {weekDays.map((day: WeekDayHeader) => (
-              <div
-                key={day.dateString}
-                className={cn(
-                  "flex cursor-pointer flex-col items-center py-2 transition hover:bg-muted/30",
-                  day.isToday && "bg-primary/5"
-                )}
-                onClick={() => onSelectDate(day.date)}
-              >
-                <span className="text-[11px] font-medium text-muted-foreground">
-                  {day.dayName
-                    ? day.dayName.charAt(0).toUpperCase() + day.dayName.slice(1)
-                    : ""}
-                </span>
-                <span
-                  className={cn(
-                    "mt-0.5 flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold transition",
-                    day.isToday
-                      ? "bg-primary text-primary-foreground shadow-xs"
-                      : "text-foreground"
-                  )}
-                >
-                  {day.dayNumber}
-                </span>
+          {/* All-Day Events & Scheduled Finance Section */}
+          {(bannerLayout.totalRows > 0 ||
+            weekDays.some((d) =>
+              financeItems.some((f) => f.dateKey === d.dateString)
+            )) && (
+            <div className="grid grid-cols-[72px_minmax(0,1fr)] border-t border-border/30">
+              <div className="flex items-center justify-center border-r border-border/30 text-[10px] font-medium text-muted-foreground">
+                {t("calendar.allDay")}
               </div>
-            ))}
-          </div>
+              <div className="flex min-w-0 flex-col">
+                {bannerLayout.totalRows > 0 && (
+                  <div
+                    className="relative grid min-w-0 grid-cols-7 divide-x divide-border/20"
+                    style={{ height: `${bannerLayout.totalRows * 24 + 4}px` }}
+                  >
+                    {weekDays.map((day) => (
+                      <div key={day.dateString} className="h-full min-w-0" />
+                    ))}
+
+                    {bannerLayout.items.map((item) => {
+                      const occ = (
+                        item.event as unknown as { occurrence: EventOccurrence }
+                      ).occurrence
+                      const colStart = item.startCol + 1
+                      const colSpan = item.spanCols
+
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          data-testid={`banner-${item.id}`}
+                          onClick={(e) =>
+                            onSelectOccurrence(occ, e.currentTarget)
+                          }
+                          onDoubleClick={(e) => {
+                            e.stopPropagation()
+                            onEditOccurrence?.(occ)
+                          }}
+                          style={{
+                            gridColumn: `${colStart} / span ${colSpan}`,
+                            top: `${2 + item.rowIndex * 24}px`,
+                            backgroundColor: occ.color || "#3b82f6",
+                          }}
+                          className={cn(
+                            "absolute inset-x-0 z-10 flex h-5 items-center truncate px-2 text-[11px] font-semibold text-white shadow-2xs transition hover:brightness-110",
+                            item.isStart
+                              ? "ml-1 rounded-l-md"
+                              : "rounded-l-none",
+                            item.isEnd ? "mr-1 rounded-r-md" : "rounded-r-none"
+                          )}
+                        >
+                          <span className="truncate">
+                            {occ.title || t("calendar.noTitle")}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {weekDays.some((d) =>
+                  financeItems.some((f) => f.dateKey === d.dateString)
+                ) && (
+                  <div className="grid min-w-0 grid-cols-7 divide-x divide-border/20 border-t border-border/20 py-1">
+                    {weekDays.map((day) => {
+                      const dayFin = financeItems.filter(
+                        (f) => f.dateKey === day.dateString
+                      )
+                      return (
+                        <div
+                          key={day.dateString}
+                          className="flex min-w-0 flex-col gap-1 px-1"
+                        >
+                          {dayFin.map((fin) => {
+                            const isIncome = fin.type === "INCOME"
+                            return (
+                              <button
+                                key={fin.id}
+                                type="button"
+                                data-testid={`finance-pill-${fin.id}`}
+                                onClick={() =>
+                                  onSelectFinanceItem?.(
+                                    fin.scheduledTransaction
+                                  )
+                                }
+                                className={cn(
+                                  "flex w-full items-center justify-between gap-1 rounded-md border px-1.5 py-0.5 text-left text-[11px] font-medium transition hover:brightness-95",
+                                  isIncome
+                                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                    : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                                )}
+                              >
+                                <span className="flex min-w-0 flex-1 items-center gap-1">
+                                  {isIncome ? (
+                                    <ArrowUpRight className="size-3 shrink-0" />
+                                  ) : (
+                                    <ArrowDownLeft className="size-3 shrink-0" />
+                                  )}
+                                  <span className="truncate">{fin.title}</span>
+                                </span>
+                                <MoneyAmount
+                                  cents={fin.amountCents}
+                                  currency={fin.currency}
+                                  size="sm"
+                                  className="shrink-0 text-[10px]"
+                                />
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* All-Day Events & Scheduled Finance Section */}
-        {(bannerLayout.totalRows > 0 ||
-          weekDays.some((d) =>
-            financeItems.some((f) => f.dateKey === d.dateString)
-          )) && (
-          <div className="grid grid-cols-[72px_1fr] border-t border-border/30">
-            <div className="flex items-center justify-center border-r border-border/30 text-[10px] font-medium text-muted-foreground">
-              {t("calendar.allDay")}
-            </div>
-            <div className="flex flex-col">
-              {bannerLayout.totalRows > 0 && (
-                <div
-                  className="relative grid grid-cols-7 divide-x divide-border/20"
-                  style={{ height: `${bannerLayout.totalRows * 24 + 4}px` }}
-                >
-                  {weekDays.map((day) => (
-                    <div key={day.dateString} className="h-full" />
-                  ))}
-
-                  {bannerLayout.items.map((item) => {
-                    const occ = (
-                      item.event as unknown as { occurrence: EventOccurrence }
-                    ).occurrence
-                    const colStart = item.startCol + 1
-                    const colSpan = item.spanCols
-
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        data-testid={`banner-${item.id}`}
-                        onClick={(e) =>
-                          onSelectOccurrence(occ, e.currentTarget)
-                        }
-                        onDoubleClick={(e) => {
-                          e.stopPropagation()
-                          onEditOccurrence?.(occ)
-                        }}
-                        style={{
-                          gridColumn: `${colStart} / span ${colSpan}`,
-                          top: `${2 + item.rowIndex * 24}px`,
-                          backgroundColor: occ.color || "#3b82f6",
-                        }}
-                        className={cn(
-                          "absolute z-10 flex h-5 items-center truncate px-2 text-[11px] font-semibold text-white shadow-2xs transition hover:brightness-110",
-                          item.isStart ? "ml-1 rounded-l-md" : "rounded-l-none",
-                          item.isEnd ? "mr-1 rounded-r-md" : "rounded-r-none"
-                        )}
-                      >
-                        <span className="truncate">
-                          {occ.title || t("calendar.noTitle")}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-
-              {weekDays.some((d) =>
-                financeItems.some((f) => f.dateKey === d.dateString)
-              ) && (
-                <div className="grid grid-cols-7 divide-x divide-border/20 border-t border-border/20 py-1">
-                  {weekDays.map((day) => {
-                    const dayFin = financeItems.filter(
-                      (f) => f.dateKey === day.dateString
-                    )
-                    return (
-                      <div
-                        key={day.dateString}
-                        className="flex min-w-0 flex-col gap-1 px-1"
-                      >
-                        {dayFin.map((fin) => {
-                          const isIncome = fin.type === "INCOME"
-                          return (
-                            <button
-                              key={fin.id}
-                              type="button"
-                              data-testid={`finance-pill-${fin.id}`}
-                              onClick={() =>
-                                onSelectFinanceItem?.(fin.scheduledTransaction)
-                              }
-                              className={cn(
-                                "flex w-full items-center justify-between gap-1 rounded-md border px-1.5 py-0.5 text-left text-[11px] font-medium transition hover:brightness-95",
-                                isIncome
-                                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                                  : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300"
-                              )}
-                            >
-                              <span className="flex min-w-0 flex-1 items-center gap-1">
-                                {isIncome ? (
-                                  <ArrowUpRight className="size-3 shrink-0" />
-                                ) : (
-                                  <ArrowDownLeft className="size-3 shrink-0" />
-                                )}
-                                <span className="truncate">{fin.title}</span>
-                              </span>
-                              <MoneyAmount
-                                cents={fin.amountCents}
-                                currency={fin.currency}
-                                size="sm"
-                                className="shrink-0 text-[10px]"
-                              />
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Scrollable Timed Grid (00:00 - 24:00) */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
-        <div className="relative grid min-h-[1536px] grid-cols-[72px_1fr]">
+        {/* Timed Grid (00:00 - 24:00) */}
+        <div
+          ref={timedGridRef}
+          className="relative z-0 grid grid-cols-[72px_minmax(0,1fr)]"
+        >
           {/* Time gutter */}
           <div className="relative border-r border-border/30 select-none">
             {hourSlots.map((slot) => (
@@ -275,7 +296,7 @@ export function WeekView({
           </div>
 
           {/* 7 Day Timed Columns */}
-          <div className="relative grid grid-cols-7 divide-x divide-border/20">
+          <div className="relative grid min-w-0 grid-cols-7 divide-x divide-border/20">
             {weekDays.map((day) => {
               // Compute side-by-side collision layout for this day
               const dayLayout = computeTimedEventLayout(
@@ -289,7 +310,7 @@ export function WeekView({
                   key={day.dateString}
                   data-testid={`week-column-${day.dateString}`}
                   className={cn(
-                    "relative h-full",
+                    "relative h-full min-w-0",
                     day.isToday && "bg-primary/[0.02]"
                   )}
                 >
@@ -308,7 +329,7 @@ export function WeekView({
                   {day.isToday && (
                     <div
                       data-testid="current-time-indicator"
-                      className="pointer-events-none absolute right-0 left-0 z-30 flex items-center"
+                      className="pointer-events-none absolute right-0 left-0 z-20 flex items-center"
                       style={{ top: `${currentTimeTopPct}%` }}
                     >
                       <div className="-ml-1.5 h-2.5 w-2.5 rounded-full bg-rose-500 shadow-xs" />
