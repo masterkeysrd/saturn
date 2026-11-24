@@ -91,4 +91,44 @@ describe("useTimezone", () => {
     )
     expect(result.current.formatMoney(5000, "INVALID")).toBe("50.00 INVALID")
   })
+
+  it("formats compact date ranges via formatDateRange omitting current year and preserving cross-year years", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-06-15T12:00:00.000Z"))
+
+    const enWrapper = ({ children }: { children: ReactNode }) => (
+      <TimezoneProvider timezone="UTC" locale="en-US">
+        {children}
+      </TimezoneProvider>
+    )
+    const { result: enResult } = renderHook(() => useTimezone(), {
+      wrapper: enWrapper,
+    })
+
+    expect(enResult.current.formatDateRange("2026-10-01", "2026-10-31")).toBe(
+      "Oct 1 - Oct 31"
+    )
+    expect(enResult.current.formatDateRange("2025-10-01", "2025-10-31")).toBe(
+      "Oct 1 - Oct 31, 2025"
+    )
+    expect(enResult.current.formatDateRange("2025-12-15", "2026-01-14")).toBe(
+      "Dec 15, 2025 - Jan 14, 2026"
+    )
+
+    const esWrapper = ({ children }: { children: ReactNode }) => (
+      <TimezoneProvider timezone="UTC" locale="es-ES">
+        {children}
+      </TimezoneProvider>
+    )
+    const { result: esResult } = renderHook(() => useTimezone(), {
+      wrapper: esWrapper,
+    })
+
+    expect(esResult.current.formatDateRange("2026-10-01", "2026-10-31")).toBe(
+      "1 Oct - 31 Oct"
+    )
+    expect(esResult.current.formatDateRange("2025-12-15", "2026-01-14")).toBe(
+      "15 Dic 2025 - 14 Ene 2026"
+    )
+  })
 })

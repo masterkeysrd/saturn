@@ -5,6 +5,7 @@ import {
   sanitizeTimezone,
   getTimezoneParts,
   formatDateWithTimezone,
+  formatShortDateRange,
   capitalizeCalendarToken,
   formatMonthYear,
   formatShortMonth,
@@ -184,7 +185,7 @@ describe("timezone utilities", () => {
         { day: "numeric", month: "short", year: "numeric" },
         "es-ES"
       )
-    ).toBe("10, Nov 2026")
+    ).toBe("10 Nov 2026")
     expect(
       formatDateWithTimezone(
         "2026-11-10",
@@ -192,7 +193,7 @@ describe("timezone utilities", () => {
         { day: "numeric", month: "short", year: "numeric" },
         "es-419"
       )
-    ).toBe("10, Nov 2026")
+    ).toBe("10 Nov 2026")
     expect(
       formatDateWithTimezone(
         "2026-11-10",
@@ -209,7 +210,7 @@ describe("timezone utilities", () => {
         { day: "numeric", month: "short" },
         "es-ES"
       )
-    ).toBe("10, Nov")
+    ).toBe("10 Nov")
     expect(
       formatDateWithTimezone(
         "2026-11-10",
@@ -217,7 +218,7 @@ describe("timezone utilities", () => {
         { day: "numeric", month: "short" },
         "es-419"
       )
-    ).toBe("10, Nov")
+    ).toBe("10 Nov")
     expect(
       formatDateWithTimezone(
         "2026-11-10",
@@ -226,5 +227,181 @@ describe("timezone utilities", () => {
         "en-US"
       )
     ).toBe("Nov 10")
+
+    expect(
+      formatDateWithTimezone(
+        "2025-10-01",
+        "UTC",
+        { day: "numeric", month: "short" },
+        "en-US"
+      )
+    ).toBe("Oct 1")
+    expect(
+      formatDateWithTimezone(
+        "2025-10-01",
+        "UTC",
+        { day: "numeric", month: "short", year: "numeric" },
+        "en-US"
+      )
+    ).toBe("Oct 1, 2025")
+    expect(
+      formatDateWithTimezone(
+        "2025-10-01",
+        "UTC",
+        { day: "numeric", month: "short" },
+        "es-ES"
+      )
+    ).toBe("1 Oct")
+    expect(
+      formatDateWithTimezone(
+        "2025-10-01",
+        "UTC",
+        { day: "numeric", month: "short", year: "numeric" },
+        "es-ES"
+      )
+    ).toBe("1 Oct 2025")
+  })
+
+  it("formats compact short date ranges across years, locales, and timezones", () => {
+    const now2026 = new Date("2026-06-15T12:00:00.000Z")
+    const tests = [
+      {
+        name: "current-year monthly range (en-US)",
+        startDate: "2026-10-01",
+        endDate: "2026-10-31",
+        timeZone: "UTC",
+        locale: "en-US",
+        now: now2026,
+        expected: "Oct 1 - Oct 31",
+      },
+      {
+        name: "current-year monthly range (es-ES)",
+        startDate: "2026-10-01",
+        endDate: "2026-10-31",
+        timeZone: "UTC",
+        locale: "es-ES",
+        now: now2026,
+        expected: "1 Oct - 31 Oct",
+      },
+      {
+        name: "current-year weekly range (en-US)",
+        startDate: "2026-10-05",
+        endDate: "2026-10-11",
+        timeZone: "UTC",
+        locale: "en-US",
+        now: now2026,
+        expected: "Oct 5 - Oct 11",
+      },
+      {
+        name: "current-year weekly range (es-ES)",
+        startDate: "2026-10-05",
+        endDate: "2026-10-11",
+        timeZone: "UTC",
+        locale: "es-ES",
+        now: now2026,
+        expected: "5 Oct - 11 Oct",
+      },
+      {
+        name: "historical same-year range (en-US)",
+        startDate: "2025-10-01",
+        endDate: "2025-10-31",
+        timeZone: "UTC",
+        locale: "en-US",
+        now: now2026,
+        expected: "Oct 1 - Oct 31, 2025",
+      },
+      {
+        name: "historical same-year range (es-ES)",
+        startDate: "2025-10-01",
+        endDate: "2025-10-31",
+        timeZone: "UTC",
+        locale: "es-ES",
+        now: now2026,
+        expected: "1 Oct - 31 Oct 2025",
+      },
+      {
+        name: "cross-year Dec-Jan range (en-US)",
+        startDate: "2025-12-15",
+        endDate: "2026-01-14",
+        timeZone: "UTC",
+        locale: "en-US",
+        now: now2026,
+        expected: "Dec 15, 2025 - Jan 14, 2026",
+      },
+      {
+        name: "cross-year Dec-Jan range (es-ES)",
+        startDate: "2025-12-15",
+        endDate: "2026-01-14",
+        timeZone: "UTC",
+        locale: "es-ES",
+        now: now2026,
+        expected: "15 Dic 2025 - 14 Ene 2026",
+      },
+      {
+        name: "non-UTC negative offset shifts year boundary into Dec 2025 - Jan 2026",
+        startDate: "2026-01-01T03:30:00.000Z",
+        endDate: "2026-01-31T20:00:00.000Z",
+        timeZone: "America/New_York",
+        locale: "en-US",
+        now: now2026,
+        expected: "Dec 31, 2025 - Jan 31, 2026",
+      },
+      {
+        name: "non-UTC negative offset shifts current-year timestamps",
+        startDate: "2026-10-01T03:30:00.000Z",
+        endDate: "2026-11-01T03:30:00.000Z",
+        timeZone: "America/New_York",
+        locale: "en-US",
+        now: now2026,
+        expected: "Sep 30 - Oct 31",
+      },
+      {
+        name: "non-UTC positive offset shifts dates forward",
+        startDate: "2026-10-01T12:00:00.000Z",
+        endDate: "2026-10-31T12:00:00.000Z",
+        timeZone: "Pacific/Auckland",
+        locale: "en-US",
+        now: now2026,
+        expected: "Oct 2 - Nov 1",
+      },
+      {
+        name: "only startDate valid in current year",
+        startDate: "2026-10-01",
+        endDate: null,
+        timeZone: "UTC",
+        locale: "en-US",
+        now: now2026,
+        expected: "Oct 1",
+      },
+      {
+        name: "only endDate valid in non-current year",
+        startDate: "not-a-date",
+        endDate: "2025-10-31",
+        timeZone: "UTC",
+        locale: "en-US",
+        now: now2026,
+        expected: "Oct 31, 2025",
+      },
+      {
+        name: "neither date valid returns empty string",
+        startDate: null,
+        endDate: undefined,
+        timeZone: "UTC",
+        locale: "en-US",
+        now: now2026,
+        expected: "",
+      },
+    ]
+
+    for (const tc of tests) {
+      expect(
+        formatShortDateRange(tc.startDate, tc.endDate, {
+          timeZone: tc.timeZone,
+          locale: tc.locale,
+          now: tc.now,
+        }),
+        tc.name
+      ).toBe(tc.expected)
+    }
   })
 })

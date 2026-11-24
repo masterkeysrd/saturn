@@ -10,6 +10,7 @@ import {
   MS_PER_HALF_DAY,
   sanitizeTimezone,
   formatDateWithTimezone,
+  formatShortDateRange,
   formatCents,
   getStartOfDay,
   getEndOfDay,
@@ -145,6 +146,8 @@ export interface TimezoneObject {
   formatTime(date: DateInput, options?: Intl.DateTimeFormatOptions): string
   /** Formats date and time (e.g. "Oct 1, 2026, 5:00 PM"). */
   formatDateTime(date: DateInput, options?: Intl.DateTimeFormatOptions): string
+  /** Formats a compact short date range (e.g. "Oct 1 - Oct 31" or "Dec 15, 2025 - Jan 14, 2026"). */
+  formatDateRange(startDate: DateInput, endDate: DateInput): string
   /** Formats month and year (e.g. "October 2026"). */
   formatMonth(date: DateInput, options?: Intl.DateTimeFormatOptions): string
   /** Relative day description (e.g. "Today", "Yesterday", "Tomorrow", or formatted date). */
@@ -252,6 +255,13 @@ export function useTimezone(overrideTimezone?: string | null): TimezoneObject {
           ),
           locale
         )
+      },
+      formatDateRange(startDate, endDate) {
+        return formatShortDateRange(startDate, endDate, {
+          timeZone: tz,
+          locale,
+          now: new Date(),
+        })
       },
       formatMonth(date, options) {
         const formatted = formatDateWithTimezone(

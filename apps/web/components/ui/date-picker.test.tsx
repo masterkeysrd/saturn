@@ -55,7 +55,7 @@ describe("Web DatePicker & Calendar localization", () => {
         <DatePicker date={selected} setDate={setDate} />
       </TimezoneProvider>
     )
-    expect(screen.getByRole("button").textContent).toBe("5, Nov 2026")
+    expect(screen.getByRole("button").textContent).toBe("5 Nov 2026")
   })
 
   it("opens popover calendar with Spanish month caption and Monday-first headers under es-ES weekStartsOn=1", () => {

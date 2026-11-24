@@ -380,8 +380,8 @@ export function formatDateWithTimezone(
 
       if (dayIndex !== -1 && monthIndex !== -1 && dayIndex < monthIndex) {
         return yearPart
-          ? `${dayPart}, ${monthPart} ${yearPart}`
-          : `${dayPart}, ${monthPart}`
+          ? `${dayPart} ${monthPart} ${yearPart}`
+          : `${dayPart} ${monthPart}`
       }
       return yearPart
         ? `${monthPart} ${dayPart}, ${yearPart}`
@@ -419,6 +419,83 @@ export function formatDateWithTimezone(
   } catch {
     return ""
   }
+}
+
+export interface FormatShortDateRangeOptions {
+  timeZone?: string
+  locale?: string
+  now?: Date
+}
+
+export function formatShortDateRange(
+  startDate: DateInput,
+  endDate: DateInput,
+  options?: FormatShortDateRangeOptions
+): string {
+  const tz = sanitizeTimezone(options?.timeZone)
+  const locale = options?.locale || "en-US"
+  const startParts = getTimezoneParts(startDate, tz)
+  const endParts = getTimezoneParts(endDate, tz)
+
+  if (!startParts && !endParts) {
+    return ""
+  }
+
+  const now = options?.now ?? new Date()
+  const nowParts = getTimezoneParts(now, tz)
+  const currentYear = nowParts?.year
+
+  const formatSingle = (d: DateInput, parts: TimezoneParts): string =>
+    formatDateWithTimezone(
+      d,
+      tz,
+      parts.year === currentYear
+        ? { month: "short", day: "numeric" }
+        : { year: "numeric", month: "short", day: "numeric" },
+      locale
+    )
+
+  if (!endParts && startParts) {
+    return formatSingle(startDate, startParts)
+  }
+  if (!startParts && endParts) {
+    return formatSingle(endDate, endParts)
+  }
+  if (!startParts || !endParts) {
+    return ""
+  }
+
+  if (startParts.year === endParts.year) {
+    const startLabel = formatDateWithTimezone(
+      startDate,
+      tz,
+      { month: "short", day: "numeric" },
+      locale
+    )
+    const endLabel = formatDateWithTimezone(
+      endDate,
+      tz,
+      startParts.year === currentYear
+        ? { month: "short", day: "numeric" }
+        : { year: "numeric", month: "short", day: "numeric" },
+      locale
+    )
+    return `${startLabel} - ${endLabel}`
+  }
+
+  const startLabel = formatDateWithTimezone(
+    startDate,
+    tz,
+    { year: "numeric", month: "short", day: "numeric" },
+    locale
+  )
+  const endLabel = formatDateWithTimezone(
+    endDate,
+    tz,
+    { year: "numeric", month: "short", day: "numeric" },
+    locale
+  )
+  return `${startLabel} - ${endLabel}`
 }
 
 export function getStartOfDay(date: DateInput, timeZone: string): Date {
