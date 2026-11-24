@@ -38,6 +38,7 @@ import {
   Sun,
   Moon,
   Smartphone,
+  Mail,
 } from "lucide-react-native"
 import {
   useListActiveSessionsQuery,
@@ -117,7 +118,9 @@ export default function SettingsScreen() {
     locale,
     hourCycle,
     weekStartsOn,
+    mailAutoLoadRemoteContent,
     updateRegionalPreferences,
+    updateMailPreferences,
   } = useSpace()
   const { t, language, supportedLocales } = useI18n()
 
@@ -174,6 +177,27 @@ export default function SettingsScreen() {
           err instanceof Error
             ? err.message
             : t("settings.hub.mobile.updateFailedDefaultRegional"),
+      })
+    }
+  }
+
+  const handleToggleMailAutoLoad = async (next: boolean) => {
+    try {
+      haptics.selection()
+      await updateMailPreferences({ autoLoadRemoteContent: next })
+      toast.show({
+        type: "success",
+        title: next
+          ? t("mail.autoLoadEnabledToast")
+          : t("mail.autoLoadDisabledToast"),
+      })
+    } catch (err: unknown) {
+      haptics.error()
+      toast.show({
+        type: "error",
+        title: t("menu.updateFailed"),
+        message:
+          err instanceof Error ? err.message : t("mail.autoLoadUpdateFailed"),
       })
     }
   }
@@ -841,6 +865,35 @@ export default function SettingsScreen() {
           </Text>
           <Card style={styles.menuGroup}>
             <View style={[styles.menuItem, styles.menuItemBorder]}>
+              <View style={[styles.menuLeft, { flex: 1, paddingRight: 12 }]}>
+                <Mail size={18} color={colors.primary} />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={styles.menuLabel}>
+                    {t("settings.mail.autoLoadRemoteContentLabel")}
+                  </Text>
+                  <Text style={styles.menuSublabel}>
+                    {t("settings.mail.autoLoadRemoteContentDesc")}
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                testID="settings-mail-auto-load-switch"
+                accessibilityLabel={t(
+                  "settings.mail.autoLoadRemoteContentLabel"
+                )}
+                value={mailAutoLoadRemoteContent}
+                onValueChange={(val) => {
+                  void handleToggleMailAutoLoad(val)
+                }}
+                trackColor={{
+                  false: colors.surfaceHighlight,
+                  true: colors.primary,
+                }}
+                thumbColor="#ffffff"
+              />
+            </View>
+
+            <View style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuLeft}>
                 <Bell size={18} color={colors.warning} />
                 <Text style={styles.menuLabel}>
@@ -1205,6 +1258,10 @@ const createStyles = (t: SaturnMobileTheme) => ({
   menuLabel: {
     fontSize: 15,
     color: t.colors.textPrimary,
+  },
+  menuSublabel: {
+    fontSize: 12,
+    color: t.colors.textMuted,
   },
   menuRight: {
     flexDirection: "row" as const,

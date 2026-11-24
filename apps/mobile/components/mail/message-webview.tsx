@@ -8,9 +8,15 @@ import {
 import { ShieldAlert, Image as ImageIcon } from "lucide-react-native"
 import { useI18n } from "@saturn/hooks"
 import type { Attachment } from "@saturn/api/saturn/mail/v1/mail"
-import { getApiBaseUrl } from "@/lib/config"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
+import { getApiBaseUrl } from "../../lib/config"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../lib/theme"
+import { haptics } from "../../lib/haptics"
+import { useSpace } from "../../lib/space-context"
+import { useToast } from "../ui/toast"
 import {
   buildMobileMessageDocumentHtml,
   INJECTED_EMAIL_LAYOUT_JS,
@@ -53,8 +59,11 @@ export function MessageWebView({
   const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { mailAutoLoadRemoteContent, updateMailPreferences } = useSpace()
+  const toast = useToast()
   const webViewRef = useRef<WebViewHandle>(null)
   const [loadImages, setLoadImages] = useState(false)
+  const shouldLoadImages = loadImages || mailAutoLoadRemoteContent
   const [webViewHeight, setWebViewHeight] = useState(() =>
     estimateInitialWebViewHeight(html, plainText)
   )
@@ -77,10 +86,10 @@ export function MessageWebView({
         html,
         plainText,
         attachments,
-        loadImages,
+        loadImages: shouldLoadImages,
         apiBaseUrl: getApiBaseUrl(),
       }),
-    [html, plainText, attachments, loadImages]
+    [html, plainText, attachments, shouldLoadImages]
   )
 
   const handleMessage = useCallback(
@@ -133,7 +142,7 @@ export function MessageWebView({
 
   return (
     <View style={styles.container}>
-      {containsRemoteImages && !loadImages && (
+      {containsRemoteImages && !shouldLoadImages && (
         <View style={styles.bannerContainer}>
           <View style={styles.bannerTextRow}>
             <ShieldAlert size={14} color={colors.warning} />
@@ -141,17 +150,44 @@ export function MessageWebView({
               {t("mail.remoteImagesBlockedShort")}
             </Text>
           </View>
-          <Pressable
-            testID="mobile-load-remote-images-btn"
-            onPress={() => {
-              haptics.selection()
-              setLoadImages(true)
-            }}
-            style={styles.loadImagesBtn}
-          >
-            <ImageIcon size={12} color={colors.warning} />
-            <Text style={styles.loadImagesBtnText}>{t("mail.loadImages")}</Text>
-          </Pressable>
+          <View style={styles.bannerActions}>
+            <Pressable
+              testID="mobile-load-remote-images-btn"
+              onPress={() => {
+                haptics.selection()
+                setLoadImages(true)
+              }}
+              style={styles.loadImagesBtn}
+            >
+              <ImageIcon size={12} color={colors.warning} />
+              <Text style={styles.loadImagesBtnText}>{t("mail.loadOnce")}</Text>
+            </Pressable>
+            <Pressable
+              testID="mobile-always-load-remote-images-btn"
+              onPress={() => {
+                haptics.selection()
+                setLoadImages(true)
+                void updateMailPreferences({ autoLoadRemoteContent: true })
+                  .then(() => {
+                    toast.show({
+                      type: "success",
+                      title: t("mail.autoLoadEnabledToast"),
+                    })
+                  })
+                  .catch(() => {
+                    toast.show({
+                      type: "error",
+                      title: t("mail.autoLoadUpdateFailed"),
+                    })
+                  })
+              }}
+              style={styles.alwaysLoadBtn}
+            >
+              <Text style={styles.alwaysLoadBtnText}>
+                {t("mail.alwaysLoad")}
+              </Text>
+            </Pressable>
+          </View>
         </View>
       )}
 
@@ -193,8 +229,10 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   bannerContainer: {
     flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     alignItems: "center" as const,
     justifyContent: "space-between" as const,
+    gap: 8,
     backgroundColor: t.colors.warningSubtle,
     borderWidth: 1,
     borderColor: `${t.colors.warning}4D`,
@@ -208,6 +246,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
     alignItems: "center" as const,
     gap: 6,
     flex: 1,
+  },
+  bannerActions: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
   },
   bannerText: {
     fontSize: 12,
@@ -227,6 +270,17 @@ const createStyles = (t: SaturnMobileTheme) => ({
     fontSize: 11,
     color: t.colors.warning,
     fontWeight: "600" as const,
+  },
+  alwaysLoadBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: t.radius.xs,
+  },
+  alwaysLoadBtnText: {
+    fontSize: 11,
+    color: t.colors.warning,
+    fontWeight: "600" as const,
+    textDecorationLine: "underline" as const,
   },
   webViewWrapper: {
     width: "100%" as const,

@@ -1,6 +1,6 @@
 import React from "react"
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, fireEvent } from "@testing-library/react"
+import { render, fireEvent, waitFor } from "@testing-library/react"
 import type { Thread, Message } from "@saturn/api/saturn/mail/v1/mail"
 import type { ConnectedAccount } from "@saturn/api/saturn/platform/connector/v1/connector"
 import { haptics } from "../lib/haptics"
@@ -29,10 +29,57 @@ import {
   INJECTED_EMAIL_LAYOUT_JS,
 } from "../components/mail/message-webview-html"
 import { AccountBucketBar } from "../components/mail/account-bucket-bar"
+import { MessageWebView } from "../components/mail/message-webview"
+import { normalizeStoredUserPreferences } from "../lib/storage"
 import { translate } from "@saturn/i18n"
 
-const { mockRouterPush } = vi.hoisted(() => ({
+const {
+  mockRouterPush,
+  mockUpdateMailPreferences,
+  mockUseSpace,
+  mockToastShow,
+} = vi.hoisted(() => ({
   mockRouterPush: vi.fn(),
+  mockUpdateMailPreferences: vi.fn(async () => undefined),
+  mockToastShow: vi.fn(),
+  mockUseSpace: vi.fn(() => ({
+    mailAutoLoadRemoteContent: false,
+    updateMailPreferences: vi.fn(async () => undefined),
+  })),
+}))
+
+vi.mock("../lib/space-context", () => ({
+  useSpace: () => mockUseSpace(),
+}))
+
+vi.mock("../components/ui/toast", () => ({
+  useToast: () => ({ show: mockToastShow, hide: vi.fn() }),
+}))
+
+vi.mock("react-native-webview", async () => {
+  const ReactMod = await import("react")
+  return {
+    WebView: ReactMod.forwardRef(
+      (
+        { source, testID }: { source?: { html?: string }; testID?: string },
+        _ref
+      ) =>
+        ReactMod.createElement("div", {
+          "data-testid": testID,
+          "data-html": source?.html ?? "",
+        })
+    ),
+  }
+})
+
+vi.mock("expo-constants", () => ({
+  default: { expoConfig: {} },
+}))
+
+vi.mock("expo-secure-store", () => ({
+  getItemAsync: vi.fn(async () => null),
+  setItemAsync: vi.fn(async () => undefined),
+  deleteItemAsync: vi.fn(async () => undefined),
 }))
 
 vi.mock("expo-router", () => ({
@@ -63,6 +110,8 @@ vi.mock("lucide-react-native", async () => {
     Trash2: Stub("Trash2"),
     Layers: Stub("Layers"),
     AlertTriangle: Stub("AlertTriangle"),
+    ShieldAlert: Stub("ShieldAlert"),
+    Image: Stub("Image"),
   }
 })
 
@@ -150,6 +199,9 @@ vi.mock("react-native", async () => {
         },
         children
       ),
+    Linking: {
+      openURL: vi.fn(async () => undefined),
+    },
   }
 })
 
@@ -1029,6 +1081,106 @@ describe("Mobile Mail Feature Logic & Component Unit Tests", () => {
 
       fireEvent.click(reconnectPill)
       expect(mockRouterPush).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe("Remote Image Autoload & Grouped StoredUserPreferences", () => {
+    beforeEach(() => {
+      mockUpdateMailPreferences.mockClear()
+      mockToastShow.mockClear()
+      mockUseSpace.mockReturnValue({
+        mailAutoLoadRemoteContent: false,
+        updateMailPreferences: mockUpdateMailPreferences,
+      })
+    })
+
+    it("normalizes grouped StoredUserPreferences with regional, mail, and calendar defaults", () => {
+      expect(
+        normalizeStoredUserPreferences({
+          regional: { locale: "es-ES", hourCycle: "h23", weekStartsOn: 1 },
+          mail: { autoLoadRemoteContent: true },
+          calendar: { webView: "week", mobileView: "three_day" },
+        })
+      ).toEqual({
+        regional: { locale: "es-ES", hourCycle: "h23", weekStartsOn: 1 },
+        mail: { autoLoadRemoteContent: true },
+        calendar: { webView: "week", mobileView: "three_day" },
+      })
+
+      expect(normalizeStoredUserPreferences(null)).toEqual({
+        regional: { locale: "en-US", hourCycle: "h12", weekStartsOn: 0 },
+        mail: { autoLoadRemoteContent: false },
+        calendar: { webView: "month", mobileView: "agenda" },
+      })
+    })
+
+    it("renders [Load once] and [Always load] in MessageWebView and persists mail.autoLoadRemoteContent", async () => {
+      const htmlWithTracker =
+        '<p>Hello <img data-saturn-remote-src="https://cdn.example.com/hero.png" /></p>'
+
+      const screen = render(
+        <TimezoneProvider timezone="UTC" locale="en-US">
+          <MessageWebView html={htmlWithTracker} hasRemoteImages={true} />
+        </TimezoneProvider>
+      )
+
+      const loadOnceBtn = screen.getByTestId("mobile-load-remote-images-btn")
+      const alwaysLoadBtn = screen.getByTestId(
+        "mobile-always-load-remote-images-btn"
+      )
+      expect(loadOnceBtn.textContent).toContain("Load once")
+      expect(alwaysLoadBtn.textContent).toContain("Always load")
+
+      const webViewBefore = screen.getByTestId("mobile-message-webview")
+      expect(webViewBefore.getAttribute("data-html")).toContain(
+        'data-saturn-remote-src="https://cdn.example.com/hero.png"'
+      )
+      expect(webViewBefore.getAttribute("data-html")).not.toContain(
+        '<img src="https://cdn.example.com/hero.png"'
+      )
+
+      fireEvent.click(alwaysLoadBtn)
+
+      expect(haptics.selection).toHaveBeenCalled()
+      expect(mockUpdateMailPreferences).toHaveBeenCalledWith({
+        autoLoadRemoteContent: true,
+      })
+
+      await waitFor(() => {
+        expect(mockToastShow).toHaveBeenCalledWith({
+          type: "success",
+          title: "Remote email images will now load automatically",
+        })
+      })
+
+      const webViewAfter = screen.getByTestId("mobile-message-webview")
+      expect(webViewAfter.getAttribute("data-html")).toContain(
+        '<img src="https://cdn.example.com/hero.png"'
+      )
+    })
+
+    it("automatically loads remote images without banner when mailAutoLoadRemoteContent is true", () => {
+      mockUseSpace.mockReturnValue({
+        mailAutoLoadRemoteContent: true,
+        updateMailPreferences: mockUpdateMailPreferences,
+      })
+
+      const htmlWithTracker =
+        '<p>Hello <img data-saturn-remote-src="https://cdn.example.com/hero.png" /></p>'
+
+      const screen = render(
+        <TimezoneProvider timezone="UTC" locale="en-US">
+          <MessageWebView html={htmlWithTracker} hasRemoteImages={true} />
+        </TimezoneProvider>
+      )
+
+      expect(screen.queryByTestId("mobile-load-remote-images-btn")).toBeNull()
+      expect(
+        screen.queryByTestId("mobile-always-load-remote-images-btn")
+      ).toBeNull()
+      expect(
+        screen.getByTestId("mobile-message-webview").getAttribute("data-html")
+      ).toContain('<img src="https://cdn.example.com/hero.png"')
     })
   })
 })

@@ -40,7 +40,9 @@ const { mockSwitchSpace, mockToastShow, mockUseSpace } = vi.hoisted(() => {
     locale: "es-ES",
     hourCycle: "h23" as const,
     weekStartsOn: 1 as const,
+    mailAutoLoadRemoteContent: false,
     updateRegionalPreferences: vi.fn(async () => undefined),
+    updateMailPreferences: vi.fn(async () => undefined),
     switchSpace: mockSwitchSpace,
     refetchSpaces: vi.fn(),
   }))
@@ -1040,11 +1042,11 @@ describe("Mobile i18n & User-Scoped Regional Preferences", () => {
     const yesterday = new Date(now.getTime() - 86_400_000)
     const pastDate = new Date(Date.UTC(2025, 10, 10, 12, 0, 0))
 
-    expect(formatDisplayDate(now, "UTC", "es-ES")).toMatch(/^Hoy \(\d+, [A-Z]/)
+    expect(formatDisplayDate(now, "UTC", "es-ES")).toMatch(/^Hoy \(\d+ [A-Z]/)
     expect(formatDisplayDate(yesterday, "UTC", "es-ES")).toMatch(
-      /^Ayer \(\d+, [A-Z]/
+      /^Ayer \(\d+ [A-Z]/
     )
-    expect(formatDisplayDate(pastDate, "UTC", "es-ES")).toBe("10, Nov 2025")
+    expect(formatDisplayDate(pastDate, "UTC", "es-ES")).toBe("10 Nov 2025")
 
     expect(formatDisplayDate(now, "UTC", "en-US")).toMatch(/^Today \([A-Z]/)
     expect(formatDisplayDate(yesterday, "UTC", "en-US")).toMatch(

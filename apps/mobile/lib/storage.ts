@@ -228,22 +228,74 @@ export async function setRememberedIdentifier(
 }
 
 export interface StoredUserPreferences {
-  locale: string
-  hourCycle: "h12" | "h23"
-  weekStartsOn: 0 | 1
+  regional: {
+    locale: string
+    hourCycle: "h12" | "h23"
+    weekStartsOn: 0 | 1
+  }
+  mail: {
+    autoLoadRemoteContent: boolean
+  }
+  calendar: {
+    webView: string
+    mobileView: string
+  }
+}
+
+export interface StoredUserPreferencesInput {
+  regional?: {
+    locale?: string | null
+    hourCycle?: string | null
+    weekStartsOn?: number | null
+  } | null
+  mail?: {
+    autoLoadRemoteContent?: boolean | null
+  } | null
+  calendar?: {
+    webView?: string | null
+    mobileView?: string | null
+  } | null
+}
+
+export function normalizeStoredUserPreferences(
+  input?: StoredUserPreferencesInput | null,
+  fallbackLocale = "en-US"
+): StoredUserPreferences {
+  return {
+    regional: {
+      locale:
+        typeof input?.regional?.locale === "string" &&
+        input.regional.locale.trim().length > 0
+          ? input.regional.locale
+          : fallbackLocale,
+      hourCycle: input?.regional?.hourCycle === "h23" ? "h23" : "h12",
+      weekStartsOn: input?.regional?.weekStartsOn === 1 ? 1 : 0,
+    },
+    mail: {
+      autoLoadRemoteContent: Boolean(input?.mail?.autoLoadRemoteContent),
+    },
+    calendar: {
+      webView:
+        typeof input?.calendar?.webView === "string" &&
+        input.calendar.webView.trim().length > 0
+          ? input.calendar.webView
+          : "month",
+      mobileView:
+        typeof input?.calendar?.mobileView === "string" &&
+        input.calendar.mobileView.trim().length > 0
+          ? input.calendar.mobileView
+          : "agenda",
+    },
+  }
 }
 
 export async function getUserPreferences(): Promise<StoredUserPreferences | null> {
   try {
     const raw = await secureGet(KEYS.USER_PREFERENCES)
     if (!raw) return null
-    const parsed = JSON.parse(raw) as Partial<StoredUserPreferences>
+    const parsed = JSON.parse(raw) as StoredUserPreferencesInput
     if (typeof parsed !== "object" || parsed === null) return null
-    return {
-      locale: typeof parsed.locale === "string" ? parsed.locale : "en-US",
-      hourCycle: parsed.hourCycle === "h23" ? "h23" : "h12",
-      weekStartsOn: parsed.weekStartsOn === 1 ? 1 : 0,
-    }
+    return normalizeStoredUserPreferences(parsed)
   } catch {
     return null
   }

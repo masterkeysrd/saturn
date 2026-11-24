@@ -40,6 +40,8 @@ const { mockSwitchSpace, mockToastShow, mockUseSpace } = vi.hoisted(() => {
     isOwner: true,
     canManageMembers: true,
     timezone: "UTC",
+    mailAutoLoadRemoteContent: false,
+    updateMailPreferences: vi.fn(async () => undefined),
     switchSpace: mockSwitchSpace,
     refetchSpaces: vi.fn(),
   }))
@@ -542,6 +544,8 @@ describe("Mobile Navigation UX, Tab Badges & Quick Capture", () => {
         isOwner: true,
         canManageMembers: true,
         timezone: "UTC",
+        mailAutoLoadRemoteContent: false,
+        updateMailPreferences: vi.fn(async () => undefined),
         switchSpace: mockSwitchSpace,
         refetchSpaces: vi.fn(),
       })
@@ -610,6 +614,8 @@ describe("Mobile Navigation UX, Tab Badges & Quick Capture", () => {
         isOwner: true,
         canManageMembers: true,
         timezone: "UTC",
+        mailAutoLoadRemoteContent: false,
+        updateMailPreferences: vi.fn(async () => undefined),
         switchSpace: mockSwitchSpace,
         refetchSpaces: vi.fn(),
       })

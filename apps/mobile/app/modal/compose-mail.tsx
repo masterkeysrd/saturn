@@ -53,6 +53,7 @@ import {
 } from "@saturn/core"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
+import { useSpace } from "@/lib/space-context"
 import { RecipientInput } from "@/components/mail/recipient-input"
 import {
   EmailRichEditor,
@@ -77,6 +78,7 @@ export default function ComposeMailModal() {
   const { t } = useI18n()
   const { colors, isDark } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { mailAutoLoadRemoteContent } = useSpace()
   const params = useLocalSearchParams<{
     draftId?: string
     threadId?: string
@@ -166,9 +168,9 @@ export default function ComposeMailModal() {
         bodyHtml: initialBodyHtml,
         bodyText: "",
         attachments: targetMessage?.attachments,
-        loadRemoteImages: false,
+        loadRemoteImages: mailAutoLoadRemoteContent,
       }),
-    [initialBodyHtml, targetMessage?.attachments]
+    [initialBodyHtml, targetMessage?.attachments, mailAutoLoadRemoteContent]
   )
 
   // Initialize existing draft when editing from Drafts mailbox
@@ -813,28 +815,30 @@ export default function ComposeMailModal() {
           </ScrollView>
 
           {/* Remote Images Hidden Banner */}
-          {preparedContent.hasRemoteImages && !remoteImagesRevealed && (
-            <View style={styles.remoteBanner}>
-              <View style={styles.remoteBannerLeft}>
-                <ImageIcon size={14} color={colors.warning} />
-                <Text style={styles.remoteBannerText}>
-                  {t("mail.remoteImagesHidden")}
-                </Text>
+          {preparedContent.hasRemoteImages &&
+            !mailAutoLoadRemoteContent &&
+            !remoteImagesRevealed && (
+              <View style={styles.remoteBanner}>
+                <View style={styles.remoteBannerLeft}>
+                  <ImageIcon size={14} color={colors.warning} />
+                  <Text style={styles.remoteBannerText}>
+                    {t("mail.remoteImagesHidden")}
+                  </Text>
+                </View>
+                <Pressable
+                  testID="mobile-composer-show-images-btn"
+                  onPress={() => {
+                    haptics.selection()
+                    setRemoteImagesRevealed(true)
+                    editorRef.current?.revealRemoteImages()
+                  }}
+                >
+                  <Text style={styles.remoteBannerAction}>
+                    {t("mail.showImages")}
+                  </Text>
+                </Pressable>
               </View>
-              <Pressable
-                testID="mobile-composer-show-images-btn"
-                onPress={() => {
-                  haptics.selection()
-                  setRemoteImagesRevealed(true)
-                  editorRef.current?.revealRemoteImages()
-                }}
-              >
-                <Text style={styles.remoteBannerAction}>
-                  {t("mail.showImages")}
-                </Text>
-              </Pressable>
-            </View>
-          )}
+            )}
 
           {/* Unified Editable HTML Composer */}
           <EmailRichEditor

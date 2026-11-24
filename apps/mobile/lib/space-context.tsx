@@ -30,6 +30,7 @@ import { useAuth } from "./auth-context"
 import {
   mobileStorage,
   getUserPreferences,
+  normalizeStoredUserPreferences,
   setUserPreferences,
   type StoredUserPreferences,
 } from "./storage"
@@ -51,6 +52,20 @@ function getDefaultDeviceLocale(): string {
   }
 }
 
+function sanitizeStoredPreferences(
+  input: Parameters<typeof normalizeStoredUserPreferences>[0],
+  fallbackLocale: string
+): StoredUserPreferences {
+  const normalized = normalizeStoredUserPreferences(input, fallbackLocale)
+  return {
+    ...normalized,
+    regional: {
+      ...normalized.regional,
+      locale: normalizeUserLocale(normalized.regional.locale),
+    },
+  }
+}
+
 export interface SpaceContextType {
   spaces: Space[]
   activeSpace: Space | null
@@ -64,8 +79,12 @@ export interface SpaceContextType {
   locale: string
   hourCycle: HourCycle
   weekStartsOn: WeekStartsOn
+  mailAutoLoadRemoteContent: boolean
   updateRegionalPreferences: (
-    patch: Partial<StoredUserPreferences>
+    patch: Partial<StoredUserPreferences["regional"]>
+  ) => Promise<void>
+  updateMailPreferences: (
+    patch: Partial<StoredUserPreferences["mail"]>
   ) => Promise<void>
   switchSpace: (spaceId: string) => Promise<void>
   refetchSpaces: () => void
@@ -82,28 +101,23 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
   } = useAuth()
   const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null)
   const [isSwitching, setIsSwitching] = useState(false)
-  const [regionalPrefs, setRegionalPrefs] = useState<StoredUserPreferences>(
-    () => ({
-      locale: getDefaultDeviceLocale(),
-      hourCycle: "h12",
-      weekStartsOn: 0,
-    })
+  const [userPrefs, setUserPrefs] = useState<StoredUserPreferences>(() =>
+    sanitizeStoredPreferences(null, getDefaultDeviceLocale())
   )
-  const regionalPrefsRef = useRef<StoredUserPreferences>(regionalPrefs)
+  const userPrefsRef = useRef<StoredUserPreferences>(userPrefs)
 
-  // Restore cached regional preferences on mount (persisted across space switches and logouts)
+  // Restore cached preferences on mount (persisted across space switches and logouts)
   useEffect(() => {
     let mounted = true
     async function restoreUserPrefs() {
       const stored = await getUserPreferences()
       if (mounted && stored) {
-        const normalized: StoredUserPreferences = {
-          locale: normalizeUserLocale(stored.locale),
-          hourCycle: stored.hourCycle === "h23" ? "h23" : "h12",
-          weekStartsOn: stored.weekStartsOn === 1 ? 1 : 0,
-        }
-        regionalPrefsRef.current = normalized
-        setRegionalPrefs(normalized)
+        const normalized = sanitizeStoredPreferences(
+          stored,
+          getDefaultDeviceLocale()
+        )
+        userPrefsRef.current = normalized
+        setUserPrefs(normalized)
       }
     }
     void restoreUserPrefs()
@@ -112,7 +126,7 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Query user-scoped regional preferences from backend when authenticated
+  // Query user-scoped preferences from backend when authenticated
   const { data: userPrefsData } = useGetUserPreferencesQuery(
     {},
     {
@@ -124,51 +138,24 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!userPrefsData) return
-    const next: StoredUserPreferences = {
-      locale: userPrefsData.locale
-        ? normalizeUserLocale(userPrefsData.locale)
-        : getDefaultDeviceLocale(),
-      hourCycle: userPrefsData.hourCycle === "h23" ? "h23" : "h12",
-      weekStartsOn: userPrefsData.weekStartsOn === 1 ? 1 : 0,
-    }
-    regionalPrefsRef.current = next
-    setRegionalPrefs(next)
+    const next = sanitizeStoredPreferences(
+      userPrefsData,
+      getDefaultDeviceLocale()
+    )
+    userPrefsRef.current = next
+    setUserPrefs(next)
     void setUserPreferences(next)
   }, [userPrefsData])
 
-  const updateRegionalPreferences = useCallback(
-    async (patch: Partial<StoredUserPreferences>) => {
-      const previous = regionalPrefsRef.current
-      const next: StoredUserPreferences = {
-        locale:
-          patch.locale !== undefined
-            ? normalizeUserLocale(patch.locale)
-            : previous.locale,
-        hourCycle:
-          patch.hourCycle !== undefined
-            ? patch.hourCycle === "h23"
-              ? "h23"
-              : "h12"
-            : previous.hourCycle,
-        weekStartsOn:
-          patch.weekStartsOn !== undefined
-            ? patch.weekStartsOn === 1
-              ? 1
-              : 0
-            : previous.weekStartsOn,
-      }
-
-      const paths: string[] = []
-      if (patch.locale !== undefined) paths.push("locale")
-      if (patch.hourCycle !== undefined) paths.push("hour_cycle")
-      if (patch.weekStartsOn !== undefined) paths.push("week_starts_on")
-
+  const applyUserPreferencesUpdate = useCallback(
+    async (next: StoredUserPreferences, paths: string[]) => {
+      const previous = userPrefsRef.current
       const previousCached = queryClient.getQueryData<UserPreferences>(
         USER_PREFERENCES_QUERY_KEY
       )
 
-      regionalPrefsRef.current = next
-      setRegionalPrefs(next)
+      userPrefsRef.current = next
+      setUserPrefs(next)
       await setUserPreferences(next)
       queryClient.setQueryData<UserPreferences>(
         USER_PREFERENCES_QUERY_KEY,
@@ -184,23 +171,17 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
           userPreferences: next,
           updateMask: { paths },
         })
-        const synced: StoredUserPreferences = {
-          locale: updated.locale
-            ? normalizeUserLocale(updated.locale)
-            : next.locale,
-          hourCycle: updated.hourCycle === "h23" ? "h23" : "h12",
-          weekStartsOn: updated.weekStartsOn === 1 ? 1 : 0,
-        }
-        regionalPrefsRef.current = synced
-        setRegionalPrefs(synced)
+        const synced = sanitizeStoredPreferences(updated, next.regional.locale)
+        userPrefsRef.current = synced
+        setUserPrefs(synced)
         await setUserPreferences(synced)
         queryClient.setQueryData<UserPreferences>(
           USER_PREFERENCES_QUERY_KEY,
           synced
         )
       } catch (err) {
-        regionalPrefsRef.current = previous
-        setRegionalPrefs(previous)
+        userPrefsRef.current = previous
+        setUserPrefs(previous)
         await setUserPreferences(previous)
         queryClient.setQueryData<UserPreferences | undefined>(
           USER_PREFERENCES_QUERY_KEY,
@@ -210,6 +191,72 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
       }
     },
     [isAuthenticated, queryClient, updateUserPreferencesMutation]
+  )
+
+  const updateRegionalPreferences = useCallback(
+    async (patch: Partial<StoredUserPreferences["regional"]>) => {
+      const previous = userPrefsRef.current
+      const next = sanitizeStoredPreferences(
+        {
+          ...previous,
+          regional: {
+            locale:
+              patch.locale !== undefined
+                ? normalizeUserLocale(patch.locale)
+                : previous.regional.locale,
+            hourCycle:
+              patch.hourCycle !== undefined
+                ? patch.hourCycle === "h23"
+                  ? "h23"
+                  : "h12"
+                : previous.regional.hourCycle,
+            weekStartsOn:
+              patch.weekStartsOn !== undefined
+                ? patch.weekStartsOn === 1
+                  ? 1
+                  : 0
+                : previous.regional.weekStartsOn,
+          },
+        },
+        previous.regional.locale
+      )
+
+      const paths: string[] = []
+      if (patch.locale !== undefined) paths.push("regional.locale")
+      if (patch.hourCycle !== undefined) paths.push("regional.hour_cycle")
+      if (patch.weekStartsOn !== undefined) {
+        paths.push("regional.week_starts_on")
+      }
+
+      await applyUserPreferencesUpdate(next, paths)
+    },
+    [applyUserPreferencesUpdate]
+  )
+
+  const updateMailPreferences = useCallback(
+    async (patch: Partial<StoredUserPreferences["mail"]>) => {
+      const previous = userPrefsRef.current
+      const next = sanitizeStoredPreferences(
+        {
+          ...previous,
+          mail: {
+            autoLoadRemoteContent:
+              patch.autoLoadRemoteContent !== undefined
+                ? Boolean(patch.autoLoadRemoteContent)
+                : previous.mail.autoLoadRemoteContent,
+          },
+        },
+        previous.regional.locale
+      )
+
+      const paths: string[] = []
+      if (patch.autoLoadRemoteContent !== undefined) {
+        paths.push("mail.auto_load_remote_content")
+      }
+
+      await applyUserPreferencesUpdate(next, paths)
+    },
+    [applyUserPreferencesUpdate]
   )
 
   // Query spaces for authenticated user
@@ -326,19 +373,21 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
         isOwner,
         canManageMembers,
         timezone,
-        locale: regionalPrefs.locale,
-        hourCycle: regionalPrefs.hourCycle,
-        weekStartsOn: regionalPrefs.weekStartsOn,
+        locale: userPrefs.regional.locale,
+        hourCycle: userPrefs.regional.hourCycle,
+        weekStartsOn: userPrefs.regional.weekStartsOn,
+        mailAutoLoadRemoteContent: userPrefs.mail.autoLoadRemoteContent,
         updateRegionalPreferences,
+        updateMailPreferences,
         switchSpace,
         refetchSpaces,
       }}
     >
       <TimezoneProvider
         timezone={timezone}
-        locale={regionalPrefs.locale}
-        hourCycle={regionalPrefs.hourCycle}
-        weekStartsOn={regionalPrefs.weekStartsOn}
+        locale={userPrefs.regional.locale}
+        hourCycle={userPrefs.regional.hourCycle}
+        weekStartsOn={userPrefs.regional.weekStartsOn}
       >
         {children}
       </TimezoneProvider>
