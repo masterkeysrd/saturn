@@ -2533,15 +2533,15 @@ func (x *UpdateProfileRequest) GetAvatarUrl() string {
 	return ""
 }
 
-// UserPreferences stores user-scoped UI language and regional formatting preferences.
+// UserPreferences stores user-scoped UI language, regional formatting, mail, and calendar preferences.
 type UserPreferences struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Optional. BCP 47 UI language and regional locale tag (e.g. "en-US", "es-ES", "es-419").
-	Locale string `protobuf:"bytes,1,opt,name=locale,proto3" json:"locale,omitempty"`
-	// Optional. Preferred clock hour cycle ("h12" for 12-hour, "h23" for 24-hour).
-	HourCycle string `protobuf:"bytes,2,opt,name=hour_cycle,json=hourCycle,proto3" json:"hour_cycle,omitempty"`
-	// Optional. Preferred first day of the week (0 = Sunday, 1 = Monday).
-	WeekStartsOn  int32 `protobuf:"varint,3,opt,name=week_starts_on,json=weekStartsOn,proto3" json:"week_starts_on,omitempty"`
+	// Optional. UI language and regional formatting preferences.
+	Regional *UserPreferences_Regional `protobuf:"bytes,1,opt,name=regional,proto3" json:"regional,omitempty"`
+	// Optional. Mail reading and display preferences.
+	Mail *UserPreferences_Mail `protobuf:"bytes,2,opt,name=mail,proto3" json:"mail,omitempty"`
+	// Optional. Calendar view preferences per device form factor.
+	Calendar      *UserPreferences_Calendar `protobuf:"bytes,3,opt,name=calendar,proto3" json:"calendar,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2576,25 +2576,25 @@ func (*UserPreferences) Descriptor() ([]byte, []int) {
 	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{43}
 }
 
-func (x *UserPreferences) GetLocale() string {
+func (x *UserPreferences) GetRegional() *UserPreferences_Regional {
 	if x != nil {
-		return x.Locale
+		return x.Regional
 	}
-	return ""
+	return nil
 }
 
-func (x *UserPreferences) GetHourCycle() string {
+func (x *UserPreferences) GetMail() *UserPreferences_Mail {
 	if x != nil {
-		return x.HourCycle
+		return x.Mail
 	}
-	return ""
+	return nil
 }
 
-func (x *UserPreferences) GetWeekStartsOn() int32 {
+func (x *UserPreferences) GetCalendar() *UserPreferences_Calendar {
 	if x != nil {
-		return x.WeekStartsOn
+		return x.Calendar
 	}
-	return 0
+	return nil
 }
 
 // Request message for Identity.GetUserPreferences.
@@ -2639,7 +2639,7 @@ type UpdateUserPreferencesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. Preferences payload containing fields to update.
 	UserPreferences *UserPreferences `protobuf:"bytes,1,opt,name=user_preferences,json=userPreferences,proto3" json:"user_preferences,omitempty"`
-	// Optional. Field mask specifying which fields (`locale`, `hour_cycle`, `week_starts_on`) to update.
+	// Optional. Field mask specifying which fields (`regional`, `regional.locale`, `regional.hour_cycle`, `regional.week_starts_on`, `mail`, `mail.auto_load_remote_content`, `calendar`, `calendar.web_view`, `calendar.mobile_view`) to update.
 	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -4246,6 +4246,171 @@ func (x *LoginUserResponse_MfaChallenge) GetAvailableFactors() []*MfaFactorDescr
 	return nil
 }
 
+// Regional stores user-scoped UI language and regional formatting preferences.
+type UserPreferences_Regional struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional. BCP 47 UI language and regional locale tag (e.g. "en-US", "es-ES", "es-419").
+	Locale string `protobuf:"bytes,1,opt,name=locale,proto3" json:"locale,omitempty"`
+	// Optional. Preferred clock hour cycle ("h12" for 12-hour, "h23" for 24-hour).
+	HourCycle string `protobuf:"bytes,2,opt,name=hour_cycle,json=hourCycle,proto3" json:"hour_cycle,omitempty"`
+	// Optional. Preferred first day of the week (0 = Sunday, 1 = Monday).
+	WeekStartsOn  int32 `protobuf:"varint,3,opt,name=week_starts_on,json=weekStartsOn,proto3" json:"week_starts_on,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UserPreferences_Regional) Reset() {
+	*x = UserPreferences_Regional{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[68]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserPreferences_Regional) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserPreferences_Regional) ProtoMessage() {}
+
+func (x *UserPreferences_Regional) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[68]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserPreferences_Regional.ProtoReflect.Descriptor instead.
+func (*UserPreferences_Regional) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{43, 0}
+}
+
+func (x *UserPreferences_Regional) GetLocale() string {
+	if x != nil {
+		return x.Locale
+	}
+	return ""
+}
+
+func (x *UserPreferences_Regional) GetHourCycle() string {
+	if x != nil {
+		return x.HourCycle
+	}
+	return ""
+}
+
+func (x *UserPreferences_Regional) GetWeekStartsOn() int32 {
+	if x != nil {
+		return x.WeekStartsOn
+	}
+	return 0
+}
+
+// Mail stores user-scoped mail reading and display preferences.
+type UserPreferences_Mail struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional. Whether remote images/external content in emails are loaded automatically.
+	AutoLoadRemoteContent bool `protobuf:"varint,1,opt,name=auto_load_remote_content,json=autoLoadRemoteContent,proto3" json:"auto_load_remote_content,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *UserPreferences_Mail) Reset() {
+	*x = UserPreferences_Mail{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[69]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserPreferences_Mail) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserPreferences_Mail) ProtoMessage() {}
+
+func (x *UserPreferences_Mail) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[69]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserPreferences_Mail.ProtoReflect.Descriptor instead.
+func (*UserPreferences_Mail) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{43, 1}
+}
+
+func (x *UserPreferences_Mail) GetAutoLoadRemoteContent() bool {
+	if x != nil {
+		return x.AutoLoadRemoteContent
+	}
+	return false
+}
+
+// Calendar stores user-scoped calendar view preferences per device form factor.
+type UserPreferences_Calendar struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional. Last selected calendar view on Web ("day", "week", "month", "agenda").
+	WebView string `protobuf:"bytes,1,opt,name=web_view,json=webView,proto3" json:"web_view,omitempty"`
+	// Optional. Last selected calendar view on Mobile ("agenda", "day", "three_day", "week", "month").
+	MobileView    string `protobuf:"bytes,2,opt,name=mobile_view,json=mobileView,proto3" json:"mobile_view,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UserPreferences_Calendar) Reset() {
+	*x = UserPreferences_Calendar{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[70]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserPreferences_Calendar) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserPreferences_Calendar) ProtoMessage() {}
+
+func (x *UserPreferences_Calendar) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[70]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserPreferences_Calendar.ProtoReflect.Descriptor instead.
+func (*UserPreferences_Calendar) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{43, 2}
+}
+
+func (x *UserPreferences_Calendar) GetWebView() string {
+	if x != nil {
+		return x.WebView
+	}
+	return ""
+}
+
+func (x *UserPreferences_Calendar) GetMobileView() string {
+	if x != nil {
+		return x.MobileView
+	}
+	return ""
+}
+
 var File_saturn_identity_v1_identity_proto protoreflect.FileDescriptor
 
 const file_saturn_identity_v1_identity_proto_rawDesc = "" +
@@ -4437,12 +4602,22 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
 	"avatar_url\x18\x02 \x01(\tB\x03\xe0A\x01H\x01R\tavatarUrl\x88\x01\x01B\a\n" +
 	"\x05_nameB\r\n" +
-	"\v_avatar_url\"}\n" +
-	"\x0fUserPreferences\x12\x1b\n" +
+	"\v_avatar_url\"\x82\x04\n" +
+	"\x0fUserPreferences\x12M\n" +
+	"\bregional\x18\x01 \x01(\v2,.saturn.identity.v1.UserPreferences.RegionalB\x03\xe0A\x01R\bregional\x12A\n" +
+	"\x04mail\x18\x02 \x01(\v2(.saturn.identity.v1.UserPreferences.MailB\x03\xe0A\x01R\x04mail\x12M\n" +
+	"\bcalendar\x18\x03 \x01(\v2,.saturn.identity.v1.UserPreferences.CalendarB\x03\xe0A\x01R\bcalendar\x1av\n" +
+	"\bRegional\x12\x1b\n" +
 	"\x06locale\x18\x01 \x01(\tB\x03\xe0A\x01R\x06locale\x12\"\n" +
 	"\n" +
 	"hour_cycle\x18\x02 \x01(\tB\x03\xe0A\x01R\thourCycle\x12)\n" +
-	"\x0eweek_starts_on\x18\x03 \x01(\x05B\x03\xe0A\x01R\fweekStartsOn\"\x1b\n" +
+	"\x0eweek_starts_on\x18\x03 \x01(\x05B\x03\xe0A\x01R\fweekStartsOn\x1aD\n" +
+	"\x04Mail\x12<\n" +
+	"\x18auto_load_remote_content\x18\x01 \x01(\bB\x03\xe0A\x01R\x15autoLoadRemoteContent\x1aP\n" +
+	"\bCalendar\x12\x1e\n" +
+	"\bweb_view\x18\x01 \x01(\tB\x03\xe0A\x01R\awebView\x12$\n" +
+	"\vmobile_view\x18\x02 \x01(\tB\x03\xe0A\x01R\n" +
+	"mobileView\"\x1b\n" +
 	"\x19GetUserPreferencesRequest\"\xb5\x01\n" +
 	"\x1cUpdateUserPreferencesRequest\x12S\n" +
 	"\x10user_preferences\x18\x01 \x01(\v2#.saturn.identity.v1.UserPreferencesB\x03\xe0A\x02R\x0fuserPreferences\x12@\n" +
@@ -4602,7 +4777,7 @@ func file_saturn_identity_v1_identity_proto_rawDescGZIP() []byte {
 	return file_saturn_identity_v1_identity_proto_rawDescData
 }
 
-var file_saturn_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 68)
+var file_saturn_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 71)
 var file_saturn_identity_v1_identity_proto_goTypes = []any{
 	(*LoginUserRequest)(nil),                 // 0: saturn.identity.v1.LoginUserRequest
 	(*LoginUserResponse)(nil),                // 1: saturn.identity.v1.LoginUserResponse
@@ -4672,120 +4847,126 @@ var file_saturn_identity_v1_identity_proto_goTypes = []any{
 	(*LoginUserRequest_MfaAssertion)(nil),    // 65: saturn.identity.v1.LoginUserRequest.MfaAssertion
 	(*LoginUserRequest_DeviceAssertion)(nil), // 66: saturn.identity.v1.LoginUserRequest.DeviceAssertion
 	(*LoginUserResponse_MfaChallenge)(nil),   // 67: saturn.identity.v1.LoginUserResponse.MfaChallenge
-	(*timestamppb.Timestamp)(nil),            // 68: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),            // 69: google.protobuf.FieldMask
-	(*emptypb.Empty)(nil),                    // 70: google.protobuf.Empty
+	(*UserPreferences_Regional)(nil),         // 68: saturn.identity.v1.UserPreferences.Regional
+	(*UserPreferences_Mail)(nil),             // 69: saturn.identity.v1.UserPreferences.Mail
+	(*UserPreferences_Calendar)(nil),         // 70: saturn.identity.v1.UserPreferences.Calendar
+	(*timestamppb.Timestamp)(nil),            // 71: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),            // 72: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),                    // 73: google.protobuf.Empty
 }
 var file_saturn_identity_v1_identity_proto_depIdxs = []int32{
 	64, // 0: saturn.identity.v1.LoginUserRequest.user_password:type_name -> saturn.identity.v1.LoginUserRequest.UserPassword
 	65, // 1: saturn.identity.v1.LoginUserRequest.mfa_assertion:type_name -> saturn.identity.v1.LoginUserRequest.MfaAssertion
 	66, // 2: saturn.identity.v1.LoginUserRequest.device_assertion:type_name -> saturn.identity.v1.LoginUserRequest.DeviceAssertion
 	67, // 3: saturn.identity.v1.LoginUserResponse.mfa:type_name -> saturn.identity.v1.LoginUserResponse.MfaChallenge
-	68, // 4: saturn.identity.v1.User.create_time:type_name -> google.protobuf.Timestamp
-	68, // 5: saturn.identity.v1.User.update_time:type_name -> google.protobuf.Timestamp
-	68, // 6: saturn.identity.v1.UserSession.create_time:type_name -> google.protobuf.Timestamp
-	68, // 7: saturn.identity.v1.UserSession.last_used_at:type_name -> google.protobuf.Timestamp
+	71, // 4: saturn.identity.v1.User.create_time:type_name -> google.protobuf.Timestamp
+	71, // 5: saturn.identity.v1.User.update_time:type_name -> google.protobuf.Timestamp
+	71, // 6: saturn.identity.v1.UserSession.create_time:type_name -> google.protobuf.Timestamp
+	71, // 7: saturn.identity.v1.UserSession.last_used_at:type_name -> google.protobuf.Timestamp
 	10, // 8: saturn.identity.v1.ListActiveSessionsResponse.sessions:type_name -> saturn.identity.v1.UserSession
-	68, // 9: saturn.identity.v1.SecurityEvent.created_at:type_name -> google.protobuf.Timestamp
+	71, // 9: saturn.identity.v1.SecurityEvent.created_at:type_name -> google.protobuf.Timestamp
 	17, // 10: saturn.identity.v1.ListMySecurityEventsResponse.events:type_name -> saturn.identity.v1.SecurityEvent
 	2,  // 11: saturn.identity.v1.ListMFAFactorsResponse.factors:type_name -> saturn.identity.v1.MfaFactorDescriptor
 	33, // 12: saturn.identity.v1.CreateDeviceRequest.device:type_name -> saturn.identity.v1.Device
-	68, // 13: saturn.identity.v1.Device.create_time:type_name -> google.protobuf.Timestamp
-	68, // 14: saturn.identity.v1.Device.last_used_time:type_name -> google.protobuf.Timestamp
-	68, // 15: saturn.identity.v1.Device.expire_time:type_name -> google.protobuf.Timestamp
+	71, // 13: saturn.identity.v1.Device.create_time:type_name -> google.protobuf.Timestamp
+	71, // 14: saturn.identity.v1.Device.last_used_time:type_name -> google.protobuf.Timestamp
+	71, // 15: saturn.identity.v1.Device.expire_time:type_name -> google.protobuf.Timestamp
 	33, // 16: saturn.identity.v1.ListDevicesResponse.devices:type_name -> saturn.identity.v1.Device
-	43, // 17: saturn.identity.v1.UpdateUserPreferencesRequest.user_preferences:type_name -> saturn.identity.v1.UserPreferences
-	69, // 18: saturn.identity.v1.UpdateUserPreferencesRequest.update_mask:type_name -> google.protobuf.FieldMask
-	68, // 19: saturn.identity.v1.APIKey.expires_at:type_name -> google.protobuf.Timestamp
-	68, // 20: saturn.identity.v1.APIKey.last_used_at:type_name -> google.protobuf.Timestamp
-	68, // 21: saturn.identity.v1.APIKey.create_time:type_name -> google.protobuf.Timestamp
-	68, // 22: saturn.identity.v1.APIKey.update_time:type_name -> google.protobuf.Timestamp
-	48, // 23: saturn.identity.v1.CreateAPIKeyRequest.api_key:type_name -> saturn.identity.v1.APIKey
-	48, // 24: saturn.identity.v1.ListAPIKeysResponse.api_keys:type_name -> saturn.identity.v1.APIKey
-	48, // 25: saturn.identity.v1.UpdateAPIKeyRequest.api_key:type_name -> saturn.identity.v1.APIKey
-	69, // 26: saturn.identity.v1.UpdateAPIKeyRequest.update_mask:type_name -> google.protobuf.FieldMask
-	68, // 27: saturn.identity.v1.UserOAuthGrant.last_used_at:type_name -> google.protobuf.Timestamp
-	68, // 28: saturn.identity.v1.UserOAuthGrant.create_time:type_name -> google.protobuf.Timestamp
-	55, // 29: saturn.identity.v1.ListUserOAuthGrantsResponse.grants:type_name -> saturn.identity.v1.UserOAuthGrant
-	59, // 30: saturn.identity.v1.InspectOAuthConsentResponse.spaces:type_name -> saturn.identity.v1.OAuthConsentSpaceOption
-	2,  // 31: saturn.identity.v1.LoginUserResponse.MfaChallenge.available_factors:type_name -> saturn.identity.v1.MfaFactorDescriptor
-	0,  // 32: saturn.identity.v1.Identity.LoginUser:input_type -> saturn.identity.v1.LoginUserRequest
-	3,  // 33: saturn.identity.v1.Identity.RegisterUser:input_type -> saturn.identity.v1.RegisterUserRequest
-	5,  // 34: saturn.identity.v1.Identity.RefreshSession:input_type -> saturn.identity.v1.RefreshSessionRequest
-	7,  // 35: saturn.identity.v1.Identity.Logout:input_type -> saturn.identity.v1.LogoutRequest
-	9,  // 36: saturn.identity.v1.Identity.GetCurrentUser:input_type -> saturn.identity.v1.GetCurrentUserRequest
-	11, // 37: saturn.identity.v1.Identity.ListActiveSessions:input_type -> saturn.identity.v1.ListActiveSessionsRequest
-	13, // 38: saturn.identity.v1.Identity.RevokeSession:input_type -> saturn.identity.v1.RevokeSessionRequest
-	15, // 39: saturn.identity.v1.Identity.RevokeAllSessions:input_type -> saturn.identity.v1.RevokeAllSessionsRequest
-	18, // 40: saturn.identity.v1.Identity.ListMySecurityEvents:input_type -> saturn.identity.v1.ListMySecurityEventsRequest
-	20, // 41: saturn.identity.v1.Identity.ListMFAFactors:input_type -> saturn.identity.v1.ListMFAFactorsRequest
-	22, // 42: saturn.identity.v1.Identity.DeleteMFAFactor:input_type -> saturn.identity.v1.DeleteMFAFactorRequest
-	23, // 43: saturn.identity.v1.Identity.SetPrimaryMFAFactor:input_type -> saturn.identity.v1.SetPrimaryMFAFactorRequest
-	24, // 44: saturn.identity.v1.Identity.SetupTOTP:input_type -> saturn.identity.v1.SetupTOTPRequest
-	26, // 45: saturn.identity.v1.Identity.ConfirmTOTP:input_type -> saturn.identity.v1.ConfirmTOTPRequest
-	28, // 46: saturn.identity.v1.Identity.RegenerateBackupCodes:input_type -> saturn.identity.v1.RegenerateBackupCodesRequest
-	30, // 47: saturn.identity.v1.Identity.CreateAuthChallenge:input_type -> saturn.identity.v1.CreateAuthChallengeRequest
-	32, // 48: saturn.identity.v1.Identity.CreateDevice:input_type -> saturn.identity.v1.CreateDeviceRequest
-	34, // 49: saturn.identity.v1.Identity.ListDevices:input_type -> saturn.identity.v1.ListDevicesRequest
-	36, // 50: saturn.identity.v1.Identity.RevokeDevice:input_type -> saturn.identity.v1.RevokeDeviceRequest
-	37, // 51: saturn.identity.v1.Identity.ValidateResetToken:input_type -> saturn.identity.v1.ValidateResetTokenRequest
-	39, // 52: saturn.identity.v1.Identity.CompleteResetPassword:input_type -> saturn.identity.v1.CompleteResetPasswordRequest
-	40, // 53: saturn.identity.v1.Identity.ChangePassword:input_type -> saturn.identity.v1.ChangePasswordRequest
-	42, // 54: saturn.identity.v1.Identity.UpdateProfile:input_type -> saturn.identity.v1.UpdateProfileRequest
-	44, // 55: saturn.identity.v1.Identity.GetUserPreferences:input_type -> saturn.identity.v1.GetUserPreferencesRequest
-	45, // 56: saturn.identity.v1.Identity.UpdateUserPreferences:input_type -> saturn.identity.v1.UpdateUserPreferencesRequest
-	46, // 57: saturn.identity.v1.Identity.ChangeEmail:input_type -> saturn.identity.v1.ChangeEmailRequest
-	47, // 58: saturn.identity.v1.Identity.DeleteAccount:input_type -> saturn.identity.v1.DeleteAccountRequest
-	49, // 59: saturn.identity.v1.Identity.CreateAPIKey:input_type -> saturn.identity.v1.CreateAPIKeyRequest
-	50, // 60: saturn.identity.v1.Identity.GetAPIKey:input_type -> saturn.identity.v1.GetAPIKeyRequest
-	51, // 61: saturn.identity.v1.Identity.ListAPIKeys:input_type -> saturn.identity.v1.ListAPIKeysRequest
-	53, // 62: saturn.identity.v1.Identity.UpdateAPIKey:input_type -> saturn.identity.v1.UpdateAPIKeyRequest
-	54, // 63: saturn.identity.v1.Identity.DeleteAPIKey:input_type -> saturn.identity.v1.DeleteAPIKeyRequest
-	56, // 64: saturn.identity.v1.Identity.ListUserOAuthGrants:input_type -> saturn.identity.v1.ListUserOAuthGrantsRequest
-	58, // 65: saturn.identity.v1.Identity.RevokeUserOAuthGrant:input_type -> saturn.identity.v1.RevokeUserOAuthGrantRequest
-	60, // 66: saturn.identity.v1.Identity.InspectOAuthConsent:input_type -> saturn.identity.v1.InspectOAuthConsentRequest
-	62, // 67: saturn.identity.v1.Identity.DecideOAuthConsent:input_type -> saturn.identity.v1.DecideOAuthConsentRequest
-	1,  // 68: saturn.identity.v1.Identity.LoginUser:output_type -> saturn.identity.v1.LoginUserResponse
-	4,  // 69: saturn.identity.v1.Identity.RegisterUser:output_type -> saturn.identity.v1.User
-	6,  // 70: saturn.identity.v1.Identity.RefreshSession:output_type -> saturn.identity.v1.RefreshSessionResponse
-	8,  // 71: saturn.identity.v1.Identity.Logout:output_type -> saturn.identity.v1.LogoutResponse
-	4,  // 72: saturn.identity.v1.Identity.GetCurrentUser:output_type -> saturn.identity.v1.User
-	12, // 73: saturn.identity.v1.Identity.ListActiveSessions:output_type -> saturn.identity.v1.ListActiveSessionsResponse
-	14, // 74: saturn.identity.v1.Identity.RevokeSession:output_type -> saturn.identity.v1.RevokeSessionResponse
-	16, // 75: saturn.identity.v1.Identity.RevokeAllSessions:output_type -> saturn.identity.v1.RevokeAllSessionsResponse
-	19, // 76: saturn.identity.v1.Identity.ListMySecurityEvents:output_type -> saturn.identity.v1.ListMySecurityEventsResponse
-	21, // 77: saturn.identity.v1.Identity.ListMFAFactors:output_type -> saturn.identity.v1.ListMFAFactorsResponse
-	70, // 78: saturn.identity.v1.Identity.DeleteMFAFactor:output_type -> google.protobuf.Empty
-	70, // 79: saturn.identity.v1.Identity.SetPrimaryMFAFactor:output_type -> google.protobuf.Empty
-	25, // 80: saturn.identity.v1.Identity.SetupTOTP:output_type -> saturn.identity.v1.SetupTOTPResponse
-	27, // 81: saturn.identity.v1.Identity.ConfirmTOTP:output_type -> saturn.identity.v1.ConfirmTOTPResponse
-	29, // 82: saturn.identity.v1.Identity.RegenerateBackupCodes:output_type -> saturn.identity.v1.RegenerateBackupCodesResponse
-	31, // 83: saturn.identity.v1.Identity.CreateAuthChallenge:output_type -> saturn.identity.v1.CreateAuthChallengeResponse
-	33, // 84: saturn.identity.v1.Identity.CreateDevice:output_type -> saturn.identity.v1.Device
-	35, // 85: saturn.identity.v1.Identity.ListDevices:output_type -> saturn.identity.v1.ListDevicesResponse
-	70, // 86: saturn.identity.v1.Identity.RevokeDevice:output_type -> google.protobuf.Empty
-	38, // 87: saturn.identity.v1.Identity.ValidateResetToken:output_type -> saturn.identity.v1.ValidateResetTokenResponse
-	70, // 88: saturn.identity.v1.Identity.CompleteResetPassword:output_type -> google.protobuf.Empty
-	41, // 89: saturn.identity.v1.Identity.ChangePassword:output_type -> saturn.identity.v1.ChangePasswordResponse
-	4,  // 90: saturn.identity.v1.Identity.UpdateProfile:output_type -> saturn.identity.v1.User
-	43, // 91: saturn.identity.v1.Identity.GetUserPreferences:output_type -> saturn.identity.v1.UserPreferences
-	43, // 92: saturn.identity.v1.Identity.UpdateUserPreferences:output_type -> saturn.identity.v1.UserPreferences
-	4,  // 93: saturn.identity.v1.Identity.ChangeEmail:output_type -> saturn.identity.v1.User
-	70, // 94: saturn.identity.v1.Identity.DeleteAccount:output_type -> google.protobuf.Empty
-	48, // 95: saturn.identity.v1.Identity.CreateAPIKey:output_type -> saturn.identity.v1.APIKey
-	48, // 96: saturn.identity.v1.Identity.GetAPIKey:output_type -> saturn.identity.v1.APIKey
-	52, // 97: saturn.identity.v1.Identity.ListAPIKeys:output_type -> saturn.identity.v1.ListAPIKeysResponse
-	48, // 98: saturn.identity.v1.Identity.UpdateAPIKey:output_type -> saturn.identity.v1.APIKey
-	70, // 99: saturn.identity.v1.Identity.DeleteAPIKey:output_type -> google.protobuf.Empty
-	57, // 100: saturn.identity.v1.Identity.ListUserOAuthGrants:output_type -> saturn.identity.v1.ListUserOAuthGrantsResponse
-	70, // 101: saturn.identity.v1.Identity.RevokeUserOAuthGrant:output_type -> google.protobuf.Empty
-	61, // 102: saturn.identity.v1.Identity.InspectOAuthConsent:output_type -> saturn.identity.v1.InspectOAuthConsentResponse
-	63, // 103: saturn.identity.v1.Identity.DecideOAuthConsent:output_type -> saturn.identity.v1.DecideOAuthConsentResponse
-	68, // [68:104] is the sub-list for method output_type
-	32, // [32:68] is the sub-list for method input_type
-	32, // [32:32] is the sub-list for extension type_name
-	32, // [32:32] is the sub-list for extension extendee
-	0,  // [0:32] is the sub-list for field type_name
+	68, // 17: saturn.identity.v1.UserPreferences.regional:type_name -> saturn.identity.v1.UserPreferences.Regional
+	69, // 18: saturn.identity.v1.UserPreferences.mail:type_name -> saturn.identity.v1.UserPreferences.Mail
+	70, // 19: saturn.identity.v1.UserPreferences.calendar:type_name -> saturn.identity.v1.UserPreferences.Calendar
+	43, // 20: saturn.identity.v1.UpdateUserPreferencesRequest.user_preferences:type_name -> saturn.identity.v1.UserPreferences
+	72, // 21: saturn.identity.v1.UpdateUserPreferencesRequest.update_mask:type_name -> google.protobuf.FieldMask
+	71, // 22: saturn.identity.v1.APIKey.expires_at:type_name -> google.protobuf.Timestamp
+	71, // 23: saturn.identity.v1.APIKey.last_used_at:type_name -> google.protobuf.Timestamp
+	71, // 24: saturn.identity.v1.APIKey.create_time:type_name -> google.protobuf.Timestamp
+	71, // 25: saturn.identity.v1.APIKey.update_time:type_name -> google.protobuf.Timestamp
+	48, // 26: saturn.identity.v1.CreateAPIKeyRequest.api_key:type_name -> saturn.identity.v1.APIKey
+	48, // 27: saturn.identity.v1.ListAPIKeysResponse.api_keys:type_name -> saturn.identity.v1.APIKey
+	48, // 28: saturn.identity.v1.UpdateAPIKeyRequest.api_key:type_name -> saturn.identity.v1.APIKey
+	72, // 29: saturn.identity.v1.UpdateAPIKeyRequest.update_mask:type_name -> google.protobuf.FieldMask
+	71, // 30: saturn.identity.v1.UserOAuthGrant.last_used_at:type_name -> google.protobuf.Timestamp
+	71, // 31: saturn.identity.v1.UserOAuthGrant.create_time:type_name -> google.protobuf.Timestamp
+	55, // 32: saturn.identity.v1.ListUserOAuthGrantsResponse.grants:type_name -> saturn.identity.v1.UserOAuthGrant
+	59, // 33: saturn.identity.v1.InspectOAuthConsentResponse.spaces:type_name -> saturn.identity.v1.OAuthConsentSpaceOption
+	2,  // 34: saturn.identity.v1.LoginUserResponse.MfaChallenge.available_factors:type_name -> saturn.identity.v1.MfaFactorDescriptor
+	0,  // 35: saturn.identity.v1.Identity.LoginUser:input_type -> saturn.identity.v1.LoginUserRequest
+	3,  // 36: saturn.identity.v1.Identity.RegisterUser:input_type -> saturn.identity.v1.RegisterUserRequest
+	5,  // 37: saturn.identity.v1.Identity.RefreshSession:input_type -> saturn.identity.v1.RefreshSessionRequest
+	7,  // 38: saturn.identity.v1.Identity.Logout:input_type -> saturn.identity.v1.LogoutRequest
+	9,  // 39: saturn.identity.v1.Identity.GetCurrentUser:input_type -> saturn.identity.v1.GetCurrentUserRequest
+	11, // 40: saturn.identity.v1.Identity.ListActiveSessions:input_type -> saturn.identity.v1.ListActiveSessionsRequest
+	13, // 41: saturn.identity.v1.Identity.RevokeSession:input_type -> saturn.identity.v1.RevokeSessionRequest
+	15, // 42: saturn.identity.v1.Identity.RevokeAllSessions:input_type -> saturn.identity.v1.RevokeAllSessionsRequest
+	18, // 43: saturn.identity.v1.Identity.ListMySecurityEvents:input_type -> saturn.identity.v1.ListMySecurityEventsRequest
+	20, // 44: saturn.identity.v1.Identity.ListMFAFactors:input_type -> saturn.identity.v1.ListMFAFactorsRequest
+	22, // 45: saturn.identity.v1.Identity.DeleteMFAFactor:input_type -> saturn.identity.v1.DeleteMFAFactorRequest
+	23, // 46: saturn.identity.v1.Identity.SetPrimaryMFAFactor:input_type -> saturn.identity.v1.SetPrimaryMFAFactorRequest
+	24, // 47: saturn.identity.v1.Identity.SetupTOTP:input_type -> saturn.identity.v1.SetupTOTPRequest
+	26, // 48: saturn.identity.v1.Identity.ConfirmTOTP:input_type -> saturn.identity.v1.ConfirmTOTPRequest
+	28, // 49: saturn.identity.v1.Identity.RegenerateBackupCodes:input_type -> saturn.identity.v1.RegenerateBackupCodesRequest
+	30, // 50: saturn.identity.v1.Identity.CreateAuthChallenge:input_type -> saturn.identity.v1.CreateAuthChallengeRequest
+	32, // 51: saturn.identity.v1.Identity.CreateDevice:input_type -> saturn.identity.v1.CreateDeviceRequest
+	34, // 52: saturn.identity.v1.Identity.ListDevices:input_type -> saturn.identity.v1.ListDevicesRequest
+	36, // 53: saturn.identity.v1.Identity.RevokeDevice:input_type -> saturn.identity.v1.RevokeDeviceRequest
+	37, // 54: saturn.identity.v1.Identity.ValidateResetToken:input_type -> saturn.identity.v1.ValidateResetTokenRequest
+	39, // 55: saturn.identity.v1.Identity.CompleteResetPassword:input_type -> saturn.identity.v1.CompleteResetPasswordRequest
+	40, // 56: saturn.identity.v1.Identity.ChangePassword:input_type -> saturn.identity.v1.ChangePasswordRequest
+	42, // 57: saturn.identity.v1.Identity.UpdateProfile:input_type -> saturn.identity.v1.UpdateProfileRequest
+	44, // 58: saturn.identity.v1.Identity.GetUserPreferences:input_type -> saturn.identity.v1.GetUserPreferencesRequest
+	45, // 59: saturn.identity.v1.Identity.UpdateUserPreferences:input_type -> saturn.identity.v1.UpdateUserPreferencesRequest
+	46, // 60: saturn.identity.v1.Identity.ChangeEmail:input_type -> saturn.identity.v1.ChangeEmailRequest
+	47, // 61: saturn.identity.v1.Identity.DeleteAccount:input_type -> saturn.identity.v1.DeleteAccountRequest
+	49, // 62: saturn.identity.v1.Identity.CreateAPIKey:input_type -> saturn.identity.v1.CreateAPIKeyRequest
+	50, // 63: saturn.identity.v1.Identity.GetAPIKey:input_type -> saturn.identity.v1.GetAPIKeyRequest
+	51, // 64: saturn.identity.v1.Identity.ListAPIKeys:input_type -> saturn.identity.v1.ListAPIKeysRequest
+	53, // 65: saturn.identity.v1.Identity.UpdateAPIKey:input_type -> saturn.identity.v1.UpdateAPIKeyRequest
+	54, // 66: saturn.identity.v1.Identity.DeleteAPIKey:input_type -> saturn.identity.v1.DeleteAPIKeyRequest
+	56, // 67: saturn.identity.v1.Identity.ListUserOAuthGrants:input_type -> saturn.identity.v1.ListUserOAuthGrantsRequest
+	58, // 68: saturn.identity.v1.Identity.RevokeUserOAuthGrant:input_type -> saturn.identity.v1.RevokeUserOAuthGrantRequest
+	60, // 69: saturn.identity.v1.Identity.InspectOAuthConsent:input_type -> saturn.identity.v1.InspectOAuthConsentRequest
+	62, // 70: saturn.identity.v1.Identity.DecideOAuthConsent:input_type -> saturn.identity.v1.DecideOAuthConsentRequest
+	1,  // 71: saturn.identity.v1.Identity.LoginUser:output_type -> saturn.identity.v1.LoginUserResponse
+	4,  // 72: saturn.identity.v1.Identity.RegisterUser:output_type -> saturn.identity.v1.User
+	6,  // 73: saturn.identity.v1.Identity.RefreshSession:output_type -> saturn.identity.v1.RefreshSessionResponse
+	8,  // 74: saturn.identity.v1.Identity.Logout:output_type -> saturn.identity.v1.LogoutResponse
+	4,  // 75: saturn.identity.v1.Identity.GetCurrentUser:output_type -> saturn.identity.v1.User
+	12, // 76: saturn.identity.v1.Identity.ListActiveSessions:output_type -> saturn.identity.v1.ListActiveSessionsResponse
+	14, // 77: saturn.identity.v1.Identity.RevokeSession:output_type -> saturn.identity.v1.RevokeSessionResponse
+	16, // 78: saturn.identity.v1.Identity.RevokeAllSessions:output_type -> saturn.identity.v1.RevokeAllSessionsResponse
+	19, // 79: saturn.identity.v1.Identity.ListMySecurityEvents:output_type -> saturn.identity.v1.ListMySecurityEventsResponse
+	21, // 80: saturn.identity.v1.Identity.ListMFAFactors:output_type -> saturn.identity.v1.ListMFAFactorsResponse
+	73, // 81: saturn.identity.v1.Identity.DeleteMFAFactor:output_type -> google.protobuf.Empty
+	73, // 82: saturn.identity.v1.Identity.SetPrimaryMFAFactor:output_type -> google.protobuf.Empty
+	25, // 83: saturn.identity.v1.Identity.SetupTOTP:output_type -> saturn.identity.v1.SetupTOTPResponse
+	27, // 84: saturn.identity.v1.Identity.ConfirmTOTP:output_type -> saturn.identity.v1.ConfirmTOTPResponse
+	29, // 85: saturn.identity.v1.Identity.RegenerateBackupCodes:output_type -> saturn.identity.v1.RegenerateBackupCodesResponse
+	31, // 86: saturn.identity.v1.Identity.CreateAuthChallenge:output_type -> saturn.identity.v1.CreateAuthChallengeResponse
+	33, // 87: saturn.identity.v1.Identity.CreateDevice:output_type -> saturn.identity.v1.Device
+	35, // 88: saturn.identity.v1.Identity.ListDevices:output_type -> saturn.identity.v1.ListDevicesResponse
+	73, // 89: saturn.identity.v1.Identity.RevokeDevice:output_type -> google.protobuf.Empty
+	38, // 90: saturn.identity.v1.Identity.ValidateResetToken:output_type -> saturn.identity.v1.ValidateResetTokenResponse
+	73, // 91: saturn.identity.v1.Identity.CompleteResetPassword:output_type -> google.protobuf.Empty
+	41, // 92: saturn.identity.v1.Identity.ChangePassword:output_type -> saturn.identity.v1.ChangePasswordResponse
+	4,  // 93: saturn.identity.v1.Identity.UpdateProfile:output_type -> saturn.identity.v1.User
+	43, // 94: saturn.identity.v1.Identity.GetUserPreferences:output_type -> saturn.identity.v1.UserPreferences
+	43, // 95: saturn.identity.v1.Identity.UpdateUserPreferences:output_type -> saturn.identity.v1.UserPreferences
+	4,  // 96: saturn.identity.v1.Identity.ChangeEmail:output_type -> saturn.identity.v1.User
+	73, // 97: saturn.identity.v1.Identity.DeleteAccount:output_type -> google.protobuf.Empty
+	48, // 98: saturn.identity.v1.Identity.CreateAPIKey:output_type -> saturn.identity.v1.APIKey
+	48, // 99: saturn.identity.v1.Identity.GetAPIKey:output_type -> saturn.identity.v1.APIKey
+	52, // 100: saturn.identity.v1.Identity.ListAPIKeys:output_type -> saturn.identity.v1.ListAPIKeysResponse
+	48, // 101: saturn.identity.v1.Identity.UpdateAPIKey:output_type -> saturn.identity.v1.APIKey
+	73, // 102: saturn.identity.v1.Identity.DeleteAPIKey:output_type -> google.protobuf.Empty
+	57, // 103: saturn.identity.v1.Identity.ListUserOAuthGrants:output_type -> saturn.identity.v1.ListUserOAuthGrantsResponse
+	73, // 104: saturn.identity.v1.Identity.RevokeUserOAuthGrant:output_type -> google.protobuf.Empty
+	61, // 105: saturn.identity.v1.Identity.InspectOAuthConsent:output_type -> saturn.identity.v1.InspectOAuthConsentResponse
+	63, // 106: saturn.identity.v1.Identity.DecideOAuthConsent:output_type -> saturn.identity.v1.DecideOAuthConsentResponse
+	71, // [71:107] is the sub-list for method output_type
+	35, // [35:71] is the sub-list for method input_type
+	35, // [35:35] is the sub-list for extension type_name
+	35, // [35:35] is the sub-list for extension extendee
+	0,  // [0:35] is the sub-list for field type_name
 }
 
 func init() { file_saturn_identity_v1_identity_proto_init() }
@@ -4811,7 +4992,7 @@ func file_saturn_identity_v1_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_identity_v1_identity_proto_rawDesc), len(file_saturn_identity_v1_identity_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   68,
+			NumMessages:   71,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

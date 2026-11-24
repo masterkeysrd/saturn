@@ -771,16 +771,43 @@ message UpdateProfileRequest {
   optional string avatar_url = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// UserPreferences stores user-scoped UI language and regional formatting preferences.
+// UserPreferences stores user-scoped UI language, regional formatting, mail, and calendar preferences.
 message UserPreferences {
-  // Optional. BCP 47 UI language and regional locale tag (e.g. "en-US", "es-ES", "es-419").
-  string locale = 1 [(google.api.field_behavior) = OPTIONAL];
+  // Regional stores user-scoped UI language and regional formatting preferences.
+  message Regional {
+    // Optional. BCP 47 UI language and regional locale tag (e.g. "en-US", "es-ES", "es-419").
+    string locale = 1 [(google.api.field_behavior) = OPTIONAL];
 
-  // Optional. Preferred clock hour cycle ("h12" for 12-hour, "h23" for 24-hour).
-  string hour_cycle = 2 [(google.api.field_behavior) = OPTIONAL];
+    // Optional. Preferred clock hour cycle ("h12" for 12-hour, "h23" for 24-hour).
+    string hour_cycle = 2 [(google.api.field_behavior) = OPTIONAL];
 
-  // Optional. Preferred first day of the week (0 = Sunday, 1 = Monday).
-  int32 week_starts_on = 3 [(google.api.field_behavior) = OPTIONAL];
+    // Optional. Preferred first day of the week (0 = Sunday, 1 = Monday).
+    int32 week_starts_on = 3 [(google.api.field_behavior) = OPTIONAL];
+  }
+
+  // Mail stores user-scoped mail reading and display preferences.
+  message Mail {
+    // Optional. Whether remote images/external content in emails are loaded automatically.
+    bool auto_load_remote_content = 1 [(google.api.field_behavior) = OPTIONAL];
+  }
+
+  // Calendar stores user-scoped calendar view preferences per device form factor.
+  message Calendar {
+    // Optional. Last selected calendar view on Web ("day", "week", "month", "agenda").
+    string web_view = 1 [(google.api.field_behavior) = OPTIONAL];
+
+    // Optional. Last selected calendar view on Mobile ("agenda", "day", "three_day", "week", "month").
+    string mobile_view = 2 [(google.api.field_behavior) = OPTIONAL];
+  }
+
+  // Optional. UI language and regional formatting preferences.
+  Regional regional = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Mail reading and display preferences.
+  Mail mail = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Calendar view preferences per device form factor.
+  Calendar calendar = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // Request message for Identity.GetUserPreferences.
@@ -791,7 +818,7 @@ message UpdateUserPreferencesRequest {
   // Required. Preferences payload containing fields to update.
   UserPreferences user_preferences = 1 [(google.api.field_behavior) = REQUIRED];
 
-  // Optional. Field mask specifying which fields (`locale`, `hour_cycle`, `week_starts_on`) to update.
+  // Optional. Field mask specifying which fields (`regional`, `regional.locale`, `regional.hour_cycle`, `regional.week_starts_on`, `mail`, `mail.auto_load_remote_content`, `calendar`, `calendar.web_view`, `calendar.mobile_view`) to update.
   google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 

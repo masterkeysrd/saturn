@@ -724,9 +724,27 @@ export interface UpdateProfileRequest {
 }
 
 /**
- * UserPreferences stores user-scoped UI language and regional formatting preferences.
+ * UserPreferences stores user-scoped UI language, regional formatting, mail, and calendar preferences.
  */
 export interface UserPreferences {
+  /**
+   * Optional. UI language and regional formatting preferences.
+   */
+  regional: UserPreferences_Regional
+  /**
+   * Optional. Mail reading and display preferences.
+   */
+  mail: UserPreferences_Mail
+  /**
+   * Optional. Calendar view preferences per device form factor.
+   */
+  calendar: UserPreferences_Calendar
+}
+
+/**
+ * Regional stores user-scoped UI language and regional formatting preferences.
+ */
+export interface UserPreferences_Regional {
   /**
    * Optional. BCP 47 UI language and regional locale tag (e.g. "en-US", "es-ES", "es-419").
    */
@@ -739,6 +757,30 @@ export interface UserPreferences {
    * Optional. Preferred first day of the week (0 = Sunday, 1 = Monday).
    */
   weekStartsOn: number
+}
+
+/**
+ * Mail stores user-scoped mail reading and display preferences.
+ */
+export interface UserPreferences_Mail {
+  /**
+   * Optional. Whether remote images/external content in emails are loaded automatically.
+   */
+  autoLoadRemoteContent: boolean
+}
+
+/**
+ * Calendar stores user-scoped calendar view preferences per device form factor.
+ */
+export interface UserPreferences_Calendar {
+  /**
+   * Optional. Last selected calendar view on Web ("day", "week", "month", "agenda").
+   */
+  webView: string
+  /**
+   * Optional. Last selected calendar view on Mobile ("agenda", "day", "three_day", "week", "month").
+   */
+  mobileView: string
 }
 
 /**
@@ -755,7 +797,7 @@ export interface UpdateUserPreferencesRequest {
    */
   userPreferences: UserPreferences
   /**
-   * Optional. Field mask specifying which fields (`locale`, `hour_cycle`, `week_starts_on`) to update.
+   * Optional. Field mask specifying which fields (`regional`, `regional.locale`, `regional.hour_cycle`, `regional.week_starts_on`, `mail`, `mail.auto_load_remote_content`, `calendar`, `calendar.web_view`, `calendar.mobile_view`) to update.
    */
   updateMask: { paths?: string[] }
 }

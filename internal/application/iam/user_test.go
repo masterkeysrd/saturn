@@ -538,16 +538,30 @@ func TestCoordinator_UserPreferences(t *testing.T) {
 				setup: func(idMock *IdentityServiceMock) {
 					idMock.GetUserPreferencesFunc = func(ctx context.Context, userID identity.UserID) (*identity.UserPreferences, error) {
 						return &identity.UserPreferences{
-							Locale:       "es-ES",
-							HourCycle:    identity.HourCycle24,
-							WeekStartsOn: 1,
+							Regional: identity.RegionalUserPreferences{
+								Locale:       "es-ES",
+								HourCycle:    identity.HourCycle24,
+								WeekStartsOn: 1,
+							},
+							Mail: identity.MailUserPreferences{AutoLoadRemoteContent: true},
+							Calendar: identity.CalendarUserPreferences{
+								WebView:    identity.CalendarWebViewMonth,
+								MobileView: identity.CalendarMobileViewThreeDay,
+							},
 						}, nil
 					}
 				},
 				want: identity.UserPreferences{
-					Locale:       "es-ES",
-					HourCycle:    identity.HourCycle24,
-					WeekStartsOn: 1,
+					Regional: identity.RegionalUserPreferences{
+						Locale:       "es-ES",
+						HourCycle:    identity.HourCycle24,
+						WeekStartsOn: 1,
+					},
+					Mail: identity.MailUserPreferences{AutoLoadRemoteContent: true},
+					Calendar: identity.CalendarUserPreferences{
+						WebView:    identity.CalendarWebViewMonth,
+						MobileView: identity.CalendarMobileViewThreeDay,
+					},
 				},
 			},
 		}
@@ -606,8 +620,8 @@ func TestCoordinator_UserPreferences(t *testing.T) {
 				name: "service error",
 				req: &UpdateUserPreferencesRequest{
 					UserID:      "usr_123",
-					Preferences: identity.UserPreferences{Locale: "bad"},
-					UpdateMask:  []string{"locale"},
+					Preferences: identity.UserPreferences{Regional: identity.RegionalUserPreferences{Locale: "bad"}},
+					UpdateMask:  []string{"regional.locale"},
 				},
 				setup: func(idMock *IdentityServiceMock) {
 					idMock.UpdateUserPreferencesFunc = func(ctx context.Context, userID identity.UserID, req identity.UpdateUserPreferencesRequest) (*identity.UserPreferences, error) {
@@ -620,19 +634,27 @@ func TestCoordinator_UserPreferences(t *testing.T) {
 			{
 				name: "success",
 				req: &UpdateUserPreferencesRequest{
-					UserID:      "usr_123",
-					Preferences: identity.UserPreferences{Locale: "es-419", HourCycle: identity.HourCycle24, WeekStartsOn: 1},
-					UpdateMask:  []string{"locale", "hour_cycle", "week_starts_on"},
+					UserID: "usr_123",
+					Preferences: identity.UserPreferences{
+						Regional: identity.RegionalUserPreferences{Locale: "es-419", HourCycle: identity.HourCycle24, WeekStartsOn: 1},
+						Mail:     identity.MailUserPreferences{AutoLoadRemoteContent: true},
+						Calendar: identity.CalendarUserPreferences{WebView: identity.CalendarWebViewDay, MobileView: identity.CalendarMobileViewThreeDay},
+					},
+					UpdateMask: []string{"regional.locale", "regional.hour_cycle", "regional.week_starts_on", "mail.auto_load_remote_content", "calendar.web_view", "calendar.mobile_view"},
 				},
 				setup: func(idMock *IdentityServiceMock) {
 					idMock.UpdateUserPreferencesFunc = func(ctx context.Context, userID identity.UserID, req identity.UpdateUserPreferencesRequest) (*identity.UserPreferences, error) {
-						if userID != "usr_123" || len(req.Paths) != 3 {
+						if userID != "usr_123" || len(req.Paths) != 6 {
 							t.Fatalf("unexpected args: userID=%q paths=%v", userID, req.Paths)
 						}
 						return &req.Preferences, nil
 					}
 				},
-				want: identity.UserPreferences{Locale: "es-419", HourCycle: identity.HourCycle24, WeekStartsOn: 1},
+				want: identity.UserPreferences{
+					Regional: identity.RegionalUserPreferences{Locale: "es-419", HourCycle: identity.HourCycle24, WeekStartsOn: 1},
+					Mail:     identity.MailUserPreferences{AutoLoadRemoteContent: true},
+					Calendar: identity.CalendarUserPreferences{WebView: identity.CalendarWebViewDay, MobileView: identity.CalendarMobileViewThreeDay},
+				},
 			},
 		}
 

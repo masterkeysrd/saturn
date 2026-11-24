@@ -24,46 +24,124 @@ const (
 	HourCycle24 = "h23"
 )
 
-// UserPreferences stores user-scoped UI language and regional formatting preferences.
-type UserPreferences struct {
+// Supported calendar view identifiers for Web and Mobile.
+const (
+	CalendarWebViewDay    = "day"
+	CalendarWebViewWeek   = "week"
+	CalendarWebViewMonth  = "month"
+	CalendarWebViewAgenda = "agenda"
+
+	CalendarMobileViewAgenda   = "agenda"
+	CalendarMobileViewDay      = "day"
+	CalendarMobileViewThreeDay = "three_day"
+	CalendarMobileViewWeek     = "week"
+	CalendarMobileViewMonth    = "month"
+)
+
+// RegionalUserPreferences stores user-scoped UI language and regional formatting preferences.
+type RegionalUserPreferences struct {
 	Locale       string `json:"locale"`
 	HourCycle    string `json:"hour_cycle"`
 	WeekStartsOn int    `json:"week_starts_on"`
 }
 
+// MailUserPreferences stores user-scoped mail reading and display preferences.
+type MailUserPreferences struct {
+	AutoLoadRemoteContent bool `json:"auto_load_remote_content"`
+}
+
+// CalendarUserPreferences stores user-scoped calendar view preferences per device form factor.
+type CalendarUserPreferences struct {
+	WebView    string `json:"web_view"`
+	MobileView string `json:"mobile_view"`
+}
+
+// UserPreferences stores user-scoped UI language, regional formatting, mail, and calendar preferences.
+type UserPreferences struct {
+	Regional RegionalUserPreferences `json:"regional"`
+	Mail     MailUserPreferences     `json:"mail"`
+	Calendar CalendarUserPreferences `json:"calendar"`
+}
+
 // UserPreferencesKey is the typed descriptor for user-scoped regional and language preferences.
 var UserPreferencesKey = settings.NewKey[UserPreferences](settings.ScopeUser, "preferences")
 
-// DefaultUserPreferences returns the default regional and UI language preferences.
+// DefaultUserPreferences returns the default regional, UI language, mail, and calendar preferences.
 func DefaultUserPreferences() UserPreferences {
 	return UserPreferences{
-		Locale:       "en-US",
-		HourCycle:    HourCycle12,
-		WeekStartsOn: 0,
+		Regional: RegionalUserPreferences{
+			Locale:       "en-US",
+			HourCycle:    HourCycle12,
+			WeekStartsOn: 0,
+		},
+		Mail: MailUserPreferences{
+			AutoLoadRemoteContent: false,
+		},
+		Calendar: CalendarUserPreferences{
+			WebView:    CalendarWebViewWeek,
+			MobileView: CalendarMobileViewAgenda,
+		},
 	}
 }
 
-// Validate checks the user preferences for valid BCP-47 locale, hour cycle, and week start day.
+// ApplyDefaults fills missing zero-valued sub-group fields from DefaultUserPreferences
+// when an existing stored settings entry predates newly introduced preference groups.
+func (p *UserPreferences) ApplyDefaults() {
+	if p == nil {
+		return
+	}
+	def := DefaultUserPreferences()
+	if p.Regional.Locale == "" {
+		p.Regional.Locale = def.Regional.Locale
+	}
+	if p.Regional.HourCycle == "" {
+		p.Regional.HourCycle = def.Regional.HourCycle
+	}
+	if p.Calendar.WebView == "" {
+		p.Calendar.WebView = def.Calendar.WebView
+	}
+	if p.Calendar.MobileView == "" {
+		p.Calendar.MobileView = def.Calendar.MobileView
+	}
+}
+
+// Validate checks the user preferences for valid BCP-47 locale, hour cycle, week start day, and calendar views.
 func (p *UserPreferences) Validate() error {
 	if p == nil {
 		return errors.E(errors.Invalid, "user preferences payload is required")
 	}
-	if !isValidBCP47Tag(p.Locale) {
-		return errors.E(errors.Invalid, "locale must be a valid BCP-47 tag (e.g. en-US, es-ES)")
+	if !isValidBCP47Tag(p.Regional.Locale) {
+		return errors.E(errors.Invalid, "regional.locale must be a valid BCP-47 tag (e.g. en-US, es-ES)")
 	}
-	if p.HourCycle != HourCycle12 && p.HourCycle != HourCycle24 {
-		return errors.E(errors.Invalid, "hour_cycle must be 'h12' or 'h23'")
+	if p.Regional.HourCycle != HourCycle12 && p.Regional.HourCycle != HourCycle24 {
+		return errors.E(errors.Invalid, "regional.hour_cycle must be 'h12' or 'h23'")
 	}
-	if p.WeekStartsOn != 0 && p.WeekStartsOn != 1 {
-		return errors.E(errors.Invalid, "week_starts_on must be 0 or 1")
+	if p.Regional.WeekStartsOn != 0 && p.Regional.WeekStartsOn != 1 {
+		return errors.E(errors.Invalid, "regional.week_starts_on must be 0 or 1")
+	}
+	switch p.Calendar.WebView {
+	case CalendarWebViewDay, CalendarWebViewWeek, CalendarWebViewMonth, CalendarWebViewAgenda:
+	default:
+		return errors.E(errors.Invalid, "calendar.web_view must be 'day', 'week', 'month', or 'agenda'")
+	}
+	switch p.Calendar.MobileView {
+	case CalendarMobileViewAgenda, CalendarMobileViewDay, CalendarMobileViewThreeDay, CalendarMobileViewWeek, CalendarMobileViewMonth:
+	default:
+		return errors.E(errors.Invalid, "calendar.mobile_view must be 'agenda', 'day', 'three_day', 'week', or 'month'")
 	}
 	return nil
 }
 
 var userPreferencesPatchSchema = patch.NewSchema[UserPreferences]().
-	Field("locale", func(p *UserPreferences) *string { return &p.Locale }).
-	Field("hour_cycle", func(p *UserPreferences) *string { return &p.HourCycle }).
-	Field("week_starts_on", func(p *UserPreferences) *int { return &p.WeekStartsOn })
+	Field("regional", func(p *UserPreferences) *RegionalUserPreferences { return &p.Regional }).
+	Field("regional.locale", func(p *UserPreferences) *string { return &p.Regional.Locale }).
+	Field("regional.hour_cycle", func(p *UserPreferences) *string { return &p.Regional.HourCycle }).
+	Field("regional.week_starts_on", func(p *UserPreferences) *int { return &p.Regional.WeekStartsOn }).
+	Field("mail", func(p *UserPreferences) *MailUserPreferences { return &p.Mail }).
+	Field("mail.auto_load_remote_content", func(p *UserPreferences) *bool { return &p.Mail.AutoLoadRemoteContent }).
+	Field("calendar", func(p *UserPreferences) *CalendarUserPreferences { return &p.Calendar }).
+	Field("calendar.web_view", func(p *UserPreferences) *string { return &p.Calendar.WebView }).
+	Field("calendar.mobile_view", func(p *UserPreferences) *string { return &p.Calendar.MobileView })
 
 // ApplyPatch applies partial updates from incoming preferences based on the field mask.
 func (p *UserPreferences) ApplyPatch(incoming *UserPreferences, mask []string) error {

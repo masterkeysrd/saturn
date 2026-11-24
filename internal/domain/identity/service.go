@@ -64,17 +64,17 @@ type DeviceVerifier interface {
 
 // Dependencies holds all storage and hashing interfaces required by the Service.
 type Dependencies struct {
-	UserStore          UserStoreProvider
-	CredentialStore    CredentialStoreProvider
-	SessionStore       SessionStoreProvider
-	SecurityEventStore SecurityEventStore
-	Hasher             Hasher
-	MFAStore           MFAFactorStore
-	Cipher             Cipher
-	TOTP               TOTPProvider
-	DeviceStore        DeviceStore
-	ChallengeStore     AuthChallengeStore
-	DeviceVerifier     DeviceVerifier
+	UserStore             UserStoreProvider
+	CredentialStore       CredentialStoreProvider
+	SessionStore          SessionStoreProvider
+	SecurityEventStore    SecurityEventStore
+	Hasher                Hasher
+	MFAStore              MFAFactorStore
+	Cipher                Cipher
+	TOTP                  TOTPProvider
+	DeviceStore           DeviceStore
+	ChallengeStore        AuthChallengeStore
+	DeviceVerifier        DeviceVerifier
 	PasswordResetStore    PasswordResetStore
 	APIKeyStore           APIKeyStore
 	OAuthClientStore      OAuthClientStore
@@ -1894,14 +1894,7 @@ func (s *Service) GetUserPreferences(ctx context.Context, userID UserID) (*UserP
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
-
-	defaults := DefaultUserPreferences()
-	if entry.Value.Locale == "" {
-		entry.Value.Locale = defaults.Locale
-	}
-	if entry.Value.HourCycle == "" {
-		entry.Value.HourCycle = defaults.HourCycle
-	}
+	entry.Value.ApplyDefaults()
 
 	return &entry.Value, nil
 }
@@ -1918,14 +1911,7 @@ func (s *Service) UpdateUserPreferences(ctx context.Context, userID UserID, req 
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
-
-	defaults := DefaultUserPreferences()
-	if entry.Value.Locale == "" {
-		entry.Value.Locale = defaults.Locale
-	}
-	if entry.Value.HourCycle == "" {
-		entry.Value.HourCycle = defaults.HourCycle
-	}
+	entry.Value.ApplyDefaults()
 
 	if err := entry.Value.ApplyPatch(&req.Preferences, req.Paths); err != nil {
 		return nil, errors.E(op, err)

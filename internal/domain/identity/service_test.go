@@ -3,6 +3,7 @@ package identity
 import (
 	"bytes"
 	"context"
+	"encoding/json/v2"
 	"fmt"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
 
 type mockUserStore struct {
@@ -4743,6 +4745,186 @@ func TestService_APIKeys(t *testing.T) {
 		}
 		if len(sStore.CreateCalls()) != 2 {
 			t.Errorf("expected 2 security events (update + revoke), got %d", len(sStore.CreateCalls()))
+		}
+	})
+}
+
+func TestService_UserPreferencesJSONRoundTripAndMasks(t *testing.T) {
+	ctx := context.Background()
+	userID := UserID("usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R")
+
+	t.Run("GetUserPreferences round-trips grouped JSON payload", func(t *testing.T) {
+		raw, err := json.Marshal(DefaultUserPreferences())
+		if err != nil {
+			t.Fatalf("marshal default prefs: %v", err)
+		}
+
+		var stored UserPreferences
+		if err := json.Unmarshal(raw, &stored); err != nil {
+			t.Fatalf("unmarshal default prefs: %v", err)
+		}
+
+		prefsMock := &UserPreferencesClientMock{
+			GetOrDefaultFunc: func(_ context.Context, scopeID string, _ UserPreferences) (*settings.Entry[UserPreferences], error) {
+				return &settings.Entry[UserPreferences]{
+					Target: UserPreferencesKey.For(scopeID),
+					Value:  stored,
+				}, nil
+			},
+		}
+		svc := NewService(Dependencies{Preferences: prefsMock})
+		got, err := svc.GetUserPreferences(ctx, userID)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if *got != DefaultUserPreferences() {
+			t.Fatalf("got %+v, want %+v", *got, DefaultUserPreferences())
+		}
+	})
+
+	t.Run("UpdateUserPreferences group and dotted masks with strict validation", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			stored   UserPreferences
+			req      UpdateUserPreferencesRequest
+			want     UserPreferences
+			wantErr  bool
+			wantKind errors.Kind
+		}{
+			{
+				name:   "updates regional.hour_cycle while preserving regional.locale, mail, and calendar",
+				stored: DefaultUserPreferences(),
+				req: UpdateUserPreferencesRequest{
+					Preferences: UserPreferences{Regional: RegionalUserPreferences{HourCycle: HourCycle24}},
+					Paths:       []string{"regional.hour_cycle"},
+				},
+				want: UserPreferences{
+					Regional: RegionalUserPreferences{Locale: "en-US", HourCycle: HourCycle24, WeekStartsOn: 0},
+					Mail:     MailUserPreferences{AutoLoadRemoteContent: false},
+					Calendar: CalendarUserPreferences{WebView: CalendarWebViewWeek, MobileView: CalendarMobileViewAgenda},
+				},
+			},
+			{
+				name:   "updates mail.auto_load_remote_content without clobbering regional or calendar",
+				stored: DefaultUserPreferences(),
+				req: UpdateUserPreferencesRequest{
+					Preferences: UserPreferences{Mail: MailUserPreferences{AutoLoadRemoteContent: true}},
+					Paths:       []string{"mail.auto_load_remote_content"},
+				},
+				want: UserPreferences{
+					Regional: RegionalUserPreferences{Locale: "en-US", HourCycle: HourCycle12, WeekStartsOn: 0},
+					Mail:     MailUserPreferences{AutoLoadRemoteContent: true},
+					Calendar: CalendarUserPreferences{WebView: CalendarWebViewWeek, MobileView: CalendarMobileViewAgenda},
+				},
+			},
+			{
+				name:   "updates calendar.web_view without clobbering calendar.mobile_view",
+				stored: DefaultUserPreferences(),
+				req: UpdateUserPreferencesRequest{
+					Preferences: UserPreferences{Calendar: CalendarUserPreferences{WebView: CalendarWebViewDay}},
+					Paths:       []string{"calendar.web_view"},
+				},
+				want: UserPreferences{
+					Regional: RegionalUserPreferences{Locale: "en-US", HourCycle: HourCycle12, WeekStartsOn: 0},
+					Mail:     MailUserPreferences{AutoLoadRemoteContent: false},
+					Calendar: CalendarUserPreferences{WebView: CalendarWebViewDay, MobileView: CalendarMobileViewAgenda},
+				},
+			},
+			{
+				name:   "updates calendar group",
+				stored: DefaultUserPreferences(),
+				req: UpdateUserPreferencesRequest{
+					Preferences: UserPreferences{Calendar: CalendarUserPreferences{WebView: CalendarWebViewMonth, MobileView: CalendarMobileViewThreeDay}},
+					Paths:       []string{"calendar"},
+				},
+				want: UserPreferences{
+					Regional: RegionalUserPreferences{Locale: "en-US", HourCycle: HourCycle12, WeekStartsOn: 0},
+					Mail:     MailUserPreferences{AutoLoadRemoteContent: false},
+					Calendar: CalendarUserPreferences{WebView: CalendarWebViewMonth, MobileView: CalendarMobileViewThreeDay},
+				},
+			},
+			{
+				name:   "rejects invalid calendar.web_view without calling Save",
+				stored: DefaultUserPreferences(),
+				req: UpdateUserPreferencesRequest{
+					Preferences: UserPreferences{Calendar: CalendarUserPreferences{WebView: "quarterly"}},
+					Paths:       []string{"calendar.web_view"},
+				},
+				wantErr:  true,
+				wantKind: errors.Invalid,
+			},
+			{
+				name:   "rejects empty calendar.mobile_view via calendar group without calling Save",
+				stored: DefaultUserPreferences(),
+				req: UpdateUserPreferencesRequest{
+					Preferences: UserPreferences{Calendar: CalendarUserPreferences{WebView: CalendarWebViewWeek}},
+					Paths:       []string{"calendar"},
+				},
+				wantErr:  true,
+				wantKind: errors.Invalid,
+			},
+			{
+				name:   "updates mail.auto_load_remote_content when stored entry has uninitialized sibling groups",
+				stored: UserPreferences{},
+				req: UpdateUserPreferencesRequest{
+					Preferences: UserPreferences{Mail: MailUserPreferences{AutoLoadRemoteContent: true}},
+					Paths:       []string{"mail.auto_load_remote_content"},
+				},
+				want: UserPreferences{
+					Regional: RegionalUserPreferences{Locale: "en-US", HourCycle: HourCycle12, WeekStartsOn: 0},
+					Mail:     MailUserPreferences{AutoLoadRemoteContent: true},
+					Calendar: CalendarUserPreferences{WebView: CalendarWebViewWeek, MobileView: CalendarMobileViewAgenda},
+				},
+			},
+			{
+				name:   "rejects invalid calendar.mobile_view without calling Save",
+				stored: DefaultUserPreferences(),
+				req: UpdateUserPreferencesRequest{
+					Preferences: UserPreferences{Calendar: CalendarUserPreferences{MobileView: "hourly"}},
+					Paths:       []string{"calendar.mobile_view"},
+				},
+				wantErr:  true,
+				wantKind: errors.Invalid,
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				prefsMock := &UserPreferencesClientMock{
+					GetOrDefaultFunc: func(_ context.Context, scopeID string, _ UserPreferences) (*settings.Entry[UserPreferences], error) {
+						return &settings.Entry[UserPreferences]{
+							Target: UserPreferencesKey.For(scopeID),
+							Value:  tc.stored,
+						}, nil
+					},
+					SaveFunc: func(_ context.Context, _ *settings.Entry[UserPreferences]) error {
+						return nil
+					},
+				}
+				svc := NewService(Dependencies{Preferences: prefsMock})
+				got, err := svc.UpdateUserPreferences(ctx, userID, tc.req)
+				if tc.wantErr {
+					if err == nil {
+						t.Fatal("expected error, got nil")
+					}
+					if errors.KindOf(err) != tc.wantKind {
+						t.Fatalf("expected kind %v, got %v", tc.wantKind, errors.KindOf(err))
+					}
+					if len(prefsMock.SaveCalls()) != 0 {
+						t.Fatalf("expected Save not to be called, got %d calls", len(prefsMock.SaveCalls()))
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if *got != tc.want {
+					t.Fatalf("got %+v, want %+v", *got, tc.want)
+				}
+				if len(prefsMock.SaveCalls()) != 1 {
+					t.Fatalf("expected 1 Save call, got %d", len(prefsMock.SaveCalls()))
+				}
+			})
 		}
 	})
 }

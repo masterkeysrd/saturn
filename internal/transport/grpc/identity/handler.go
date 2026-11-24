@@ -670,9 +670,18 @@ func (h *Handler) UpdateUserPreferences(ctx context.Context, req *identityv1.Upd
 	prefs, err := h.IAM.Coordinator.UpdateUserPreferences(ctx, &iam.UpdateUserPreferencesRequest{
 		UserID: identity.UserID(principal.Subject),
 		Preferences: identity.UserPreferences{
-			Locale:       pbPrefs.GetLocale(),
-			HourCycle:    pbPrefs.GetHourCycle(),
-			WeekStartsOn: int(pbPrefs.GetWeekStartsOn()),
+			Regional: identity.RegionalUserPreferences{
+				Locale:       pbPrefs.GetRegional().GetLocale(),
+				HourCycle:    pbPrefs.GetRegional().GetHourCycle(),
+				WeekStartsOn: int(pbPrefs.GetRegional().GetWeekStartsOn()),
+			},
+			Mail: identity.MailUserPreferences{
+				AutoLoadRemoteContent: pbPrefs.GetMail().GetAutoLoadRemoteContent(),
+			},
+			Calendar: identity.CalendarUserPreferences{
+				WebView:    pbPrefs.GetCalendar().GetWebView(),
+				MobileView: pbPrefs.GetCalendar().GetMobileView(),
+			},
 		},
 		UpdateMask: req.GetUpdateMask().GetPaths(),
 	})
@@ -688,9 +697,18 @@ func toProtoUserPreferences(p *identity.UserPreferences) *identityv1.UserPrefere
 		return nil
 	}
 	return &identityv1.UserPreferences{
-		Locale:       p.Locale,
-		HourCycle:    p.HourCycle,
-		WeekStartsOn: int32(p.WeekStartsOn),
+		Regional: &identityv1.UserPreferences_Regional{
+			Locale:       p.Regional.Locale,
+			HourCycle:    p.Regional.HourCycle,
+			WeekStartsOn: int32(p.Regional.WeekStartsOn),
+		},
+		Mail: &identityv1.UserPreferences_Mail{
+			AutoLoadRemoteContent: p.Mail.AutoLoadRemoteContent,
+		},
+		Calendar: &identityv1.UserPreferences_Calendar{
+			WebView:    p.Calendar.WebView,
+			MobileView: p.Calendar.MobileView,
+		},
 	}
 }
 

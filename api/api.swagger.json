@@ -1414,7 +1414,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1Calendar"
+              "$ref": "#/definitions/calendarV1Calendar"
             }
           },
           "default": {
@@ -1431,7 +1431,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1Calendar"
+              "$ref": "#/definitions/calendarV1Calendar"
             }
           }
         ],
@@ -1448,7 +1448,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1Calendar"
+              "$ref": "#/definitions/calendarV1Calendar"
             }
           },
           "default": {
@@ -1509,7 +1509,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1Calendar"
+              "$ref": "#/definitions/calendarV1Calendar"
             }
           },
           "default": {
@@ -1533,7 +1533,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1Calendar"
+              "$ref": "#/definitions/calendarV1Calendar"
             }
           }
         ],
@@ -1550,7 +1550,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1Calendar"
+              "$ref": "#/definitions/calendarV1Calendar"
             }
           },
           "default": {
@@ -11110,6 +11110,35 @@
       },
       "description": "AccountInfo wraps minimal account details required for UI listing."
     },
+    "UserPreferencesMail": {
+      "type": "object",
+      "properties": {
+        "autoLoadRemoteContent": {
+          "type": "boolean",
+          "description": "Optional. Whether remote images/external content in emails are loaded automatically."
+        }
+      },
+      "description": "Mail stores user-scoped mail reading and display preferences."
+    },
+    "UserPreferencesRegional": {
+      "type": "object",
+      "properties": {
+        "locale": {
+          "type": "string",
+          "description": "Optional. BCP 47 UI language and regional locale tag (e.g. \"en-US\", \"es-ES\", \"es-419\")."
+        },
+        "hourCycle": {
+          "type": "string",
+          "description": "Optional. Preferred clock hour cycle (\"h12\" for 12-hour, \"h23\" for 24-hour)."
+        },
+        "weekStartsOn": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. Preferred first day of the week (0 = Sunday, 1 = Monday)."
+        }
+      },
+      "description": "Regional stores user-scoped UI language and regional formatting preferences."
+    },
     "WorkflowServiceDisableFlowBody": {
       "type": "object",
       "description": "Request message for WorkflowService.DisableFlow."
@@ -11143,6 +11172,102 @@
     "WorkflowServiceResetFlowBody": {
       "type": "object",
       "description": "Request message for WorkflowService.ResetFlow."
+    },
+    "calendarV1Calendar": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier with prefix `cal_`."
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Space / Workspace ID this calendar belongs to.",
+          "readOnly": true
+        },
+        "connectedAccountId": {
+          "type": "string",
+          "description": "Connected account ID if source is external.",
+          "readOnly": true
+        },
+        "source": {
+          "$ref": "#/definitions/v1CalendarSource",
+          "description": "Origin source of the calendar.",
+          "readOnly": true
+        },
+        "providerCalendarId": {
+          "type": "string",
+          "description": "Provider's external calendar ID.",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the calendar."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional descriptive text."
+        },
+        "color": {
+          "type": "string",
+          "description": "Hex color code tag for events in this calendar."
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA primary timezone identifier."
+        },
+        "accessRole": {
+          "$ref": "#/definitions/v1AccessRole",
+          "description": "Access role of the caller for this calendar.",
+          "readOnly": true
+        },
+        "isPrimary": {
+          "type": "boolean",
+          "description": "True if this is the primary calendar for the connected account.",
+          "readOnly": true
+        },
+        "isEnabled": {
+          "type": "boolean",
+          "description": "Toggle controlling whether events from this calendar are displayed."
+        },
+        "isDefaultNative": {
+          "type": "boolean",
+          "description": "True if this is the default native calendar for the workspace.",
+          "readOnly": true
+        },
+        "lastSyncTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last synchronization timestamp for external calendars.",
+          "readOnly": true
+        },
+        "syncStatus": {
+          "type": "string",
+          "description": "Synchronization health status.",
+          "readOnly": true
+        },
+        "syncError": {
+          "type": "string",
+          "description": "Detailed error message if synchronization failed.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last modification timestamp.",
+          "readOnly": true
+        }
+      },
+      "description": "Calendar resource entity.",
+      "required": [
+        "name"
+      ]
     },
     "googleRpcStatus": {
       "type": "object",
@@ -12922,102 +13047,6 @@
         "FULL"
       ],
       "description": "Scoped resource view options.\n\n - BASIC: Returns basic configuration details without period calculations.\n - FULL: Hydrates complete structure including active period spent statistics."
-    },
-    "v1Calendar": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier with prefix `cal_`."
-        },
-        "spaceId": {
-          "type": "string",
-          "description": "Space / Workspace ID this calendar belongs to.",
-          "readOnly": true
-        },
-        "connectedAccountId": {
-          "type": "string",
-          "description": "Connected account ID if source is external.",
-          "readOnly": true
-        },
-        "source": {
-          "$ref": "#/definitions/v1CalendarSource",
-          "description": "Origin source of the calendar.",
-          "readOnly": true
-        },
-        "providerCalendarId": {
-          "type": "string",
-          "description": "Provider's external calendar ID.",
-          "readOnly": true
-        },
-        "name": {
-          "type": "string",
-          "description": "Display name of the calendar."
-        },
-        "description": {
-          "type": "string",
-          "description": "Optional descriptive text."
-        },
-        "color": {
-          "type": "string",
-          "description": "Hex color code tag for events in this calendar."
-        },
-        "timezone": {
-          "type": "string",
-          "description": "IANA primary timezone identifier."
-        },
-        "accessRole": {
-          "$ref": "#/definitions/v1AccessRole",
-          "description": "Access role of the caller for this calendar.",
-          "readOnly": true
-        },
-        "isPrimary": {
-          "type": "boolean",
-          "description": "True if this is the primary calendar for the connected account.",
-          "readOnly": true
-        },
-        "isEnabled": {
-          "type": "boolean",
-          "description": "Toggle controlling whether events from this calendar are displayed."
-        },
-        "isDefaultNative": {
-          "type": "boolean",
-          "description": "True if this is the default native calendar for the workspace.",
-          "readOnly": true
-        },
-        "lastSyncTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Last synchronization timestamp for external calendars.",
-          "readOnly": true
-        },
-        "syncStatus": {
-          "type": "string",
-          "description": "Synchronization health status.",
-          "readOnly": true
-        },
-        "syncError": {
-          "type": "string",
-          "description": "Detailed error message if synchronization failed.",
-          "readOnly": true
-        },
-        "createTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Creation timestamp.",
-          "readOnly": true
-        },
-        "updateTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Last modification timestamp.",
-          "readOnly": true
-        }
-      },
-      "description": "Calendar resource entity.",
-      "required": [
-        "name"
-      ]
     },
     "v1CalendarSource": {
       "type": "string",
@@ -15279,7 +15308,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1Calendar"
+            "$ref": "#/definitions/calendarV1Calendar"
           },
           "description": "List of calendars belonging to the workspace."
         }
@@ -18987,21 +19016,34 @@
     "v1UserPreferences": {
       "type": "object",
       "properties": {
-        "locale": {
-          "type": "string",
-          "description": "Optional. BCP 47 UI language and regional locale tag (e.g. \"en-US\", \"es-ES\", \"es-419\")."
+        "regional": {
+          "$ref": "#/definitions/UserPreferencesRegional",
+          "description": "Optional. UI language and regional formatting preferences."
         },
-        "hourCycle": {
-          "type": "string",
-          "description": "Optional. Preferred clock hour cycle (\"h12\" for 12-hour, \"h23\" for 24-hour)."
+        "mail": {
+          "$ref": "#/definitions/UserPreferencesMail",
+          "description": "Optional. Mail reading and display preferences."
         },
-        "weekStartsOn": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Optional. Preferred first day of the week (0 = Sunday, 1 = Monday)."
+        "calendar": {
+          "$ref": "#/definitions/v1UserPreferencesCalendar",
+          "description": "Optional. Calendar view preferences per device form factor."
         }
       },
-      "description": "UserPreferences stores user-scoped UI language and regional formatting preferences."
+      "description": "UserPreferences stores user-scoped UI language, regional formatting, mail, and calendar preferences."
+    },
+    "v1UserPreferencesCalendar": {
+      "type": "object",
+      "properties": {
+        "webView": {
+          "type": "string",
+          "description": "Optional. Last selected calendar view on Web (\"day\", \"week\", \"month\", \"agenda\")."
+        },
+        "mobileView": {
+          "type": "string",
+          "description": "Optional. Last selected calendar view on Mobile (\"agenda\", \"day\", \"three_day\", \"week\", \"month\")."
+        }
+      },
+      "description": "Calendar stores user-scoped calendar view preferences per device form factor."
     },
     "v1UserSession": {
       "type": "object",
