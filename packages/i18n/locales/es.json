@@ -3086,6 +3086,9 @@
     "attachmentFallback": "Archivo adjunto",
     "attachmentUploadFailed": "Error al subir el archivo adjunto",
     "attachmentsTitle": "Archivos adjuntos ({count})",
+    "autoLoadDisabledToast": "Las imágenes remotas se bloquearán por defecto",
+    "autoLoadEnabledToast": "Las imágenes remotas se cargarán automáticamente",
+    "autoLoadUpdateFailed": "No se pudo actualizar la preferencia de imágenes remotas",
     "blockByDefault": "(bloquear por defecto)",
     "bucket": {
       "archive": "Archivo",
@@ -3171,6 +3174,7 @@
     "lastSaved": "Guardado por última vez {time}",
     "loadImages": "Cargar imágenes",
     "loadMore": "Cargar más conversaciones",
+    "loadOnce": "Cargar una vez",
     "loadingConversation": "Cargando conversación...",
     "mailboxes": "Buzones",
     "markAsRead": "Marcar como leído",
@@ -3743,6 +3747,13 @@
       "navWorkspaceOAuthApps": "Aplicaciones OAuth del espacio",
       "navWorkspaces": "Espacios de trabajo",
       "title": "Configuración"
+    },
+    "mail": {
+      "autoLoadRemoteContentDesc": "Cargar automáticamente imágenes externas y contenido multimedia remoto al abrir correos.",
+      "autoLoadRemoteContentLabel": "Cargar imágenes remotas automáticamente",
+      "description": "Configura cómo se manejan las imágenes remotas y el contenido externo en los correos.",
+      "saved": "Preferencias de correo actualizadas",
+      "title": "Preferencias de correo"
     },
     "mfa": {
       "btnAdd": "Añadir autenticador",

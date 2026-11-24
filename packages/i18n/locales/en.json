@@ -3086,6 +3086,9 @@
     "attachmentFallback": "Attachment",
     "attachmentUploadFailed": "Attachment upload failed",
     "attachmentsTitle": "Attachments ({count})",
+    "autoLoadDisabledToast": "Remote email images blocked by default",
+    "autoLoadEnabledToast": "Remote email images will now load automatically",
+    "autoLoadUpdateFailed": "Failed to update remote image preference",
     "blockByDefault": "(block by default)",
     "bucket": {
       "archive": "Archive",
@@ -3171,6 +3174,7 @@
     "lastSaved": "Last saved {time}",
     "loadImages": "Load images",
     "loadMore": "Load more conversations",
+    "loadOnce": "Load once",
     "loadingConversation": "Loading conversation...",
     "mailboxes": "Mailboxes",
     "markAsRead": "Mark as read",
@@ -3743,6 +3747,13 @@
       "navWorkspaceOAuthApps": "Workspace OAuth Apps",
       "navWorkspaces": "Workspaces",
       "title": "Settings"
+    },
+    "mail": {
+      "autoLoadRemoteContentDesc": "Automatically load external images and remote media when opening emails.",
+      "autoLoadRemoteContentLabel": "Auto-load remote email images",
+      "description": "Configure how remote images and external email content are handled.",
+      "saved": "Mail preferences updated",
+      "title": "Mail Preferences"
     },
     "mfa": {
       "btnAdd": "Add Authenticator",
