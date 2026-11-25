@@ -798,7 +798,7 @@ export default function FinanceHubScreen() {
               style={styles.budgetStatsCard}
               onPress={() => navigateTo("/(app)/finance/budgets")}
             >
-              {/* Header row: Total Spent / Limit & Percentage Badge */}
+              {/* Header row: Total Spent / Limit */}
               <View style={styles.budgetStatsHeader}>
                 <View style={styles.budgetStatsSpendCol}>
                   <View style={styles.budgetStatsLabelRow}>
@@ -825,32 +825,6 @@ export default function FinanceHubScreen() {
                     </Text>
                   </View>
                 </View>
-
-                <Badge
-                  size="md"
-                  label={`${budgetStats.rawPercentage}%`}
-                  bg={
-                    budgetStats.isOver
-                      ? colors.destructiveSubtle
-                      : budgetStats.isWarning
-                        ? colors.warningSubtle
-                        : colors.primarySubtle
-                  }
-                  border={
-                    budgetStats.isOver
-                      ? "rgba(244, 63, 94, 0.3)"
-                      : budgetStats.isWarning
-                        ? "rgba(245, 158, 11, 0.3)"
-                        : "rgba(56, 189, 248, 0.3)"
-                  }
-                  color={
-                    budgetStats.isOver
-                      ? colors.destructive
-                      : budgetStats.isWarning
-                        ? colors.warning
-                        : colors.primary
-                  }
-                />
               </View>
 
               {/* Progress Bar */}
@@ -1633,7 +1607,6 @@ const createStyles = (t: SaturnMobileTheme) => ({
   budgetStatsSpendCol: {
     flex: 1,
     gap: 2,
-    marginRight: 10,
   },
   budgetStatsLabelRow: {
     flexDirection: "row" as const,
@@ -1717,7 +1690,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     justifyContent: "space-between" as const,
     backgroundColor: t.colors.warningSubtle,
     borderWidth: 1,
-    borderColor: "rgba(245, 158, 11, 0.25)",
+    borderColor: t.colors.warningBorder,
     borderRadius: t.radius.sm,
     paddingHorizontal: 10,
     paddingVertical: 7,
@@ -1726,7 +1699,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   criticalCalloutRowOver: {
     backgroundColor: t.colors.destructiveSubtle,
-    borderColor: "rgba(244, 63, 94, 0.25)",
+    borderColor: t.colors.destructiveBorder,
   },
   criticalCalloutLeft: {
     flexDirection: "row" as const,

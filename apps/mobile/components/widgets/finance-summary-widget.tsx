@@ -25,12 +25,16 @@ import {
   useI18n,
   useTimezone,
 } from "@saturn/hooks"
-import { useSpace } from "@/lib/space-context"
-import { Card } from "@/components/ui/card"
-import { MonoAmount, Caption } from "@/components/ui/typography"
-import { Skeleton } from "@/components/ui/skeleton-loader"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
+import { useSpace } from "../../lib/space-context"
+import { Card } from "../ui/card"
+import { MonoAmount, Caption } from "../ui/typography"
+import { Skeleton } from "../ui/skeleton-loader"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../lib/theme"
+import { haptics } from "../../lib/haptics"
 
 export function FinanceSummaryWidget() {
   const { colors } = useTheme()
@@ -110,7 +114,11 @@ export function FinanceSummaryWidget() {
   const totalSpentCents = insightsData?.spent?.totalSpent || "0"
 
   const currentMonthLabel = useMemo(() => {
-    return tz.format(tz.now(), { month: "short" })
+    return tz.format(tz.now(), {
+      month: "short",
+      year: undefined,
+      day: undefined,
+    })
   }, [tz])
 
   const isLoading =

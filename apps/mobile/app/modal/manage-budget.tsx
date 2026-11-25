@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo } from "react"
 import {
+  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -12,8 +13,9 @@ import {
 } from "react-native"
 import { useRouter, useLocalSearchParams, Stack } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
-import BottomSheet from "@gorhom/bottom-sheet"
-import { X, Trash2, AlertTriangle } from "lucide-react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet"
+import { X, Trash2, AlertTriangle, Pencil } from "lucide-react-native"
 import {
   useCreateBudgetMutation,
   useUpdateBudgetMutation,
@@ -47,25 +49,38 @@ import {
   useCurrencyConversionPreview,
 } from "@saturn/hooks/finance"
 import { useI18n } from "@saturn/hooks"
-import { getLocalizedEnumLabel } from "@saturn/i18n"
-import { useSpace } from "@/lib/space-context"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
-import { Card } from "@/components/ui/card"
-import { TextInput } from "@/components/ui/text-input"
-import { HeroAmountInput } from "@/components/ui/amount-input"
-import { FormPillGroup, FormColorPicker } from "@/components/ui/form-primitives"
-import { Button } from "@/components/ui/button"
-import { useToast } from "@/components/ui/toast"
-import { BUDGET_ICONS, BudgetCategoryIcon } from "@/lib/budget-icons"
+import { getLocalizedEnumLabel, type TranslationKey } from "@saturn/i18n"
+import { useSpace } from "../../lib/space-context"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../lib/theme"
+import { haptics } from "../../lib/haptics"
+import { AppBottomSheet } from "../../components/ui/bottom-sheet"
+import { TextInput } from "../../components/ui/text-input"
+import { HeroAmountInput } from "../../components/ui/amount-input"
+import {
+  FormPillGroup,
+  FormColorPicker,
+} from "../../components/ui/form-primitives"
+import { Button } from "../../components/ui/button"
+import { useToast } from "../../components/ui/toast"
+import { BUDGET_ICONS, BudgetCategoryIcon } from "../../lib/budget-icons"
 import {
   CurrencyPickerSheet,
   AccountPickerSheet,
-} from "@/components/finance/sheets"
-import { AccountCardSelect } from "@/components/finance/account-select"
+} from "../../components/finance/sheets"
+import { AccountCardSelect } from "../../components/finance/account-select"
+
+function getBudgetIconLabelKey(slug: string): TranslationKey {
+  const camel = slug.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase())
+  return `finance.budgets.icons.${camel}` as TranslationKey
+}
 
 export default function ManageBudgetModal() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { activeSpaceId } = useSpace()
   const { id: editBudgetId } = useLocalSearchParams<{ id?: string }>()
   const isEditMode = Boolean(editBudgetId)
@@ -75,18 +90,17 @@ export default function ManageBudgetModal() {
   const { colors, getBudgetColors } = useTheme()
   const styles = useThemedStyles(createStyles)
 
-  // Bottom sheets
   const currencySheetRef = useRef<BottomSheet>(null)
   const accountSheetRef = useRef<BottomSheet>(null)
+  const appearanceSheetRef = useRef<BottomSheet>(null)
+  const [isAppearanceOpen, setIsAppearanceOpen] = useState(false)
 
-  // Fetch settings & base currency
   const { data: settingsData } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )
   const baseCurrency = settingsData?.baseCurrency || "USD"
 
-  // Fetch currencies & accounts
   const { data: currenciesData } = useListCurrenciesQuery(
     {},
     { enabled: !!activeSpaceId, staleTime: 1000 * 60 * 30 }
@@ -102,14 +116,12 @@ export default function ManageBudgetModal() {
     [accountsData?.accounts]
   )
 
-  // Fetch institutions
   const { data: instData } = useListInstitutionsQuery(
     { pageSize: 100, pageToken: "" },
     { enabled: !!activeSpaceId }
   )
   const institutions: Account_InstitutionInfo[] = instData?.institutions || []
 
-  // Fetch existing budget if edit mode
   const { data: existingBudget, isLoading: isBudgetLoading } =
     useGetBudgetQuery(
       { id: editBudgetId || "" },
@@ -133,7 +145,6 @@ export default function ManageBudgetModal() {
     [existingBudget, baseCurrency]
   )
 
-  // RHF Form
   const {
     control,
     handleSubmit,
@@ -151,7 +162,6 @@ export default function ManageBudgetModal() {
     "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
   )
 
-  // Watch form fields in a single tuple
   const [
     limit = "",
     color = "indigo",
@@ -180,7 +190,6 @@ export default function ManageBudgetModal() {
   })
   const conversion = getConversionPreview(limit, currency)
 
-  // Mutations
   const createMutation = useCreateBudgetMutation()
   const updateMutation = useUpdateBudgetMutation()
   const deleteMutation = useDeleteBudgetMutation()
@@ -324,6 +333,18 @@ export default function ManageBudgetModal() {
     )
   }
 
+  const openAppearancePicker = () => {
+    Keyboard.dismiss()
+    haptics.light()
+    setIsAppearanceOpen(true)
+    appearanceSheetRef.current?.expand()
+  }
+
+  const closeAppearancePicker = () => {
+    setIsAppearanceOpen(false)
+    appearanceSheetRef.current?.close()
+  }
+
   if (isEditMode && isBudgetLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -349,25 +370,7 @@ export default function ManageBudgetModal() {
                     onPress: () => router.back(),
                   },
                 ],
-                unstable_headerRightItems: () => [
-                  isSaving
-                    ? {
-                        type: "custom",
-                        hidesSharedBackground: true,
-                        element: (
-                          <ActivityIndicator
-                            size="small"
-                            color={colors.primary}
-                          />
-                        ),
-                      }
-                    : {
-                        type: "button",
-                        label: t("common.save"),
-                        variant: "done",
-                        onPress: () => handleSubmit(onValid)(),
-                      },
-                ],
+                unstable_headerRightItems: () => [],
               }
             : {
                 headerLeft: () => (
@@ -379,22 +382,7 @@ export default function ManageBudgetModal() {
                     <X size={20} color={colors.textMuted} />
                   </TouchableOpacity>
                 ),
-                headerRight: () => (
-                  <TouchableOpacity
-                    onPress={() => handleSubmit(onValid)()}
-                    disabled={isSaving}
-                    style={[styles.headerSaveBtn, isSaving && { opacity: 0.6 }]}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    {isSaving ? (
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    ) : (
-                      <Text style={styles.headerSaveBtnText}>
-                        {t("common.save")}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                ),
+                headerRight: () => null,
               }),
         }}
       />
@@ -407,97 +395,136 @@ export default function ManageBudgetModal() {
           style={styles.container}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {/* Limit Amount Hero Card */}
-          <HeroAmountInput
-            control={control}
-            name="limit"
-            label={t("finance.budgets.mobile.heroLabel").toUpperCase()}
-            currency={currency}
-            currencySymbol={getCurrencySymbol(currency)}
-            currencyDisabled={isEditMode}
-            onPressCurrency={() => {
-              haptics.light()
-              currencySheetRef.current?.expand()
-            }}
-            accentColor={activeColorMeta.bar}
-            containerStyle={{ marginBottom: 0 }}
-          />
+          {/* Top Identity Row: [48x48 Categorical Icon Badge] + Clean Budget Name Input */}
+          <View style={styles.identitySection}>
+            <TouchableOpacity
+              testID="budget-appearance-trigger"
+              accessibilityRole="button"
+              accessibilityLabel={t("finance.budgets.mobile.appearanceSection")}
+              activeOpacity={0.75}
+              onPress={openAppearancePicker}
+              style={[
+                styles.appearanceTrigger,
+                {
+                  backgroundColor: activeColorMeta.bg,
+                  borderColor: activeColorMeta.border,
+                },
+              ]}
+            >
+              <BudgetCategoryIcon
+                icon={icon}
+                size={22}
+                color={activeColorMeta.bar}
+              />
+              <View
+                style={[
+                  styles.appearanceBadgeDot,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Pencil size={9} color={colors.textMuted} />
+              </View>
+            </TouchableOpacity>
 
-          {/* Live Currency Conversion Preview */}
-          {currency !== baseCurrency && conversion ? (
-            <View style={styles.conversionPreviewWrap}>
-              {"amount" in conversion ? (
-                <View style={styles.conversionPreviewRow}>
-                  <Text style={styles.conversionPreviewText}>
+            <View style={styles.nameInputColumn}>
+              <TextInput
+                control={control}
+                name="name"
+                label={t("finance.budgets.sheet.nameLabel")}
+                placeholder={t("finance.budgets.mobile.namePlaceholder")}
+                placeholderTextColor={colors.textMuted}
+                inputContainerStyle={styles.nameInputWrapper}
+                style={styles.nameInput}
+              />
+            </View>
+          </View>
+
+          {/* Target Limit Section (Flat on sheet canvas, hairline top) */}
+          <View style={styles.hairlineSection}>
+            <HeroAmountInput
+              control={control}
+              name="limit"
+              label={t("finance.budgets.mobile.heroLabel")}
+              currency={currency}
+              currencySymbol={getCurrencySymbol(currency)}
+              currencyDisabled={isEditMode}
+              onPressCurrency={() => {
+                haptics.light()
+                currencySheetRef.current?.expand()
+              }}
+              accentColor={activeColorMeta.bar}
+              containerStyle={styles.heroAmountFlat}
+            />
+
+            {currency !== baseCurrency && conversion ? (
+              <View style={styles.conversionInlineWrap}>
+                {"amount" in conversion ? (
+                  <Text style={styles.conversionInlineText}>
                     ≈{" "}
                     {formatAmount(
                       Math.round(conversion.amount * 100),
                       baseCurrency
                     )}{" "}
-                    <Text style={styles.conversionPreviewRate}>
+                    <Text style={styles.conversionInlineRate}>
                       (1 {currency} = {conversion.rate.toFixed(4)}{" "}
                       {baseCurrency})
                     </Text>
                   </Text>
-                </View>
-              ) : (
-                <View style={styles.conversionWarningRow}>
-                  <AlertTriangle size={14} color={colors.warning} />
-                  <Text style={styles.conversionWarningText}>
-                    {conversion.error}
-                  </Text>
-                </View>
-              )}
-            </View>
-          ) : null}
+                ) : (
+                  <View style={styles.conversionWarningInline}>
+                    <AlertTriangle size={13} color={colors.warning} />
+                    <Text style={styles.conversionWarningText}>
+                      {conversion.error}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            ) : null}
+          </View>
 
-          {/* Budget Name Card */}
-          <Card style={styles.sectionCard}>
-            <Text style={styles.sectionHeaderLabel}>
-              {t("finance.budgets.mobile.detailsSection").toUpperCase()}
-            </Text>
-            <TextInput
-              control={control}
-              name="name"
-              label={t("finance.budgets.sheet.nameLabel")}
-              placeholder={t("finance.budgets.mobile.namePlaceholder")}
-              placeholderTextColor={colors.textMuted}
-              containerStyle={{ marginBottom: 16 }}
-            />
-
-            {/* Recurrence Interval */}
-            <Text style={styles.fieldSubLabel}>
+          {/* Period / Recurrence Interval Section */}
+          <View style={styles.hairlineSection}>
+            <Text style={styles.fieldLabel}>
               {t("finance.budgets.mobile.recurrenceFrequency")}
             </Text>
             {isEditMode ? (
-              <View style={styles.intervalRow}>
-                <View
-                  style={[
-                    styles.intervalPill,
-                    styles.intervalPillActive,
-                    {
-                      borderColor: activeColorMeta.bar,
-                      backgroundColor: activeColorMeta.bg,
-                    },
-                  ]}
-                >
-                  <Text
+              <>
+                <View style={styles.intervalRow}>
+                  <View
                     style={[
-                      styles.intervalPillText,
-                      styles.intervalPillTextActive,
-                      { color: activeColorMeta.text },
+                      styles.intervalPill,
+                      styles.intervalPillActive,
+                      {
+                        borderColor: activeColorMeta.bar,
+                        backgroundColor: activeColorMeta.bg,
+                      },
                     ]}
                   >
-                    {getLocalizedEnumLabel(
-                      "finance",
-                      "interval",
-                      interval,
-                      locale
-                    )}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.intervalPillText,
+                        styles.intervalPillTextActive,
+                        { color: activeColorMeta.text },
+                      ]}
+                    >
+                      {getLocalizedEnumLabel(
+                        "finance",
+                        "interval",
+                        interval,
+                        locale
+                      )}
+                    </Text>
+                  </View>
                 </View>
-              </View>
+                <Text style={styles.fieldHelperText}>
+                  {t("finance.budgets.sheet.intervalLockedHelper")}
+                </Text>
+              </>
             ) : (
               <FormPillGroup
                 control={control}
@@ -515,124 +542,14 @@ export default function ManageBudgetModal() {
                 activeBg={activeColorMeta.bg}
                 activeBorder={activeColorMeta.bar}
                 activeTextColor={activeColorMeta.text}
-                pillStyle={{ flex: 1 }}
+                pillStyle={styles.intervalGroupPill}
               />
             )}
+          </View>
 
-            {/* Limit Propagation Rule (Edit mode only) */}
-            {isEditMode && (
-              <>
-                <Text style={[styles.fieldSubLabel, { marginTop: 16 }]}>
-                  {t("finance.budgets.sheet.propagationLabel")}
-                </Text>
-                <View style={styles.intervalRow}>
-                  {PROPAGATION_OPTIONS.map((opt) => {
-                    const isSelected = propagation === opt.value
-                    return (
-                      <TouchableOpacity
-                        key={opt.value}
-                        onPress={() => {
-                          haptics.selection()
-                          setPropagation(opt.value)
-                        }}
-                        style={[
-                          styles.intervalPill,
-                          isSelected && [
-                            styles.intervalPillActive,
-                            { borderColor: activeColorMeta.bar },
-                          ],
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.intervalPillText,
-                            isSelected && [
-                              styles.intervalPillTextActive,
-                              { color: activeColorMeta.text },
-                            ],
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {getLocalizedEnumLabel(
-                            "finance",
-                            "limitPropagation",
-                            opt.value,
-                            locale
-                          )}
-                        </Text>
-                      </TouchableOpacity>
-                    )
-                  })}
-                </View>
-                <Text style={styles.fieldHelperText}>
-                  {propagation === "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
-                    ? t("finance.budgets.mobile.propagationHelperFuture")
-                    : t("finance.budgets.mobile.propagationHelperCurrent")}
-                </Text>
-              </>
-            )}
-
-            {/* Lifecycle Status (Edit mode only) */}
-            {isEditMode && (
-              <>
-                <Text style={[styles.fieldSubLabel, { marginTop: 16 }]}>
-                  {t("finance.budgets.sheet.statusLabel")}
-                </Text>
-                <FormPillGroup
-                  control={control}
-                  name="status"
-                  options={[
-                    {
-                      value: "ACTIVE" as Budget_Status,
-                      label: getLocalizedEnumLabel(
-                        "finance",
-                        "status",
-                        "ACTIVE",
-                        locale
-                      ),
-                      activeBorder: activeColorMeta.bar,
-                      activeBg: activeColorMeta.bg,
-                      activeTextColor: activeColorMeta.text,
-                    },
-                    {
-                      value: "PAUSED" as Budget_Status,
-                      label: getLocalizedEnumLabel(
-                        "finance",
-                        "status",
-                        "PAUSED",
-                        locale
-                      ),
-                      activeBorder: colors.warning,
-                      activeBg: colors.warningSubtle,
-                      activeTextColor: colors.warning,
-                    },
-                    {
-                      value: "CLOSED" as Budget_Status,
-                      label: getLocalizedEnumLabel(
-                        "finance",
-                        "status",
-                        "CLOSED",
-                        locale
-                      ),
-                      activeBorder: colors.destructive,
-                      activeBg: colors.destructiveSubtle,
-                      activeTextColor: colors.destructive,
-                    },
-                  ]}
-                  pillStyle={{ flex: 1 }}
-                />
-                <Text style={styles.fieldHelperText}>
-                  {status === "ACTIVE"
-                    ? t("finance.budgets.mobile.statusHelperActive")
-                    : status === "PAUSED"
-                      ? t("finance.budgets.mobile.statusHelperPaused")
-                      : t("finance.budgets.mobile.statusHelperClosed")}
-                </Text>
-              </>
-            )}
-
-            {/* Default Account Selector */}
-            <Text style={[styles.fieldSubLabel, { marginTop: 16 }]}>
+          {/* Default Account Section */}
+          <View style={styles.hairlineSection}>
+            <Text style={styles.fieldLabel}>
               {t("finance.budgets.mobile.defaultAccountOptional")}
             </Text>
             <AccountCardSelect
@@ -644,104 +561,128 @@ export default function ManageBudgetModal() {
               placeholder={t("finance.budgets.mobile.anyAccountPlaceholder")}
               subtitle={t("finance.budgets.mobile.anyAccountSubtitle")}
             />
-          </Card>
+          </View>
 
-          {/* Color & Icon Customization Card */}
-          <Card style={styles.sectionCard}>
-            <Text style={styles.sectionHeaderLabel}>
-              {t("finance.budgets.mobile.appearanceSection").toUpperCase()}
-            </Text>
-
-            {/* Color Palette */}
-            <Text style={styles.fieldSubLabel}>
-              {t("finance.budgets.mobile.colorAccent")}
-            </Text>
-            <FormColorPicker
-              control={control}
-              name="color"
-              getColorHex={(c) => getBudgetColors(c).bar}
-              containerStyle={{ marginBottom: 18 }}
-            />
-
-            {/* Category Icon */}
-            <View style={styles.iconHeaderRow}>
-              <Text style={styles.fieldSubLabel}>
-                {t("finance.budgets.mobile.categoryIcon")}
+          {/* Edit Mode: Limit Propagation Rule */}
+          {isEditMode ? (
+            <View style={styles.hairlineSection}>
+              <Text style={styles.fieldLabel}>
+                {t("finance.budgets.sheet.propagationLabel")}
               </Text>
-              <View
-                style={[
-                  styles.iconPreviewBadge,
+              <View style={styles.intervalRow}>
+                {PROPAGATION_OPTIONS.map((opt) => {
+                  const isSelected = propagation === opt.value
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      onPress={() => {
+                        haptics.selection()
+                        setPropagation(opt.value)
+                      }}
+                      style={[
+                        styles.intervalPill,
+                        isSelected && [
+                          styles.intervalPillActive,
+                          {
+                            borderColor: activeColorMeta.bar,
+                            backgroundColor: activeColorMeta.bg,
+                          },
+                        ],
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.intervalPillText,
+                          isSelected && [
+                            styles.intervalPillTextActive,
+                            { color: activeColorMeta.text },
+                          ],
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {getLocalizedEnumLabel(
+                          "finance",
+                          "limitPropagation",
+                          opt.value,
+                          locale
+                        )}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+              <Text style={styles.fieldHelperText}>
+                {propagation === "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
+                  ? t("finance.budgets.mobile.propagationHelperFuture")
+                  : t("finance.budgets.mobile.propagationHelperCurrent")}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Edit Mode: Lifecycle Status */}
+          {isEditMode ? (
+            <View style={styles.hairlineSection}>
+              <Text style={styles.fieldLabel}>
+                {t("finance.budgets.sheet.statusLabel")}
+              </Text>
+              <FormPillGroup
+                control={control}
+                name="status"
+                options={[
                   {
-                    backgroundColor: activeColorMeta.bg,
-                    borderColor: activeColorMeta.border,
+                    value: "ACTIVE" as Budget_Status,
+                    label: getLocalizedEnumLabel(
+                      "finance",
+                      "status",
+                      "ACTIVE",
+                      locale
+                    ),
+                    activeBorder: activeColorMeta.bar,
+                    activeBg: activeColorMeta.bg,
+                    activeTextColor: activeColorMeta.text,
+                  },
+                  {
+                    value: "PAUSED" as Budget_Status,
+                    label: getLocalizedEnumLabel(
+                      "finance",
+                      "status",
+                      "PAUSED",
+                      locale
+                    ),
+                    activeBorder: colors.warning,
+                    activeBg: colors.warningSubtle,
+                    activeTextColor: colors.warning,
+                  },
+                  {
+                    value: "CLOSED" as Budget_Status,
+                    label: getLocalizedEnumLabel(
+                      "finance",
+                      "status",
+                      "CLOSED",
+                      locale
+                    ),
+                    activeBorder: colors.destructive,
+                    activeBg: colors.destructiveSubtle,
+                    activeTextColor: colors.destructive,
                   },
                 ]}
-              >
-                <BudgetCategoryIcon
-                  icon={icon}
-                  size={18}
-                  color={activeColorMeta.bar}
-                />
-                <Text
-                  style={[
-                    styles.iconPreviewText,
-                    { color: activeColorMeta.text },
-                  ]}
-                >
-                  {icon}
-                </Text>
-              </View>
+                pillStyle={styles.intervalGroupPill}
+              />
+              <Text style={styles.fieldHelperText}>
+                {status === "ACTIVE"
+                  ? t("finance.budgets.mobile.statusHelperActive")
+                  : status === "PAUSED"
+                    ? t("finance.budgets.mobile.statusHelperPaused")
+                    : t("finance.budgets.mobile.statusHelperClosed")}
+              </Text>
             </View>
+          ) : null}
 
-            <View style={styles.iconGrid}>
-              {Object.keys(BUDGET_ICONS).map((iconSlug) => {
-                const IconComp = BUDGET_ICONS[iconSlug]
-                const isSelected = icon === iconSlug
-                return (
-                  <TouchableOpacity
-                    key={iconSlug}
-                    onPress={() => {
-                      haptics.selection()
-                      setValue("icon", iconSlug, { shouldValidate: true })
-                    }}
-                    style={[
-                      styles.iconGridItem,
-                      isSelected && [
-                        styles.iconGridItemActive,
-                        {
-                          backgroundColor: activeColorMeta.bg,
-                          borderColor: activeColorMeta.bar,
-                        },
-                      ],
-                    ]}
-                  >
-                    <IconComp
-                      size={20}
-                      color={
-                        isSelected ? activeColorMeta.bar : colors.textMuted
-                      }
-                    />
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
-          </Card>
-
-          {/* Action Footer */}
-          <View style={styles.actionFooter}>
-            <Button
-              onPress={handleSubmit(onValid)}
-              loading={isSaving}
-              variant="primary"
-              size="lg"
-            >
-              {isEditMode
-                ? t("finance.budgets.sheet.editSubmit")
-                : t("finance.budgets.mobile.createSubmit")}
-            </Button>
-
-            {isEditMode && (
+          {/* Edit Mode: Delete Action */}
+          {isEditMode ? (
+            <View style={styles.hairlineSection}>
               <TouchableOpacity
+                testID="budget-delete-button"
                 onPress={handleDelete}
                 disabled={isDeleting}
                 style={styles.deleteBtn}
@@ -757,10 +698,101 @@ export default function ManageBudgetModal() {
                   </>
                 )}
               </TouchableOpacity>
-            )}
-          </View>
+            </View>
+          ) : null}
         </ScrollView>
+
+        {/* Single Pinned Sticky Footer */}
+        <View
+          style={[
+            styles.stickyFooter,
+            { paddingBottom: Math.max(insets.bottom, 12) },
+          ]}
+        >
+          <Button
+            testID="budget-save-button"
+            onPress={handleSubmit(onValid)}
+            loading={isSaving}
+            variant="primary"
+            style={styles.saveBtn}
+          >
+            {isEditMode
+              ? t("finance.budgets.sheet.editSubmit")
+              : t("finance.budgets.mobile.createSubmit")}
+          </Button>
+        </View>
       </KeyboardAvoidingView>
+
+      {/* Appearance Picker Bottom Sheet */}
+      <AppBottomSheet
+        ref={appearanceSheetRef}
+        title={t("finance.budgets.mobile.appearanceSection")}
+        snapPoints={["62%"]}
+        onClose={() => setIsAppearanceOpen(false)}
+      >
+        {isAppearanceOpen ? (
+          <BottomSheetScrollView
+            testID="budget-appearance-picker"
+            contentContainerStyle={[
+              styles.appearanceSheetContent,
+              { paddingBottom: Math.max(insets.bottom, 24) },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={styles.fieldLabel}>
+              {t("finance.budgets.mobile.colorAccent")}
+            </Text>
+            <FormColorPicker
+              control={control}
+              name="color"
+              getColorHex={(c) => getBudgetColors(c).bar}
+              containerStyle={styles.colorPickerWrap}
+            />
+
+            <View style={styles.appearanceDivider} />
+
+            <Text style={styles.fieldLabel}>
+              {t("finance.budgets.mobile.categoryIcon")}
+            </Text>
+            <View style={styles.iconGrid}>
+              {Object.keys(BUDGET_ICONS).map((iconSlug) => {
+                const isSelected = icon === iconSlug
+                return (
+                  <TouchableOpacity
+                    key={iconSlug}
+                    testID={`budget-icon-option-${iconSlug}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(getBudgetIconLabelKey(iconSlug))}
+                    onPress={() => {
+                      haptics.selection()
+                      setValue("icon", iconSlug, { shouldValidate: true })
+                      closeAppearancePicker()
+                    }}
+                    style={[
+                      styles.iconGridItem,
+                      isSelected && [
+                        styles.iconGridItemActive,
+                        {
+                          backgroundColor: activeColorMeta.bg,
+                          borderColor: activeColorMeta.bar,
+                        },
+                      ],
+                    ]}
+                  >
+                    <BudgetCategoryIcon
+                      icon={iconSlug}
+                      size={20}
+                      color={
+                        isSelected ? activeColorMeta.bar : colors.textMuted
+                      }
+                    />
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+          </BottomSheetScrollView>
+        ) : null}
+      </AppBottomSheet>
 
       {/* Currency Picker Bottom Sheet */}
       <CurrencyPickerSheet
@@ -805,111 +837,109 @@ const createStyles = (t: SaturnMobileTheme) => ({
     backgroundColor: t.colors.background,
   },
   content: {
-    padding: 16,
-    paddingBottom: 48,
-    gap: 16,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 32,
   },
   headerBtn: {
     padding: 8,
   },
-  headerSaveBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: t.colors.primary,
-    borderRadius: t.radius.md,
+  identitySection: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 12,
+    paddingBottom: 16,
   },
-  headerSaveBtnText: {
-    fontSize: 14,
-    fontWeight: "700" as const,
-    color: t.colors.primaryForeground,
-  },
-  amountCard: {
-    padding: 16,
-    backgroundColor: t.colors.surfaceElevated,
-    borderRadius: t.radius.xl,
+  appearanceTrigger: {
+    width: 48,
+    height: 48,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
-    borderColor: t.colors.border,
-  },
-  sectionHeaderLabel: {
-    fontSize: 11,
-    fontWeight: "700" as const,
-    color: t.colors.textMuted,
-    letterSpacing: 0.6,
-    marginBottom: 10,
-  },
-  amountInputRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-  },
-  currencySymbol: {
-    fontSize: 32,
-    fontWeight: "800" as const,
-    marginRight: 6,
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-    flexShrink: 0,
-  },
-  amountInputContainer: {
-    flex: 1,
-    marginVertical: 0,
-  },
-  amountInputWrapper: {
-    backgroundColor: "transparent",
-    borderWidth: 0,
-    paddingHorizontal: 0,
-  },
-  amountInput: {
-    fontSize: 32,
-    fontWeight: "800" as const,
-    padding: 0,
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-  },
-  currencySelectButton: {
-    flexDirection: "row" as const,
     alignItems: "center" as const,
     justifyContent: "center" as const,
+    marginTop: 22,
+    position: "relative" as const,
     flexShrink: 0,
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: t.radius.md,
-    backgroundColor: t.colors.surfaceSubtle,
+  },
+  appearanceBadgeDot: {
+    position: "absolute" as const,
+    right: -4,
+    bottom: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     borderWidth: 1,
-    borderColor: t.colors.border,
-    minWidth: 68,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
-  currencySelectButtonDisabled: {
-    opacity: 0.75,
-    minWidth: 52,
+  nameInputColumn: {
+    flex: 1,
+    minWidth: 0,
   },
-  currencySelectCode: {
-    fontSize: 13,
-    fontWeight: "700" as const,
-    color: t.colors.textPrimary,
-    flexShrink: 0,
+  nameInputWrapper: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: t.colors.border,
+    borderRadius: 0,
+    paddingHorizontal: 0,
+    minHeight: 42,
   },
-  errorText: {
+  nameInput: {
+    fontSize: 18,
+    fontWeight: "600" as const,
+    paddingVertical: 6,
+  },
+  hairlineSection: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: t.colors.border,
+    paddingVertical: 16,
+  },
+  heroAmountFlat: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    borderRadius: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    marginBottom: 0,
+  },
+  conversionInlineWrap: {
+    marginTop: 8,
+  },
+  conversionInlineText: {
     fontSize: 12,
-    color: t.colors.destructive,
-    marginTop: 6,
-  },
-  sectionCard: {
-    padding: 16,
-    backgroundColor: t.colors.surfaceElevated,
-    borderRadius: t.radius.xl,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-  },
-  fieldSubLabel: {
-    fontSize: 13,
     fontWeight: "600" as const,
     color: t.colors.textSecondary,
-    marginBottom: 8,
+  },
+  conversionInlineRate: {
+    fontSize: 12,
+    fontWeight: "400" as const,
+    color: t.colors.textMuted,
+  },
+  conversionWarningInline: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+  },
+  conversionWarningText: {
+    fontSize: 12,
+    color: t.colors.warning,
+    flex: 1,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: "500" as const,
+    color: t.colors.textSecondary,
+    marginBottom: 10,
   },
   fieldHelperText: {
     fontSize: 12,
     color: t.colors.textMuted,
-    marginTop: 6,
+    marginTop: 8,
     lineHeight: 16,
+  },
+  intervalGroupPill: {
+    flex: 1,
   },
   intervalRow: {
     flexDirection: "row" as const,
@@ -936,60 +966,44 @@ const createStyles = (t: SaturnMobileTheme) => ({
   intervalPillTextActive: {
     fontWeight: "700" as const,
   },
-  selectorRow: {
+  deleteBtn: {
     flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "space-between" as const,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: t.radius.md,
-    backgroundColor: t.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-  },
-  selectorLeft: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 10,
-    flex: 1,
-  },
-  selectorIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: t.colors.primarySubtle,
     alignItems: "center" as const,
     justifyContent: "center" as const,
+    gap: 8,
+    paddingVertical: 13,
+    borderRadius: t.radius.md,
+    borderWidth: 1,
+    borderColor: t.colors.destructiveBorder,
+    backgroundColor: t.colors.destructiveSubtle,
   },
-  selectorValueText: {
+  deleteBtnText: {
     fontSize: 14,
     fontWeight: "600" as const,
-    color: t.colors.textPrimary,
-    flex: 1,
+    color: t.colors.destructive,
   },
-  selectorPlaceholder: {
-    color: t.colors.textMuted,
-    fontWeight: "400" as const,
+  stickyFooter: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    backgroundColor: t.colors.background,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: t.colors.border,
   },
-  iconHeaderRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "space-between" as const,
-    marginBottom: 10,
+  saveBtn: {
+    height: 48,
+    width: "100%" as const,
   },
-  iconPreviewBadge: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: t.radius.full,
-    borderWidth: 1,
+  appearanceSheetContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
-  iconPreviewText: {
-    fontSize: 12,
-    fontWeight: "600" as const,
-    textTransform: "capitalize" as const,
+  colorPickerWrap: {
+    marginBottom: 16,
+  },
+  appearanceDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: t.colors.border,
+    marginBottom: 16,
   },
   iconGrid: {
     flexDirection: "row" as const,
@@ -1008,64 +1022,5 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   iconGridItemActive: {
     borderWidth: 1.5,
-  },
-  actionFooter: {
-    marginTop: 8,
-    gap: 12,
-  },
-  deleteBtn: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: t.radius.lg,
-    borderWidth: 1,
-    borderColor: "rgba(244, 63, 94, 0.3)",
-    backgroundColor: t.colors.destructiveSubtle,
-  },
-  deleteBtnText: {
-    fontSize: 14,
-    fontWeight: "600" as const,
-    color: t.colors.destructive,
-  },
-  conversionPreviewWrap: {
-    marginTop: -8,
-    marginBottom: 16,
-    paddingHorizontal: 4,
-  },
-  conversionPreviewRow: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: t.radius.md,
-    backgroundColor: t.colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-  },
-  conversionPreviewText: {
-    fontSize: 13,
-    fontWeight: "600" as const,
-    color: t.colors.textPrimary,
-  },
-  conversionPreviewRate: {
-    fontSize: 12,
-    fontWeight: "400" as const,
-    color: t.colors.textMuted,
-  },
-  conversionWarningRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: t.radius.md,
-    backgroundColor: t.colors.warningSubtle,
-    borderWidth: 1,
-    borderColor: "rgba(245, 158, 11, 0.3)",
-  },
-  conversionWarningText: {
-    fontSize: 12,
-    color: t.colors.warning,
-    flex: 1,
   },
 })

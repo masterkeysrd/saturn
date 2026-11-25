@@ -9,39 +9,25 @@ import type {
   Account,
   Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { MonoAmount } from "@/components/ui/typography"
-import { haptics } from "@/lib/haptics"
+import { useThemedStyles, type SaturnMobileTheme } from "../../lib/theme"
+import { MonoAmount } from "../ui/typography"
+import { haptics } from "../../lib/haptics"
 
-interface CardAccountTheme {
+export interface CardAccountTheme {
   accentDark: string
   accentLight: string
   border: string
   textColor: string
 }
 
-function getCardTheme(colorName?: string): CardAccountTheme {
-  switch (colorName) {
-    case "emerald":
+export function getCardTheme(colorName?: string): CardAccountTheme {
+  switch (colorName?.toLowerCase()) {
+    case "teal":
       return {
-        accentDark: "#064e3b",
-        accentLight: "#10b981",
-        border: "rgba(16, 185, 129, 0.35)",
-        textColor: "#34d399",
-      }
-    case "rose":
-      return {
-        accentDark: "#4c0519",
-        accentLight: "#f43f5e",
-        border: "rgba(244, 63, 94, 0.35)",
-        textColor: "#fb7185",
-      }
-    case "amber":
-      return {
-        accentDark: "#451a03",
-        accentLight: "#f59e0b",
-        border: "rgba(245, 158, 11, 0.35)",
-        textColor: "#fbbf24",
+        accentDark: "#042f2e",
+        accentLight: "#0d9488",
+        border: "rgba(13, 148, 136, 0.35)",
+        textColor: "#2dd4bf",
       }
     case "sky":
       return {
@@ -50,12 +36,69 @@ function getCardTheme(colorName?: string): CardAccountTheme {
         border: "rgba(14, 165, 233, 0.35)",
         textColor: "#38bdf8",
       }
+    case "blue":
+      return {
+        accentDark: "#172554",
+        accentLight: "#3b82f6",
+        border: "rgba(59, 130, 246, 0.35)",
+        textColor: "#60a5fa",
+      }
     case "violet":
       return {
         accentDark: "#2e1065",
         accentLight: "#8b5cf6",
         border: "rgba(139, 92, 246, 0.35)",
         textColor: "#a78bfa",
+      }
+    case "plum":
+      return {
+        accentDark: "#3b0764",
+        accentLight: "#a855f7",
+        border: "rgba(168, 85, 247, 0.35)",
+        textColor: "#c084fc",
+      }
+    case "pink":
+      return {
+        accentDark: "#500724",
+        accentLight: "#ec4899",
+        border: "rgba(236, 72, 153, 0.35)",
+        textColor: "#f472b6",
+      }
+    case "coral":
+    case "rose":
+      return {
+        accentDark: "#4c0519",
+        accentLight: "#f43f5e",
+        border: "rgba(244, 63, 94, 0.35)",
+        textColor: "#fb7185",
+      }
+    case "orange":
+      return {
+        accentDark: "#431407",
+        accentLight: "#f97316",
+        border: "rgba(249, 115, 22, 0.35)",
+        textColor: "#fb923c",
+      }
+    case "amber":
+      return {
+        accentDark: "#451a03",
+        accentLight: "#f59e0b",
+        border: "rgba(245, 158, 11, 0.35)",
+        textColor: "#fbbf24",
+      }
+    case "lime":
+      return {
+        accentDark: "#1a2e05",
+        accentLight: "#84cc16",
+        border: "rgba(132, 204, 22, 0.35)",
+        textColor: "#a3e635",
+      }
+    case "emerald":
+      return {
+        accentDark: "#064e3b",
+        accentLight: "#10b981",
+        border: "rgba(16, 185, 129, 0.35)",
+        textColor: "#34d399",
       }
     case "indigo":
     default:

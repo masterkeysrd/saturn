@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native"
 import { useRouter } from "expo-router"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import {
@@ -59,6 +60,7 @@ import { AppBottomSheet } from "@/components/ui/bottom-sheet"
 
 export default function TransactionsScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
   const { t } = useI18n()
@@ -281,16 +283,36 @@ export default function TransactionsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Search & Filter Header */}
-      <View style={styles.headerBlock}>
+      {/* Unified Safe-Area Search & Filter Top Bar */}
+      <View
+        style={[
+          styles.headerBlock,
+          { paddingTop: Math.max(insets.top, 8) + 4 },
+        ]}
+      >
         <View style={styles.searchBarRow}>
+          <TouchableOpacity
+            testID="transactions-back-btn"
+            accessibilityRole="button"
+            accessibilityLabel={t("common.back")}
+            style={styles.backButton}
+            activeOpacity={0.7}
+            onPress={() => {
+              haptics.light()
+              router.back()
+            }}
+          >
+            <ChevronLeft size={20} color={colors.textPrimary} />
+          </TouchableOpacity>
+
           <View style={styles.searchWrapper}>
             <BaseTextInput
               placeholder={t("finance.transactions.list.searchPlaceholder")}
               value={search}
               onChangeText={setSearch}
-              leftIcon={<Search size={18} color={colors.textMuted} />}
-              inputContainerStyle={{ minHeight: 44 }}
+              leftIcon={<Search size={17} color={colors.textMuted} />}
+              inputContainerStyle={{ minHeight: 40, height: 40 }}
+              style={{ paddingVertical: 0 }}
             />
           </View>
 
@@ -802,25 +824,35 @@ const createStyles = (t: SaturnMobileTheme) => ({
     backgroundColor: t.colors.background,
   },
   headerBlock: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: 12,
+    paddingTop: 8,
     paddingBottom: 8,
-    gap: 10,
+    gap: 8,
     backgroundColor: t.colors.background,
   },
   searchBarRow: {
     flexDirection: "row" as const,
-    gap: 10,
+    gap: 8,
     alignItems: "center" as const,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surface,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   searchWrapper: {
     flex: 1,
   },
   filterButton: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: t.radius.md,
-    backgroundColor: t.colors.surfaceElevated,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
     borderColor: t.colors.border,
     alignItems: "center" as const,
@@ -976,6 +1008,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   transactionCardWrapper: {
     padding: 0,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+    ...(!t.isDark ? t.shadows.sm : {}),
     overflow: "hidden" as const,
     marginBottom: 8,
   },

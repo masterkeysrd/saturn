@@ -923,10 +923,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   summaryCard: {
     padding: 14,
-    borderRadius: t.radius.xl,
-    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
     borderColor: t.colors.border,
+    ...(!t.isDark ? t.shadows.sm : {}),
     gap: 4,
   },
   summaryCardHeader: {
@@ -955,10 +956,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   netCard: {
     padding: 14,
-    borderRadius: t.radius.xl,
-    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
     borderColor: t.colors.border,
+    ...(!t.isDark ? t.shadows.sm : {}),
   },
   netCardContent: {
     flexDirection: "row" as const,
@@ -1017,10 +1019,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   borrowingCard: {
     padding: 14,
-    borderRadius: t.radius.xl,
-    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
     borderColor: t.colors.border,
+    ...(!t.isDark ? t.shadows.sm : {}),
     gap: 12,
   },
   cardHeaderRow: {
@@ -1109,7 +1112,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
   progressBarTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: t.colors.border,
+    backgroundColor: t.colors.surfaceHighlight,
     overflow: "hidden" as const,
   },
   progressBarFill: {

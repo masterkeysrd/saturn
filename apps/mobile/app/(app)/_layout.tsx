@@ -99,9 +99,7 @@ export default function AppLayout() {
       <Stack.Screen
         name="finance/transactions/index"
         options={{
-          headerShown: true,
-          headerTitle: t("nav.transactions"),
-          headerBackTitle: t("nav.finance"),
+          headerShown: false,
         }}
       />
       <Stack.Screen

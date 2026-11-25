@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -12,21 +11,18 @@ import {
 } from "react-native"
 import { useRouter, Stack } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   PiggyBank,
-  Calendar,
   Plus,
-  Sparkles,
-  PieChart,
   Search,
   X,
-  CreditCard,
   AlertTriangle,
   MoreVertical,
 } from "lucide-react-native"
 import { Icon } from "@expo/ui"
-import { ActionMenu } from "@/components/ui/action-menu"
-import { formatAmount, parseDate } from "@saturn/core"
+import { ActionMenu } from "../../../components/ui/action-menu"
+import { convertCentsToBase, formatAmount, parseDate } from "@saturn/core"
 import {
   useListBudgetsQuery,
   useGetSettingsQuery,
@@ -37,20 +33,28 @@ import {
   type Budget_Status,
   type Account,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { invalidateFinanceQueries, useI18n, useTimezone } from "@saturn/hooks"
+import {
+  invalidateFinanceQueries,
+  useCurrencyConversionPreview,
+  useI18n,
+  useTimezone,
+} from "@saturn/hooks"
 import { getLocalizedIntervalLabel, type TranslationKey } from "@saturn/i18n"
-import { useSpace } from "@/lib/space-context"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { getBudgetIcon } from "@/lib/budget-icons"
-import { Card } from "@/components/ui/card"
-import { Caption, MonoAmount } from "@/components/ui/typography"
-import { Badge } from "@/components/ui/badge"
-import { SkeletonCard } from "@/components/ui/skeleton-loader"
-import { EmptyState } from "@/components/ui/empty-state"
-import { useToast } from "@/components/ui/toast"
-import { haptics } from "@/lib/haptics"
+import { useSpace } from "../../../lib/space-context"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../../lib/theme"
+import { BudgetCategoryIcon } from "../../../lib/budget-icons"
+import { Card } from "../../../components/ui/card"
+import { MonoAmount } from "../../../components/ui/typography"
+import { SkeletonCard } from "../../../components/ui/skeleton-loader"
+import { EmptyState } from "../../../components/ui/empty-state"
+import { QuickCaptureFab } from "../../../components/ui/quick-capture-sheet"
+import { useToast } from "../../../components/ui/toast"
+import { haptics } from "../../../lib/haptics"
 
-// Cross-platform menu icons
 const detailsIcon = Icon.select({
   ios: "info.circle",
   android: require("@expo/material-symbols/info.xml"),
@@ -100,8 +104,30 @@ const STATUS_ACTION_KEYS: Record<BudgetStatusAction, TranslationKey> = {
   Reopened: "finance.budgets.mobile.statusAction.Reopened",
 }
 
+export function computeBudgetPacePercent(
+  budget: Budget,
+  now: Date
+): number | null {
+  if (budget.interval === "ONE_TIME" || budget.status === "CLOSED") {
+    return null
+  }
+  const period = budget.currentPeriod
+  if (!period?.startDate || !period?.endDate) {
+    return null
+  }
+  const startMs = new Date(period.startDate).getTime()
+  const endMs = new Date(period.endDate).getTime()
+  const totalMs = endMs - startMs
+  if (isNaN(startMs) || isNaN(endMs) || totalMs <= 0) {
+    return null
+  }
+  const raw = ((now.getTime() - startMs) / totalMs) * 100
+  return Math.min(Math.max(raw, 0), 100)
+}
+
 export default function BudgetsScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
   const { t, locale } = useI18n()
@@ -113,16 +139,21 @@ export default function BudgetsScreen() {
   const [statusFilter, setStatusFilter] = useState<
     "ACTIVE" | "PAUSED" | "CLOSED" | "ALL"
   >("ACTIVE")
+  const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
 
-  // Fetch settings & base currency
   const { data: settingsData } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )
   const baseCurrency = settingsData?.baseCurrency || "USD"
 
-  // Fetch accounts to resolve default accounts
+  const { exchangeRates } = useCurrencyConversionPreview({
+    spaceId: activeSpaceId || undefined,
+    enabled: !!activeSpaceId,
+    baseCurrency,
+  })
+
   const { data: accountsData } = useListAccountsQuery(
     { activeOnly: false },
     { enabled: !!activeSpaceId }
@@ -139,17 +170,17 @@ export default function BudgetsScreen() {
     return map
   }, [accounts])
 
-  const statusesParam = useMemo<Budget_Status[]>(() => {
-    if (statusFilter === "ALL") return ["ACTIVE", "PAUSED", "CLOSED"]
-    return [statusFilter]
-  }, [statusFilter])
-
   const {
     data: budgetsData,
     isLoading,
     refetch,
   } = useListBudgetsQuery(
-    { pageSize: 100, pageToken: "", view: "FULL", statuses: statusesParam },
+    {
+      pageSize: 100,
+      pageToken: "",
+      view: "FULL",
+      statuses: ["ACTIVE", "PAUSED", "CLOSED"],
+    },
     { enabled: !!activeSpaceId }
   )
 
@@ -161,53 +192,119 @@ export default function BudgetsScreen() {
   const updateMutation = useUpdateBudgetMutation()
   const deleteMutation = useDeleteBudgetMutation()
 
-  // Summary Metrics across active budgets in base currency
-  const { totalLimitBaseCents, totalSpentBaseCents, activeBudgetsCount } =
-    useMemo(() => {
-      let totalLimit = 0
-      let totalSpent = 0
-      let activeCount = 0
+  const statusCounts = useMemo(() => {
+    let active = 0
+    let paused = 0
+    let closed = 0
+    for (const b of budgets) {
+      if (b.status === "PAUSED") paused++
+      else if (b.status === "CLOSED") closed++
+      else active++
+    }
+    return { active, paused, closed, all: budgets.length }
+  }, [budgets])
 
-      budgets.forEach((b) => {
-        const isActive = b.status === "ACTIVE" || !b.status
-        if (!isActive) return
-        activeCount++
+  const summaryStats = useMemo(() => {
+    const now = tz.now()
+    let totalLimitBaseCents = 0
+    let totalSpentBaseCents = 0
+    let activeBudgetsCount = 0
+    let onTrackCount = 0
+    let aheadOfPaceCount = 0
+    let weightedPaceSum = 0
+    let paceWeightTotal = 0
 
-        // Limit in base currency
-        if (b.currentPeriod?.limitInBase) {
-          totalLimit += Number(b.currentPeriod.limitInBase)
-        } else {
-          totalLimit += Number(b.limitAmount || "0")
-        }
+    for (const b of budgets) {
+      const isActive = b.status === "ACTIVE" || !b.status
+      if (!isActive) continue
+      activeBudgetsCount++
 
-        // Spent in base currency
-        if (b.currentPeriod?.spentInBase) {
-          totalSpent += Number(b.currentPeriod.spentInBase)
-        } else if (b.currentPeriod?.spentAmount) {
-          totalSpent += Number(b.currentPeriod.spentAmount)
-        }
-      })
+      const limitBase = b.currentPeriod?.limitInBase
+        ? Number(b.currentPeriod.limitInBase)
+        : convertCentsToBase(
+            b.limitAmount,
+            b.currency,
+            baseCurrency,
+            exchangeRates
+          )
 
-      return {
-        totalLimitBaseCents: totalLimit,
-        totalSpentBaseCents: totalSpent,
-        activeBudgetsCount: activeCount,
+      const spentBase = b.currentPeriod?.spentInBase
+        ? Number(b.currentPeriod.spentInBase)
+        : convertCentsToBase(
+            b.currentPeriod?.spentAmount || 0,
+            b.currency,
+            baseCurrency,
+            exchangeRates
+          )
+
+      totalLimitBaseCents += limitBase
+      totalSpentBaseCents += spentBase
+
+      const limitLocal = Number(b.limitAmount || "0")
+      const spentLocal = Number(b.currentPeriod?.spentAmount || "0")
+      const actualLocalPct =
+        limitLocal > 0 ? (spentLocal / limitLocal) * 100 : 0
+      const pacePct = computeBudgetPacePercent(b, now)
+
+      if (
+        (limitLocal > 0 && spentLocal > limitLocal) ||
+        (pacePct !== null && actualLocalPct - pacePct > 5)
+      ) {
+        aheadOfPaceCount++
+      } else {
+        onTrackCount++
       }
-    }, [budgets])
 
-  const overallUtilization =
-    totalLimitBaseCents > 0
-      ? Math.min(
-          100,
-          Math.round((totalSpentBaseCents / totalLimitBaseCents) * 100)
-        )
-      : 0
+      if (pacePct !== null) {
+        const weight = limitBase > 0 ? limitBase : 1
+        weightedPaceSum += pacePct * weight
+        paceWeightTotal += weight
+      }
+    }
 
-  // Filter budgets by search query
+    const isOver =
+      totalLimitBaseCents > 0 && totalSpentBaseCents > totalLimitBaseCents
+    const remainingBaseCents = Math.max(
+      totalLimitBaseCents - totalSpentBaseCents,
+      0
+    )
+    const overBaseCents = Math.max(totalSpentBaseCents - totalLimitBaseCents, 0)
+    const overallUtilization =
+      totalLimitBaseCents > 0
+        ? Math.min(
+            100,
+            Math.round((totalSpentBaseCents / totalLimitBaseCents) * 100)
+          )
+        : 0
+    const isWarning = !isOver && overallUtilization >= 85
+    const aggregatePacePercent =
+      paceWeightTotal > 0 ? weightedPaceSum / paceWeightTotal : null
+
+    return {
+      totalLimitBaseCents,
+      totalSpentBaseCents,
+      remainingBaseCents,
+      overBaseCents,
+      isOver,
+      isWarning,
+      overallUtilization,
+      activeBudgetsCount,
+      onTrackCount,
+      aheadOfPaceCount,
+      aggregatePacePercent,
+    }
+  }, [budgets, baseCurrency, exchangeRates, tz])
+
   const filteredBudgets = useMemo(() => {
-    if (!searchQuery.trim()) return budgets
+    const byStatus = budgets.filter((b) => {
+      if (statusFilter === "ALL") return true
+      if (statusFilter === "ACTIVE") return b.status === "ACTIVE" || !b.status
+      return b.status === statusFilter
+    })
+
+    if (!searchQuery.trim()) return byStatus
     const q = searchQuery.toLowerCase().trim()
-    return budgets.filter((b) => {
+    return byStatus.filter((b) => {
       const matchName = b.name.toLowerCase().includes(q)
       const matchCurrency = b.currency?.toLowerCase().includes(q)
       const accountName = b.defaultAccountId
@@ -216,7 +313,19 @@ export default function BudgetsScreen() {
       const matchAccount = accountName?.includes(q)
       return matchName || matchCurrency || matchAccount
     })
-  }, [budgets, searchQuery, accountsMap])
+  }, [budgets, statusFilter, searchQuery, accountsMap])
+
+  const isSearchVisible = searchOpen || searchQuery.trim().length > 0
+
+  const toggleSearch = () => {
+    haptics.selection()
+    if (isSearchVisible) {
+      setSearchOpen(false)
+      setSearchQuery("")
+    } else {
+      setSearchOpen(true)
+    }
+  }
 
   const handleRefresh = async () => {
     haptics.light()
@@ -316,6 +425,8 @@ export default function BudgetsScreen() {
     )
   }
 
+  const now = tz.now()
+
   return (
     <View style={styles.safeArea}>
       <Stack.Screen
@@ -324,6 +435,18 @@ export default function BudgetsScreen() {
           ...(Platform.OS === "ios"
             ? {
                 unstable_headerRightItems: () => [
+                  {
+                    type: "button",
+                    label: t("finance.budgets.mobile.searchToggleAria"),
+                    icon: {
+                      type: "sfSymbol",
+                      name: isSearchVisible ? "xmark" : "magnifyingglass",
+                    },
+                    tintColor: isSearchVisible
+                      ? colors.primary
+                      : colors.textPrimary,
+                    onPress: toggleSearch,
+                  },
                   {
                     type: "button",
                     label: t("finance.budgets.mobile.menuNew"),
@@ -338,20 +461,40 @@ export default function BudgetsScreen() {
               }
             : {
                 headerRight: () => (
-                  <TouchableOpacity
-                    onPress={() => {
-                      haptics.light()
-                      router.push("/modal/manage-budget")
-                    }}
-                    style={styles.headerAddBtn}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Plus size={20} color={colors.primary} />
-                  </TouchableOpacity>
+                  <View style={styles.headerRightRow}>
+                    <TouchableOpacity
+                      testID="budgets-search-toggle"
+                      accessibilityLabel={t(
+                        "finance.budgets.mobile.searchToggleAria"
+                      )}
+                      onPress={toggleSearch}
+                      style={styles.headerIconBtn}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      {isSearchVisible ? (
+                        <X size={20} color={colors.primary} />
+                      ) : (
+                        <Search size={20} color={colors.textPrimary} />
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      testID="budgets-header-add"
+                      accessibilityLabel={t("finance.budgets.mobile.menuNew")}
+                      onPress={() => {
+                        haptics.light()
+                        router.push("/modal/manage-budget")
+                      }}
+                      style={styles.headerIconBtn}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Plus size={20} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
                 ),
               }),
         }}
       />
+
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -365,158 +508,197 @@ export default function BudgetsScreen() {
           />
         }
       >
-        {/* 1. Summary Dashboard Header Card */}
-        <Card style={styles.summaryCard}>
-          <View style={styles.summaryTopRow}>
-            <View style={styles.summaryIconBadge}>
-              <PieChart size={20} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
+        {/* 1. Hero Summary Card (Always reflects active period workspace totals in baseCurrency) */}
+        <Card style={styles.summaryCard} testID="budgets-hero-summary">
+          <View style={styles.summaryHeroRow}>
+            <View style={styles.summaryHeroMain}>
               <Text style={styles.summaryLabel}>
-                {t("finance.budgets.mobile.summaryActiveLimits")}
+                {summaryStats.isOver
+                  ? t("finance.budgets.progress.overBudget")
+                  : t("finance.budgets.mobile.summaryLeftToSpend")}
               </Text>
-              <MonoAmount size="lg" color={colors.textPrimary}>
-                {formatAmount(totalLimitBaseCents, baseCurrency)}
+              <MonoAmount
+                size="lg"
+                color={
+                  summaryStats.isOver ? colors.destructive : colors.textPrimary
+                }
+                testID="budgets-hero-amount"
+              >
+                {summaryStats.isOver
+                  ? t("finance.budgets.mobile.amountOver", {
+                      amount: formatAmount(
+                        summaryStats.overBaseCents,
+                        baseCurrency
+                      ),
+                    })
+                  : formatAmount(summaryStats.remainingBaseCents, baseCurrency)}
               </MonoAmount>
             </View>
-            <Badge
-              size="sm"
-              label={baseCurrency}
-              bg={colors.primarySubtle}
-              color={colors.primary}
-            />
+            <Text style={styles.summaryOfLimitText} numberOfLines={1}>
+              {t("finance.budgets.mobile.summarySpentOfLimit", {
+                spent: formatAmount(
+                  summaryStats.totalSpentBaseCents,
+                  baseCurrency
+                ),
+                limit: formatAmount(
+                  summaryStats.totalLimitBaseCents,
+                  baseCurrency
+                ),
+              })}
+            </Text>
           </View>
 
-          {/* Utilization Bar */}
-          <View style={styles.summaryProgressSection}>
-            <View style={styles.summaryProgressHeader}>
-              <Text style={styles.summaryProgressSpent}>
-                {t("finance.budgets.mobile.summarySpent", {
-                  amount: formatAmount(totalSpentBaseCents, baseCurrency),
-                })}
-              </Text>
-              <Text style={styles.summaryProgressPercent}>
-                {t("finance.budgets.mobile.summaryUtilized", {
-                  pct: overallUtilization,
-                })}
-              </Text>
-            </View>
+          <View style={styles.summaryProgressWrap}>
             <View style={styles.summaryProgressTrack}>
               <View
                 style={[
                   styles.summaryProgressBar,
                   {
-                    width: `${overallUtilization}%`,
-                    backgroundColor:
-                      overallUtilization >= 100
-                        ? colors.destructive
-                        : overallUtilization >= 85
-                          ? colors.warning
-                          : colors.primary,
+                    width: `${summaryStats.overallUtilization}%`,
+                    backgroundColor: summaryStats.isOver
+                      ? colors.destructive
+                      : summaryStats.isWarning
+                        ? colors.warning
+                        : colors.primary,
                   },
                 ]}
               />
             </View>
+            {summaryStats.aggregatePacePercent !== null ? (
+              <View
+                testID="summary-pace-tick"
+                accessibilityLabel={t("finance.budgets.paceTick", {
+                  pct: Math.round(summaryStats.aggregatePacePercent),
+                })}
+                style={[
+                  styles.paceTickSummary,
+                  { left: `${summaryStats.aggregatePacePercent}%` },
+                ]}
+              />
+            ) : null}
           </View>
 
-          {/* Meta footer row */}
-          <View style={styles.summaryFooterRow}>
-            <Text style={styles.summaryFooterText}>
-              {t("finance.budgets.mobile.summaryTemplates", {
-                total: budgets.length,
-                active: activeBudgetsCount,
-              })}
+          {summaryStats.activeBudgetsCount > 0 ? (
+            <Text style={styles.summaryPaceText} numberOfLines={1}>
+              {summaryStats.aheadOfPaceCount > 0
+                ? t("finance.budgets.mobile.summaryPaceSummary", {
+                    onTrack: summaryStats.onTrackCount,
+                    ahead: summaryStats.aheadOfPaceCount,
+                  })
+                : t("finance.budgets.mobile.summaryOnTrackOnly", {
+                    count: summaryStats.onTrackCount,
+                  })}
             </Text>
-            <Text style={styles.summaryFooterBase}>
-              {t("finance.budgets.mobile.summaryBase", {
-                currency: baseCurrency,
-              })}
-            </Text>
-          </View>
+          ) : null}
         </Card>
 
-        {/* 2. Search Bar */}
-        <View style={styles.searchBar}>
-          <Search size={16} color={colors.textMuted} />
-          <RNTextInput
-            style={styles.searchInput}
-            placeholder={t("finance.budgets.mobile.searchPlaceholder")}
-            placeholderTextColor={colors.textMuted}
-            keyboardAppearance={isDark ? "dark" : "light"}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 ? (
-            <TouchableOpacity
-              onPress={() => setSearchQuery("")}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <X size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        {/* 3. Status Filter Pills */}
-        <View style={styles.filterRow}>
-          {(
-            [
-              {
-                key: "ACTIVE",
-                labelKey: "finance.budgets.mobile.filterActive",
-              },
-              {
-                key: "PAUSED",
-                labelKey: "finance.budgets.mobile.filterPaused",
-              },
-              {
-                key: "CLOSED",
-                labelKey: "finance.budgets.mobile.filterClosed",
-              },
-              { key: "ALL", labelKey: "common.all" },
-            ] as const
-          ).map((filter) => {
-            const isSelected = statusFilter === filter.key
-            return (
-              <TouchableOpacity
-                key={filter.key}
-                style={[
-                  styles.filterPill,
-                  isSelected && styles.filterPillActive,
-                ]}
-                onPress={() => {
-                  haptics.selection()
-                  setStatusFilter(filter.key)
-                }}
-                activeOpacity={0.7}
-              >
-                <Text
+        {/* 2. Compact Status Filter Pills + Optional Inline Search Toggle */}
+        <View style={styles.filterToolbar}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            {(
+              [
+                {
+                  key: "ACTIVE",
+                  label: `${t("finance.budgets.mobile.filterActive")} (${statusCounts.active})`,
+                },
+                {
+                  key: "PAUSED",
+                  label:
+                    statusCounts.paused > 0
+                      ? `${t("finance.budgets.mobile.filterPaused")} (${statusCounts.paused})`
+                      : t("finance.budgets.mobile.filterPaused"),
+                },
+                {
+                  key: "CLOSED",
+                  label:
+                    statusCounts.closed > 0
+                      ? `${t("finance.budgets.mobile.filterClosed")} (${statusCounts.closed})`
+                      : t("finance.budgets.mobile.filterClosed"),
+                },
+                {
+                  key: "ALL",
+                  label: t("common.all"),
+                },
+              ] as const
+            ).map((filter) => {
+              const isSelected = statusFilter === filter.key
+              return (
+                <TouchableOpacity
+                  key={filter.key}
+                  testID={`budgets-filter-${filter.key.toLowerCase()}`}
                   style={[
-                    styles.filterPillText,
-                    isSelected && styles.filterPillTextActive,
+                    styles.filterPill,
+                    isSelected && styles.filterPillActive,
                   ]}
+                  onPress={() => {
+                    haptics.selection()
+                    setStatusFilter(filter.key)
+                  }}
+                  activeOpacity={0.7}
                 >
-                  {t(filter.labelKey)}
-                </Text>
-              </TouchableOpacity>
-            )
-          })}
+                  <Text
+                    style={[
+                      styles.filterPillText,
+                      isSelected && styles.filterPillTextActive,
+                    ]}
+                  >
+                    {filter.label}
+                  </Text>
+                </TouchableOpacity>
+              )
+            })}
+          </ScrollView>
+
+          <TouchableOpacity
+            testID="budgets-inline-search-toggle"
+            accessibilityLabel={t("finance.budgets.mobile.searchToggleAria")}
+            style={[
+              styles.inlineSearchBtn,
+              isSearchVisible && styles.inlineSearchBtnActive,
+            ]}
+            onPress={toggleSearch}
+            activeOpacity={0.7}
+          >
+            {isSearchVisible ? (
+              <X size={15} color={colors.primary} />
+            ) : (
+              <Search size={15} color={colors.textMuted} />
+            )}
+          </TouchableOpacity>
         </View>
 
-        <Caption style={styles.sectionHeader}>
-          {statusFilter === "ALL"
-            ? t("finance.budgets.mobile.headerAll")
-            : statusFilter === "PAUSED"
-              ? t("finance.budgets.mobile.headerPaused")
-              : statusFilter === "CLOSED"
-                ? t("finance.budgets.mobile.headerClosed")
-                : t("finance.budgets.mobile.headerActive")}{" "}
-          ({filteredBudgets.length})
-        </Caption>
+        {isSearchVisible ? (
+          <View style={styles.searchBar} testID="budgets-search-bar">
+            <Search size={15} color={colors.textMuted} />
+            <RNTextInput
+              style={styles.searchInput}
+              placeholder={t("finance.budgets.mobile.searchPlaceholder")}
+              placeholderTextColor={colors.textMuted}
+              keyboardAppearance={isDark ? "dark" : "light"}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus={searchOpen}
+            />
+            {searchQuery.length > 0 ? (
+              <TouchableOpacity
+                onPress={() => setSearchQuery("")}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <X size={15} color={colors.textMuted} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : null}
 
+        {/* 3. Budgets List or Actionable Empty State */}
         {isLoading ? (
-          <View style={{ gap: 10 }}>
+          <View style={styles.skeletonStack}>
             <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
@@ -525,36 +707,51 @@ export default function BudgetsScreen() {
           <EmptyState
             icon={<PiggyBank size={28} color={colors.textMuted} />}
             title={
-              searchQuery.trim()
-                ? t("finance.budgets.mobile.emptyNoMatch")
-                : t("finance.budgets.mobile.emptyNone")
+              budgets.length === 0
+                ? t("finance.budgets.mobile.emptyNone")
+                : t("finance.budgets.mobile.emptyNoMatch")
             }
             description={
-              searchQuery.trim()
-                ? t("finance.budgets.mobile.emptyNoMatchDesc", {
-                    query: searchQuery,
-                  })
-                : t("finance.budgets.mobile.emptyNoneDesc")
+              budgets.length === 0
+                ? t("finance.budgets.mobile.emptyNoneDesc")
+                : searchQuery.trim()
+                  ? t("finance.budgets.mobile.emptyNoMatchDesc", {
+                      query: searchQuery,
+                    })
+                  : t("finance.budgets.mobile.emptyNoneDesc")
             }
+            actionLabel={
+              budgets.length === 0
+                ? t("finance.budgets.mobile.createSubmit")
+                : t("finance.budgets.mobile.clearFilters")
+            }
+            onAction={() => {
+              haptics.light()
+              if (budgets.length === 0) {
+                router.push("/modal/manage-budget")
+              } else {
+                setSearchQuery("")
+                setSearchOpen(false)
+                setStatusFilter(statusFilter === "ACTIVE" ? "ALL" : "ACTIVE")
+              }
+            }}
           />
         ) : (
           <View style={styles.budgetList}>
             {filteredBudgets.map((b: Budget) => {
               const nativeColors = getBudgetColors(b.color || "indigo")
-              const BIcon = getBudgetIcon(b.icon, b.name)
 
               const spentCents = Number(b.currentPeriod?.spentAmount || "0")
               const limitCents = Number(b.limitAmount || "0")
               const actualPercentage =
                 limitCents > 0 ? Math.round((spentCents / limitCents) * 100) : 0
               const progressWidth = Math.min(actualPercentage, 100)
-              const isOver = actualPercentage >= 100
-              const isNearLimit = actualPercentage >= 85 && !isOver
+              const isOver = limitCents > 0 && spentCents > limitCents
+              const isNearLimit = !isOver && actualPercentage >= 85
 
               const remainingCents = Math.max(limitCents - spentCents, 0)
               const overCents = Math.max(spentCents - limitCents, 0)
 
-              const now = tz.now()
               const endParsed = b.currentPeriod?.endDate
                 ? parseDate(b.currentPeriod.endDate)
                 : null
@@ -576,24 +773,22 @@ export default function BudgetsScreen() {
                   ? Math.round(remainingCents / daysLeft)
                   : 0
 
-              const startStr = b.currentPeriod?.startDate
-                ? tz.format(b.currentPeriod.startDate, {
-                    month: "short",
-                    day: "numeric",
-                  })
-                : ""
-              const endStr = b.currentPeriod?.endDate
-                ? tz.format(b.currentPeriod.endDate, {
-                    month: "short",
-                    day: "numeric",
-                  })
-                : ""
               const dateRangeStr =
                 b.interval === "ONE_TIME"
                   ? t("finance.budgets.progress.lifetime")
-                  : startStr && endStr
-                    ? `${startStr} - ${endStr}`
+                  : b.currentPeriod?.startDate && b.currentPeriod?.endDate
+                    ? tz.formatDateRange(
+                        b.currentPeriod.startDate,
+                        b.currentPeriod.endDate
+                      )
                     : ""
+
+              const intervalStr = getLocalizedIntervalLabel(b.interval, locale)
+              const subtitleText = dateRangeStr
+                ? `${dateRangeStr} · ${intervalStr}`
+                : intervalStr
+
+              const pacePercent = computeBudgetPacePercent(b, now)
 
               const barColor = isOver
                 ? colors.destructive
@@ -601,7 +796,6 @@ export default function BudgetsScreen() {
                   ? colors.warning
                   : nativeColors.bar
 
-              // Cross-currency conversion check
               const isCrossCurrency = Boolean(
                 b.currency &&
                 baseCurrency &&
@@ -610,12 +804,6 @@ export default function BudgetsScreen() {
               const rateToBase = b.currentPeriod?.exchangeRateToBase ?? 0
               const isRateMissing =
                 isCrossCurrency && Boolean(b.currentPeriod) && rateToBase <= 0
-              const limitInBaseCents = Math.round(limitCents * rateToBase)
-
-              // Default Account resolution
-              const defaultAccount = b.defaultAccountId
-                ? accountsMap.get(b.defaultAccountId)
-                : undefined
 
               const navigateToDetails = () => {
                 haptics.light()
@@ -626,136 +814,107 @@ export default function BudgetsScreen() {
               }
 
               return (
-                <Card key={b.id} style={styles.budgetCard}>
-                  <View style={styles.budgetHeader}>
+                <Card
+                  key={b.id}
+                  style={styles.budgetCard}
+                  testID={`budget-card-${b.id}`}
+                >
+                  {/* Row 1: Icon + Name/Subtitle on left, Left/Over amount + ActionMenu on right */}
+                  <View style={styles.budgetRowTop}>
                     <TouchableOpacity
                       style={styles.budgetHeaderMain}
                       activeOpacity={0.7}
                       onPress={navigateToDetails}
                     >
-                      <View style={styles.budgetLeftGroup}>
-                        <View
-                          style={[
-                            styles.budgetIconBadge,
-                            {
-                              backgroundColor: nativeColors.bg,
-                              borderColor: nativeColors.border,
-                            },
-                          ]}
-                        >
-                          <BIcon size={18} color={nativeColors.bar} />
-                        </View>
-                        <View style={styles.budgetTitleCol}>
-                          <View style={styles.budgetNameRow}>
-                            <Text style={styles.budgetName} numberOfLines={1}>
-                              {b.name}
-                            </Text>
-                            <View style={styles.intervalBadge}>
-                              <Text style={styles.intervalText}>
-                                {getLocalizedIntervalLabel(b.interval, locale)}
+                      <View
+                        style={[
+                          styles.budgetIconBadge,
+                          {
+                            backgroundColor: nativeColors.bg,
+                            borderColor: nativeColors.border,
+                          },
+                        ]}
+                      >
+                        <BudgetCategoryIcon
+                          icon={b.icon}
+                          name={b.name}
+                          size={18}
+                          color={nativeColors.bar}
+                        />
+                      </View>
+
+                      <View style={styles.budgetTitleCol}>
+                        <View style={styles.budgetNameRow}>
+                          <Text style={styles.budgetName} numberOfLines={1}>
+                            {b.name}
+                          </Text>
+                          {b.status === "CLOSED" ? (
+                            <View
+                              style={[
+                                styles.statusChip,
+                                {
+                                  backgroundColor: colors.destructiveSubtle,
+                                  borderColor: colors.destructiveBorder,
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.statusChipText,
+                                  { color: colors.destructive },
+                                ]}
+                              >
+                                {t("finance.budgets.mobile.badgeClosed")}
                               </Text>
                             </View>
-                            {b.status === "CLOSED" ? (
-                              <View
+                          ) : b.status === "PAUSED" ? (
+                            <View
+                              style={[
+                                styles.statusChip,
+                                {
+                                  backgroundColor: colors.warningSubtle,
+                                  borderColor: colors.warningBorder,
+                                },
+                              ]}
+                            >
+                              <Text
                                 style={[
-                                  styles.intervalBadge,
-                                  {
-                                    backgroundColor: "rgba(239, 68, 68, 0.15)",
-                                    borderColor: "rgba(239, 68, 68, 0.3)",
-                                  },
+                                  styles.statusChipText,
+                                  { color: colors.warning },
                                 ]}
                               >
-                                <Text
-                                  style={[
-                                    styles.intervalText,
-                                    { color: colors.destructive },
-                                  ]}
-                                >
-                                  {t("finance.budgets.mobile.badgeClosed")}
-                                </Text>
-                              </View>
-                            ) : b.status === "PAUSED" ? (
-                              <View
-                                style={[
-                                  styles.intervalBadge,
-                                  {
-                                    backgroundColor: colors.warningSubtle,
-                                    borderColor: "rgba(245, 158, 11, 0.3)",
-                                  },
-                                ]}
-                              >
-                                <Text
-                                  style={[
-                                    styles.intervalText,
-                                    { color: colors.warning },
-                                  ]}
-                                >
-                                  {t("finance.budgets.mobile.badgePaused")}
-                                </Text>
-                              </View>
-                            ) : null}
-
-                            {/* Default Account badge */}
-                            {defaultAccount ? (
-                              <View style={styles.accountBadge}>
-                                <CreditCard
-                                  size={10}
-                                  color={colors.textMuted}
-                                />
-                                <Text
-                                  style={styles.accountBadgeText}
-                                  numberOfLines={1}
-                                >
-                                  {defaultAccount.name}
-                                </Text>
-                              </View>
-                            ) : null}
-                          </View>
-                          {dateRangeStr ? (
-                            <View style={styles.periodRow}>
-                              <Calendar size={11} color={colors.textMuted} />
-                              <Text style={styles.periodText}>
-                                {dateRangeStr}
+                                {t("finance.budgets.mobile.badgePaused")}
                               </Text>
                             </View>
                           ) : null}
                         </View>
-                      </View>
 
-                      <View style={styles.budgetRightGroup}>
-                        <Text style={styles.limitAmountText}>
-                          {formatAmount(b.limitAmount, b.currency)}
+                        <Text style={styles.budgetSubtitle} numberOfLines={1}>
+                          {subtitleText}
                         </Text>
-
-                        <Badge
-                          size="sm"
-                          label={`${actualPercentage}%`}
-                          bg={
-                            isOver
-                              ? colors.destructiveSubtle
-                              : isNearLimit
-                                ? colors.warningSubtle
-                                : nativeColors.bg
-                          }
-                          border={
-                            isOver
-                              ? "rgba(244, 63, 94, 0.3)"
-                              : isNearLimit
-                                ? "rgba(245, 158, 11, 0.3)"
-                                : nativeColors.border
-                          }
-                          color={
-                            isOver
-                              ? colors.destructive
-                              : isNearLimit
-                                ? colors.warning
-                                : nativeColors.text
-                          }
-                        />
                       </View>
+
+                      <MonoAmount
+                        size="sm"
+                        color={isOver ? colors.destructive : colors.textPrimary}
+                        style={styles.heroRemainingAmount}
+                      >
+                        {isOver
+                          ? t("finance.budgets.mobile.amountOver", {
+                              amount: formatAmount(
+                                String(overCents),
+                                b.currency
+                              ),
+                            })
+                          : t("finance.budgets.mobile.amountLeft", {
+                              amount: formatAmount(
+                                String(remainingCents),
+                                b.currency
+                              ),
+                            })}
+                      </MonoAmount>
                     </TouchableOpacity>
 
-                    {/* Native 3-Dots Quick Action Menu (sibling of TouchableOpacity) */}
                     <ActionMenu
                       title={b.name}
                       colorScheme={resolvedMode}
@@ -865,7 +1024,6 @@ export default function BudgetsScreen() {
                     activeOpacity={0.75}
                     onPress={navigateToDetails}
                   >
-                    {/* Missing Exchange Rate Warning Banner */}
                     {isRateMissing ? (
                       <View style={styles.exchangeRateWarning}>
                         <AlertTriangle size={13} color={colors.warning} />
@@ -878,92 +1036,55 @@ export default function BudgetsScreen() {
                       </View>
                     ) : null}
 
-                    {/* Cross-Currency Conversion Strip */}
-                    {isCrossCurrency && rateToBase > 0 ? (
-                      <View style={styles.crossCurrencyStrip}>
-                        <Text style={styles.crossCurrencyRateText}>
-                          1 {b.currency} = {rateToBase.toFixed(4)}{" "}
-                          {baseCurrency}
+                    {/* Row 2: 6px Progress Track with Today elapsed-period pace tick */}
+                    <View style={styles.progressWrap}>
+                      <View style={styles.progressTrack}>
+                        <View
+                          style={[
+                            styles.progressBar,
+                            {
+                              width: `${progressWidth}%`,
+                              backgroundColor: barColor,
+                            },
+                          ]}
+                        />
+                      </View>
+                      {pacePercent !== null ? (
+                        <View
+                          testID={`budget-pace-tick-${b.id}`}
+                          accessibilityLabel={t(
+                            "finance.budgets.progress.paceTickAria",
+                            { pct: Math.round(pacePercent) }
+                          )}
+                          style={[styles.paceTick, { left: `${pacePercent}%` }]}
+                        />
+                      ) : null}
+                    </View>
+
+                    {/* Row 3: $Spent of $Limit on left + condensed $X/day safe on right */}
+                    <View style={styles.budgetFooter}>
+                      <Text style={styles.spentOfLimitText} numberOfLines={1}>
+                        {t("finance.budgets.mobile.summarySpentOfLimit", {
+                          spent: formatAmount(String(spentCents), b.currency),
+                          limit: formatAmount(String(limitCents), b.currency),
+                        })}
+                      </Text>
+
+                      {isOver ? (
+                        <Text style={styles.exceededText} numberOfLines={1}>
+                          {t("finance.budgets.progress.exceeded")}
                         </Text>
-                        <Text style={styles.crossCurrencyLimitText}>
-                          {t("finance.budgets.mobile.limitInBase", {
-                            currency: baseCurrency,
+                      ) : b.status !== "CLOSED" && dailyAllowanceCents > 0 ? (
+                        <Text style={styles.dailySafeText} numberOfLines={1}>
+                          {t("finance.budgets.mobile.perDaySafe", {
                             amount: formatAmount(
-                              limitInBaseCents,
-                              baseCurrency
+                              String(dailyAllowanceCents),
+                              b.currency
                             ),
                           })}
                         </Text>
-                      </View>
-                    ) : null}
-
-                    {/* Progress Track */}
-                    <View style={styles.progressTrack}>
-                      <View
-                        style={[
-                          styles.progressBar,
-                          {
-                            width: `${progressWidth}%`,
-                            backgroundColor: barColor,
-                          },
-                        ]}
-                      />
+                      ) : null}
                     </View>
-
-                    <View style={styles.budgetFooter}>
-                      <Text style={styles.spentText}>
-                        {t("finance.budgets.mobile.spentLabel")}{" "}
-                        <Text
-                          style={[
-                            styles.whiteText,
-                            isOver && { color: colors.destructive },
-                          ]}
-                        >
-                          {formatAmount(String(spentCents), b.currency)}
-                        </Text>
-                      </Text>
-                      <Text
-                        style={[
-                          styles.remainingText,
-                          isOver && styles.overText,
-                        ]}
-                      >
-                        {isOver
-                          ? t("finance.budgets.mobile.overBy", {
-                              amount: formatAmount(
-                                String(overCents),
-                                b.currency
-                              ),
-                            })
-                          : t("finance.budgets.mobile.amountLeft", {
-                              amount: formatAmount(
-                                String(remainingCents),
-                                b.currency
-                              ),
-                            })}
-                      </Text>
-                    </View>
-
-                    {!isOver && dailyAllowanceCents > 0 ? (
-                      <View style={styles.allowanceSubRow}>
-                        <Sparkles size={11} color={colors.primary} />
-                        <Text style={styles.allowanceSubText}>
-                          {t("finance.budgets.mobile.paceLabel")}{" "}
-                          <Text style={styles.allowanceSubBold}>
-                            {formatAmount(
-                              String(dailyAllowanceCents),
-                              b.currency
-                            )}{" "}
-                            {t("finance.budgets.mobile.perDay")}
-                          </Text>{" "}
-                          (
-                          {t("finance.budgets.progress.daysLeft", {
-                            days: daysLeft,
-                          })}
-                          )
-                        </Text>
-                      </View>
-                    ) : null}
                   </TouchableOpacity>
                 </Card>
               )
@@ -971,6 +1092,13 @@ export default function BudgetsScreen() {
           </View>
         )}
       </ScrollView>
+
+      <QuickCaptureFab
+        testID="budgets-fab-add"
+        accessibilityLabel={t("finance.budgets.mobile.menuNew")}
+        onPress={() => router.push("/modal/manage-budget")}
+        style={{ bottom: Math.max(insets.bottom, 16) + 4 }}
+      />
     </View>
   )
 }
@@ -980,8 +1108,13 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flex: 1,
     backgroundColor: t.colors.background,
   },
-  headerAddBtn: {
-    paddingHorizontal: 8,
+  headerRightRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+  },
+  headerIconBtn: {
+    paddingHorizontal: 6,
     paddingVertical: 4,
   },
   container: {
@@ -990,312 +1123,83 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   content: {
     padding: 16,
-    paddingBottom: 80,
-    gap: 14,
+    paddingTop: 12,
+    paddingBottom: 96,
+    gap: 12,
   },
   summaryCard: {
-    padding: 16,
-    borderRadius: 18,
-    backgroundColor: t.colors.surfaceElevated,
-    gap: 12,
+    padding: 14,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+    gap: 10,
   },
-  summaryTopRow: {
+  summaryHeroRow: {
     flexDirection: "row" as const,
-    alignItems: "center" as const,
+    alignItems: "flex-end" as const,
+    justifyContent: "space-between" as const,
     gap: 12,
   },
-  summaryIconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: t.colors.primarySubtle,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
+  summaryHeroMain: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   summaryLabel: {
-    fontSize: 10,
-    fontWeight: "700" as const,
-    color: t.colors.textMuted,
-    letterSpacing: 0.6,
-    marginBottom: 2,
-    textTransform: "uppercase" as const,
-  },
-  summaryProgressSection: {
-    gap: 6,
-    marginTop: 4,
-  },
-  summaryProgressHeader: {
-    flexDirection: "row" as const,
-    justifyContent: "space-between" as const,
-    alignItems: "center" as const,
-  },
-  summaryProgressSpent: {
     fontSize: 12,
-    color: t.colors.textSecondary,
     fontWeight: "500" as const,
+    color: t.colors.textMuted,
   },
-  summaryProgressPercent: {
+  summaryOfLimitText: {
     fontSize: 12,
-    fontWeight: "700" as const,
-    color: t.colors.primary,
+    fontWeight: "500" as const,
+    color: t.colors.textSecondary,
+    fontVariant: ["tabular-nums"] as const,
+    flexShrink: 0,
+  },
+  summaryProgressWrap: {
+    position: "relative" as const,
+    justifyContent: "center" as const,
+    paddingVertical: 2,
   },
   summaryProgressTrack: {
-    height: 6,
+    height: 7,
     backgroundColor: t.colors.surfaceHighlight,
-    borderRadius: 3,
+    borderRadius: 4,
     overflow: "hidden" as const,
   },
   summaryProgressBar: {
     height: "100%" as const,
-    borderRadius: 3,
+    borderRadius: 4,
   },
-  summaryFooterRow: {
-    flexDirection: "row" as const,
-    justifyContent: "space-between" as const,
-    alignItems: "center" as const,
-    paddingTop: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: t.colors.border,
+  paceTickSummary: {
+    position: "absolute" as const,
+    top: -1,
+    width: 2,
+    height: 13,
+    borderRadius: 1,
+    backgroundColor: t.colors.textPrimary,
+    marginLeft: -1,
   },
-  summaryFooterText: {
-    fontSize: 11,
+  summaryPaceText: {
+    fontSize: 12,
     color: t.colors.textMuted,
+    fontWeight: "500" as const,
   },
-  summaryFooterBase: {
-    fontSize: 11,
-    fontWeight: "600" as const,
-    color: t.colors.textMuted,
-    textTransform: "uppercase" as const,
-  },
-  searchBar: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 10,
-    height: 42,
-    paddingHorizontal: 12,
-    borderRadius: t.radius.lg,
-    backgroundColor: t.colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: t.colors.textPrimary,
-    padding: 0,
-  },
-  sectionHeader: {
-    letterSpacing: 0.8,
-    paddingHorizontal: 4,
-    textTransform: "uppercase" as const,
-  },
-  budgetList: {
-    gap: 12,
-  },
-  budgetCard: {
-    padding: 16,
-    gap: 12,
-  },
-  budgetHeader: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "space-between" as const,
-    gap: 8,
-  },
-  budgetHeaderMain: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "space-between" as const,
-    flex: 1,
-    gap: 10,
-  },
-  budgetBodyPressable: {
-    gap: 12,
-  },
-  budgetLeftGroup: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 12,
-    flex: 1,
-  },
-  budgetIconBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 1,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    flexShrink: 0,
-  },
-  budgetTitleCol: {
-    flex: 1,
-    gap: 3,
-  },
-  budgetNameRow: {
+  filterToolbar: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 8,
-    flexWrap: "wrap" as const,
-  },
-  budgetName: {
-    fontSize: 15,
-    fontWeight: "700" as const,
-    color: t.colors.textPrimary,
-  },
-  intervalBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    backgroundColor: t.colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-  },
-  intervalText: {
-    fontSize: 9,
-    fontWeight: "700" as const,
-    color: t.colors.textMuted,
-    textTransform: "uppercase" as const,
-  },
-  accountBadge: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    backgroundColor: t.colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-    maxWidth: 120,
-  },
-  accountBadgeText: {
-    fontSize: 9,
-    fontWeight: "600" as const,
-    color: t.colors.textMuted,
-  },
-  periodRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 4,
-  },
-  periodText: {
-    fontSize: 11,
-    color: t.colors.textMuted,
-  },
-  budgetRightGroup: {
-    alignItems: "flex-end" as const,
-    gap: 4,
-  },
-  limitAmountText: {
-    fontSize: 15,
-    fontWeight: "800" as const,
-    color: t.colors.textPrimary,
-  },
-  menuTriggerWrapper: {
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-  },
-  dotsBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-  },
-  exchangeRateWarning: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: t.colors.warningSubtle,
-    borderWidth: 1,
-    borderColor: "rgba(245, 158, 11, 0.3)",
-  },
-  exchangeRateWarningText: {
-    fontSize: 11,
-    color: t.colors.warning,
-    flex: 1,
-    lineHeight: 15,
-  },
-  crossCurrencyStrip: {
-    flexDirection: "row" as const,
-    justifyContent: "space-between" as const,
-    alignItems: "center" as const,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: t.colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-  },
-  crossCurrencyRateText: {
-    fontSize: 10,
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-    color: t.colors.textMuted,
-  },
-  crossCurrencyLimitText: {
-    fontSize: 11,
-    fontWeight: "600" as const,
-    color: t.colors.textSecondary,
-  },
-  progressTrack: {
-    height: 8,
-    backgroundColor: t.colors.surfaceHighlight,
-    borderRadius: 4,
-    overflow: "hidden" as const,
-  },
-  progressBar: {
-    height: "100%" as const,
-    borderRadius: 4,
-  },
-  budgetFooter: {
-    flexDirection: "row" as const,
-    justifyContent: "space-between" as const,
-    alignItems: "center" as const,
-  },
-  spentText: {
-    fontSize: 12,
-    color: t.colors.textMuted,
-  },
-  whiteText: {
-    color: t.colors.textPrimary,
-    fontWeight: "700" as const,
-  },
-  remainingText: {
-    fontSize: 12,
-    fontWeight: "700" as const,
-    color: t.colors.success,
-  },
-  overText: {
-    color: t.colors.destructive,
-  },
-  allowanceSubRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 6,
-    paddingTop: 8,
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: t.colors.border,
-  },
-  allowanceSubText: {
-    fontSize: 11,
-    color: t.colors.textMuted,
-  },
-  allowanceSubBold: {
-    fontWeight: "700" as const,
-    color: t.colors.primary,
   },
   filterRow: {
     flexDirection: "row" as const,
-    gap: 8,
-    marginBottom: 4,
+    alignItems: "center" as const,
+    gap: 6,
   },
   filterPill: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 5,
+    paddingHorizontal: 11,
     borderRadius: t.radius.full,
     backgroundColor: t.colors.surface,
     borderWidth: 1,
@@ -1313,5 +1217,188 @@ const createStyles = (t: SaturnMobileTheme) => ({
   filterPillTextActive: {
     color: t.colors.primary,
     fontWeight: "700" as const,
+  },
+  inlineSearchBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: t.colors.surface,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    flexShrink: 0,
+  },
+  inlineSearchBtnActive: {
+    backgroundColor: t.colors.primarySubtle,
+    borderColor: t.colors.primary,
+  },
+  searchBar: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    height: 38,
+    paddingHorizontal: 12,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surface,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: t.colors.textPrimary,
+    padding: 0,
+  },
+  skeletonStack: {
+    gap: 10,
+  },
+  budgetList: {
+    gap: 10,
+  },
+  budgetCard: {
+    padding: 14,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+    gap: 10,
+  },
+  budgetRowTop: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    gap: 4,
+  },
+  budgetHeaderMain: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    flex: 1,
+    minWidth: 0,
+    gap: 10,
+  },
+  budgetIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    flexShrink: 0,
+  },
+  budgetTitleCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  budgetNameRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+  },
+  budgetName: {
+    fontSize: 15,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
+    flexShrink: 1,
+  },
+  statusChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: t.radius.xs,
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  statusChipText: {
+    fontSize: 10,
+    fontWeight: "600" as const,
+  },
+  budgetSubtitle: {
+    fontSize: 12,
+    color: t.colors.textMuted,
+  },
+  heroRemainingAmount: {
+    flexShrink: 0,
+    marginLeft: 4,
+  },
+  menuTriggerWrapper: {
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    flexShrink: 0,
+  },
+  dotsBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  budgetBodyPressable: {
+    gap: 8,
+  },
+  exchangeRateWarning: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.warningSubtle,
+    borderWidth: 1,
+    borderColor: t.colors.warningBorder,
+  },
+  exchangeRateWarningText: {
+    fontSize: 11,
+    color: t.colors.warning,
+    flex: 1,
+    lineHeight: 15,
+  },
+  progressWrap: {
+    position: "relative" as const,
+    justifyContent: "center" as const,
+    paddingVertical: 2,
+  },
+  progressTrack: {
+    height: 6,
+    backgroundColor: t.colors.surfaceHighlight,
+    borderRadius: 3,
+    overflow: "hidden" as const,
+  },
+  progressBar: {
+    height: "100%" as const,
+    borderRadius: 3,
+  },
+  paceTick: {
+    position: "absolute" as const,
+    top: 0,
+    width: 2,
+    height: 10,
+    borderRadius: 1,
+    backgroundColor: t.colors.textPrimary,
+    marginLeft: -1,
+  },
+  budgetFooter: {
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
+    gap: 8,
+  },
+  spentOfLimitText: {
+    fontSize: 12,
+    color: t.colors.textSecondary,
+    fontVariant: ["tabular-nums"] as const,
+    flexShrink: 1,
+  },
+  dailySafeText: {
+    fontSize: 12,
+    color: t.colors.textMuted,
+    fontVariant: ["tabular-nums"] as const,
+    flexShrink: 0,
+  },
+  exceededText: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: t.colors.destructive,
+    flexShrink: 0,
   },
 })

@@ -1,7 +1,11 @@
 import React from "react"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, fireEvent, waitFor } from "@testing-library/react"
-import { CATEGORICAL_PALETTE } from "@saturn/tokens"
+import {
+  CATEGORICAL_HEX_MAP,
+  CATEGORICAL_HUES,
+  CATEGORICAL_PALETTE,
+} from "@saturn/tokens"
 import {
   MobileThemeProvider,
   THEME_MODE_STORAGE_KEY,
@@ -15,6 +19,8 @@ import {
   useThemedStyles,
   type SaturnMobileTheme,
 } from "../lib/theme"
+import { getCardTheme } from "../components/finance/card-account-item"
+import { Card } from "../components/ui/card"
 
 const mockColorSchemeState = vi.hoisted(() => ({
   scheme: "dark" as "light" | "dark" | null | undefined,
@@ -36,14 +42,78 @@ vi.mock("react-native", async () => {
       OS: "ios",
       select: (obj: Record<string, unknown>) => obj.ios ?? obj.default,
     },
-    StyleSheet: {
-      create: <T extends Record<string, unknown>>(styles: T): T => styles,
-    },
     useColorScheme: () => mockColorSchemeState.scheme,
-    View: ({ children, ...props }: Record<string, unknown>) =>
-      ReactMod.createElement("div", props, children as React.ReactNode),
+    View: ({
+      children,
+      style,
+      testID,
+      ...props
+    }: Record<string, unknown> & { testID?: string }) => {
+      const flat = Array.isArray(style)
+        ? Object.assign({}, ...style.filter(Boolean))
+        : (style as Record<string, unknown> | undefined)
+      return ReactMod.createElement(
+        "div",
+        {
+          ...props,
+          ...(testID ? { "data-testid": testID } : {}),
+          ...(flat ? { "data-style": JSON.stringify(flat), style: flat } : {}),
+        },
+        children as React.ReactNode
+      )
+    },
     Text: ({ children, ...props }: Record<string, unknown>) =>
       ReactMod.createElement("span", props, children as React.ReactNode),
+    TouchableOpacity: ({
+      children,
+      onPress,
+      ...props
+    }: Record<string, unknown> & { onPress?: () => void }) =>
+      ReactMod.createElement(
+        "button",
+        { ...props, onClick: onPress },
+        children as React.ReactNode
+      ),
+    Image: (props: Record<string, unknown>) =>
+      ReactMod.createElement("img", props),
+    StyleSheet: {
+      create: <T extends Record<string, unknown>>(styles: T): T => styles,
+      absoluteFill: {},
+    },
+  }
+})
+
+vi.mock("expo-linear-gradient", async () => {
+  const ReactMod = await import("react")
+  return {
+    LinearGradient: ({ children, ...props }: Record<string, unknown>) =>
+      ReactMod.createElement("div", props, children as React.ReactNode),
+  }
+})
+
+vi.mock("lucide-react-native", () => ({
+  Landmark: () => null,
+  CreditCard: () => null,
+  Coins: () => null,
+  Wallet: () => null,
+}))
+
+vi.mock("../lib/haptics", () => ({
+  haptics: {
+    light: vi.fn(),
+    medium: vi.fn(),
+    heavy: vi.fn(),
+    selection: vi.fn(),
+    success: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn(),
+  },
+}))
+vi.mock("../components/ui/typography", async () => {
+  const ReactMod = await import("react")
+  return {
+    MonoAmount: ({ children }: { children?: React.ReactNode }) =>
+      ReactMod.createElement("span", null, children),
   }
 })
 
@@ -119,6 +189,8 @@ describe("Mobile Theme Tokens & Reactivity", () => {
     it("has distinct surface, background, text, and primaryForeground tokens", () => {
       expect(lightColors.background).not.toBe(darkColors.background)
       expect(lightColors.surface).not.toBe(darkColors.surface)
+      expect(lightColors.surfaceElevated).toBe("#ffffff")
+      expect(lightColors.surfaceElevated).not.toBe(lightColors.background)
       expect(lightColors.surfaceElevated).not.toBe(darkColors.surfaceElevated)
       expect(lightColors.textPrimary).not.toBe(darkColors.textPrimary)
       expect(lightColors.textMuted).not.toBe(darkColors.textMuted)
@@ -205,6 +277,56 @@ describe("Mobile Theme Tokens & Reactivity", () => {
       expect(mockColorSchemeState.setColorScheme).toHaveBeenCalledWith(
         "unspecified"
       )
+    })
+  })
+
+  describe("Card surface standardization & 12-hue CardAccountItem (DF-22)", () => {
+    it("renders Card with radius.lg (14), surface fill, and light-mode shadows", () => {
+      mockColorSchemeState.scheme = "light"
+
+      const { getByTestId } = render(
+        <MobileThemeProvider defaultMode="light">
+          <Card testID="default-card">Default</Card>
+          <Card testID="elevated-card" elevated>
+            Elevated
+          </Card>
+        </MobileThemeProvider>
+      )
+
+      const defaultCard = getByTestId("default-card")
+      const elevatedCard = getByTestId("elevated-card")
+      const defaultStyle = JSON.parse(
+        defaultCard.getAttribute("data-style") || "{}"
+      )
+      const elevatedStyle = JSON.parse(
+        elevatedCard.getAttribute("data-style") || "{}"
+      )
+
+      expect(defaultStyle.borderRadius).toBe(14)
+      expect(defaultStyle.backgroundColor).toBe(lightColors.surface)
+      expect(defaultStyle.borderColor).toBe(lightColors.border)
+      expect(defaultStyle.shadowOpacity).toBe(lightShadows.sm.shadowOpacity)
+
+      expect(elevatedStyle.borderRadius).toBe(14)
+      expect(elevatedStyle.backgroundColor).toBe(lightColors.surfaceElevated)
+      expect(elevatedStyle.shadowOpacity).toBe(lightShadows.md.shadowOpacity)
+    })
+
+    it("resolves distinct themes for all 12 CATEGORICAL_HUES plus rose alias", () => {
+      const indigoTheme = getCardTheme("indigo")
+      for (const hue of CATEGORICAL_HUES) {
+        const cardTheme = getCardTheme(hue)
+        expect(cardTheme.accentLight).toBe(CATEGORICAL_HEX_MAP[hue])
+        expect(cardTheme.accentDark).toMatch(/^#[0-9a-f]{6}$/i)
+        expect(cardTheme.textColor).toMatch(/^#[0-9a-f]{6}$/i)
+        if (hue !== "indigo") {
+          expect(cardTheme.accentLight).not.toBe(indigoTheme.accentLight)
+        }
+      }
+
+      expect(getCardTheme("rose")).toEqual(getCardTheme("coral"))
+      expect(getCardTheme("TEAL")).toEqual(getCardTheme("teal"))
+      expect(getCardTheme("unknown")).toEqual(indigoTheme)
     })
   })
 })

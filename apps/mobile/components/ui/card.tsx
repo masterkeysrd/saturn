@@ -7,8 +7,8 @@ import {
   type StyleProp,
   type TextStyle,
 } from "react-native"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
+import { useThemedStyles, type SaturnMobileTheme } from "../../lib/theme"
+import { haptics } from "../../lib/haptics"
 
 export interface CardProps extends ViewProps {
   elevated?: boolean
@@ -23,13 +23,11 @@ export function Card({
   children,
   ...props
 }: CardProps) {
-  const { shadows } = useTheme()
   const styles = useThemedStyles(createStyles)
 
   const containerStyles = [
     styles.card,
     elevated ? styles.cardElevated : styles.cardDefault,
-    elevated && shadows.sm,
     style,
   ]
 
@@ -119,17 +117,19 @@ export function CardFooter({
 
 const createStyles = (t: SaturnMobileTheme) => ({
   card: {
-    borderRadius: t.radius.md,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
     overflow: "hidden" as const,
   },
   cardDefault: {
     backgroundColor: t.colors.surface,
     borderColor: t.colors.border,
+    ...(!t.isDark ? t.shadows.sm : {}),
   },
   cardElevated: {
     backgroundColor: t.colors.surfaceElevated,
     borderColor: t.colors.borderStrong,
+    ...(t.isDark ? t.shadows.sm : t.shadows.md),
   },
   header: {
     paddingHorizontal: 16,

@@ -27,12 +27,7 @@ import {
   type InboxItem,
   type InboxItem_DocType,
 } from "@saturn/api/saturn/finance/v1/finance"
-import {
-  invalidateFinanceQueries,
-  useDebounce,
-  useI18n,
-  useTimezone,
-} from "@saturn/hooks"
+import { invalidateFinanceQueries, useDebounce, useI18n } from "@saturn/hooks"
 import type { TranslationKey } from "@saturn/i18n"
 import { canWriteWorkspace } from "@/lib/quick-capture"
 import { useSpace } from "@/lib/space-context"
@@ -80,7 +75,6 @@ const DOC_TYPE_FILTERS: readonly {
 export default function FinanceInboxScreen() {
   const queryClient = useQueryClient()
   const toast = useToast()
-  const tz = useTimezone()
   const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
@@ -533,7 +527,6 @@ export default function FinanceInboxScreen() {
                     ? ` · ${t("finance.inbox.swipeRightToApprove")}`
                     : ""}
                 </Text>
-                <Text style={styles.queueTimezoneText}>{tz.timezone}</Text>
               </View>
             ) : undefined
           }
@@ -801,10 +794,6 @@ const createStyles = (t: SaturnMobileTheme) => ({
   queueSummaryText: {
     fontSize: 12,
     fontWeight: "500" as const,
-    color: t.colors.textMuted,
-  },
-  queueTimezoneText: {
-    fontSize: 11,
     color: t.colors.textMuted,
   },
 })

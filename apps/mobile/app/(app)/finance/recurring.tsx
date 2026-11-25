@@ -1072,6 +1072,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
   overviewCard: {
     flex: 1,
     padding: 14,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+    ...(!t.isDark ? t.shadows.sm : {}),
     gap: 8,
   },
   overviewHeaderRow: {
@@ -1105,6 +1110,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
     alignItems: "center" as const,
     justifyContent: "space-between" as const,
     padding: 14,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+    ...(!t.isDark ? t.shadows.sm : {}),
     borderLeftWidth: 3,
     borderLeftColor: t.colors.warning,
   },
@@ -1125,7 +1135,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   tabContainer: {
     flexDirection: "row" as const,
-    backgroundColor: t.colors.surface,
+    backgroundColor: t.colors.surfaceSubtle,
     padding: 4,
     borderRadius: t.radius.lg,
     borderWidth: 1,
@@ -1142,9 +1152,10 @@ const createStyles = (t: SaturnMobileTheme) => ({
     gap: 6,
   },
   tabBtnActive: {
-    backgroundColor: t.colors.surfaceElevated,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
     borderColor: t.colors.border,
+    ...(!t.isDark ? t.shadows.sm : {}),
   },
   tabText: {
     fontSize: 12,
@@ -1182,6 +1193,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   listCard: {
     padding: 0,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+    ...(!t.isDark ? t.shadows.sm : {}),
     overflow: "hidden" as const,
   },
   txRow: {
