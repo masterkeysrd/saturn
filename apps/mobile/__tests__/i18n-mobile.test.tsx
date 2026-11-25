@@ -81,6 +81,7 @@ vi.mock("../lib/haptics", () => ({
 
 vi.mock("expo-router", () => ({
   useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
+  useIsFocused: () => true,
 }))
 
 vi.mock("lucide-react-native", async () => {

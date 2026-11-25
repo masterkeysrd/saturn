@@ -40,6 +40,10 @@ import {
   useTimezone,
 } from "@saturn/hooks"
 import { getLocalizedIntervalLabel, type TranslationKey } from "@saturn/i18n"
+import {
+  useMobileCopilotView,
+  useOptionalMobileCopilotSheet,
+} from "../../../lib/copilot-sheet-context"
 import { useSpace } from "../../../lib/space-context"
 import {
   useTheme,
@@ -47,6 +51,7 @@ import {
   type SaturnMobileTheme,
 } from "../../../lib/theme"
 import { BudgetCategoryIcon } from "../../../lib/budget-icons"
+import { AIHeaderButton } from "../../../components/app-header"
 import { Card } from "../../../components/ui/card"
 import { MonoAmount } from "../../../components/ui/typography"
 import { SkeletonCard } from "../../../components/ui/skeleton-loader"
@@ -141,6 +146,17 @@ export default function BudgetsScreen() {
   >("ACTIVE")
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const copilotSheet = useOptionalMobileCopilotSheet()
+
+  useMobileCopilotView({
+    viewId: "mobile.finance.budgets",
+    title: t("nav.budgets"),
+    suggestions: [
+      t("finance.budgets.suggestion.pacingAhead"),
+      t("finance.budgets.suggestion.activeLimits"),
+      t("finance.budgets.suggestion.adjustments"),
+    ],
+  })
 
   const { data: settingsData } = useGetSettingsQuery(
     {},
@@ -457,6 +473,16 @@ export default function BudgetsScreen() {
                       router.push("/modal/manage-budget")
                     },
                   },
+                  {
+                    type: "button",
+                    label: t("menu.aiAssistant"),
+                    icon: { type: "sfSymbol", name: "sparkles" },
+                    tintColor: colors.primary,
+                    onPress: () => {
+                      haptics.light()
+                      copilotSheet?.openCopilotSheet()
+                    },
+                  },
                 ],
               }
             : {
@@ -489,6 +515,7 @@ export default function BudgetsScreen() {
                     >
                       <Plus size={20} color={colors.primary} />
                     </TouchableOpacity>
+                    <AIHeaderButton testID="budgets-header-ai" />
                   </View>
                 ),
               }),

@@ -5,6 +5,8 @@ import {
   Image,
   TouchableOpacity,
   type GestureResponderEvent,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -13,6 +15,7 @@ import { useListThreadsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { useI18n } from "@saturn/hooks"
 import { Avatar } from "./ui/avatar"
 import { useToast } from "./ui/toast"
+import { useOptionalMobileCopilotSheet } from "../lib/copilot-sheet-context"
 import { useSpace } from "../lib/space-context"
 import {
   getNextCycledSpace,
@@ -169,11 +172,13 @@ export function SpaceAvatarButton({
 
 export interface AIHeaderButtonProps {
   hasPendingApproval?: boolean
+  style?: StyleProp<ViewStyle>
   testID?: string
 }
 
 export function AIHeaderButton({
   hasPendingApproval: hasPendingApprovalProp,
+  style,
   testID = "ai-header-button",
 }: AIHeaderButtonProps) {
   const { colors } = useTheme()
@@ -181,6 +186,7 @@ export function AIHeaderButton({
   const { t } = useI18n()
   const router = useRouter()
   const { activeSpaceId } = useSpace()
+  const copilotSheet = useOptionalMobileCopilotSheet()
 
   const { data: threadsData } = useListThreadsQuery(
     { isArchived: false, pageSize: 20, pageToken: "" },
@@ -198,12 +204,16 @@ export function AIHeaderButton({
 
   const handleOpenAI = () => {
     haptics.light()
+    if (copilotSheet) {
+      copilotSheet.openCopilotSheet()
+      return
+    }
     router.push("/(app)/ai" as never)
   }
 
   return (
     <TouchableOpacity
-      style={[styles.iconButton, styles.aiButton]}
+      style={[styles.iconButton, styles.aiButton, style]}
       activeOpacity={0.7}
       onPress={handleOpenAI}
       hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}

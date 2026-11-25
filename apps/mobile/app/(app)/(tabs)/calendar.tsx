@@ -29,6 +29,7 @@ import {
   useDeleteEvent,
 } from "@saturn/hooks"
 import {
+  buildCopilotEntityKey,
   formatLocalDateString,
   getTimezoneParts,
   isMailAccountReauthRequired,
@@ -45,6 +46,7 @@ import {
 import { AppBottomSheet } from "../../../components/ui/bottom-sheet"
 import { QuickCaptureFab } from "../../../components/ui/quick-capture-sheet"
 import { useToast } from "../../../components/ui/toast"
+import { useMobileCopilotView } from "../../../lib/copilot-sheet-context"
 import { useSpace } from "../../../lib/space-context"
 import {
   useTheme,
@@ -119,6 +121,37 @@ export default function CalendarScreen() {
   const [pendingDeleteOccurrence, setPendingDeleteOccurrence] = useState<
     EventOccurrence | undefined
   >(undefined)
+
+  const focalDateStr = useMemo(
+    () => formatLocalDateString(currentDate, tz.timezone),
+    [currentDate, tz.timezone]
+  )
+
+  useMobileCopilotView({
+    viewId: "mobile.calendar",
+    title: t("nav.calendar"),
+    activeEntity: selectedOccurrence?.eventId
+      ? {
+          key: buildCopilotEntityKey(
+            "calendar_event",
+            selectedOccurrence.eventId
+          ),
+          kind: "calendar_event",
+          id: selectedOccurrence.eventId,
+          label: selectedOccurrence.title || t("calendar.noTitle"),
+          summary: {
+            startTime:
+              selectedOccurrence.startTime || selectedOccurrence.startDate,
+            isAllDay: Boolean(selectedOccurrence.isAllDay),
+          },
+        }
+      : undefined,
+    suggestions: [
+      t("calendar.suggestion.whatsOn", { date: focalDateStr }),
+      t("calendar.suggestion.focusBlocks"),
+      t("calendar.suggestion.overlapping"),
+    ],
+  })
 
   // Bottom sheet references
   const filterSheetRef = useRef<BottomSheet>(null)

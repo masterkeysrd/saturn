@@ -216,6 +216,7 @@ vi.mock("react-native", async () => {
 
 vi.mock("expo-router", () => ({
   useRouter: () => ({ push: mockRouterPush, back: vi.fn() }),
+  useIsFocused: () => true,
 }))
 
 vi.mock("react-native-safe-area-context", () => ({

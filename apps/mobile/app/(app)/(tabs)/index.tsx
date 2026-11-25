@@ -19,6 +19,7 @@ import {
 import { useI18n, useTimezone } from "@saturn/hooks"
 import { Send, SlidersHorizontal, Sparkles } from "lucide-react-native"
 import { useAuth } from "@/lib/auth-context"
+import { useMobileCopilotView } from "@/lib/copilot-sheet-context"
 import { useSpace } from "@/lib/space-context"
 import { getOverviewQuickCaptureActions } from "@/lib/quick-capture"
 import { buildUpdateDashboardPreferencesPayload } from "@/lib/overview-preferences"
@@ -58,6 +59,16 @@ export default function OverviewScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [aiQuery, setAiQuery] = useState("")
   const [customizeOpen, setCustomizeOpen] = useState(false)
+
+  useMobileCopilotView({
+    viewId: "mobile.overview",
+    title: t("nav.overview"),
+    suggestions: [
+      t("ai.copilotSheet.suggestOverview"),
+      t("ai.copilotSheet.suggestFinance"),
+      t("ai.copilotSheet.suggestCalendar"),
+    ],
+  })
 
   const quickCaptureActions = useMemo(
     () => getOverviewQuickCaptureActions(activeSpaceRole),

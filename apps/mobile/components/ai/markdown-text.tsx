@@ -10,8 +10,13 @@ import {
 import * as Clipboard from "expo-clipboard"
 import { Check, Copy } from "lucide-react-native"
 import { useI18n } from "@saturn/hooks"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../lib/theme"
+import { haptics } from "../../lib/haptics"
+import { JsonCodeBlock } from "../ui/json-code-block"
 import {
   parseMarkdownBlocks,
   type MarkdownBlock,
@@ -110,6 +115,26 @@ function InlineText({ text, baseStyle }: { text: string; baseStyle: object }) {
   )
 }
 
+function isJsonCode(language: string | undefined, code: string): boolean {
+  const lang = language?.trim().toLowerCase()
+  if (lang === "json" || lang === "jsonc") {
+    return true
+  }
+  const trimmed = code.trim()
+  if (
+    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+    (trimmed.startsWith("[") && trimmed.endsWith("]"))
+  ) {
+    try {
+      const parsed: unknown = JSON.parse(trimmed)
+      return typeof parsed === "object" && parsed !== null
+    } catch {
+      return false
+    }
+  }
+  return false
+}
+
 function CodeBlockView({
   language,
   code,
@@ -121,6 +146,10 @@ function CodeBlockView({
   const styles = useThemedStyles(createStyles)
   const { t } = useI18n()
   const [copied, setCopied] = useState(false)
+
+  if (isJsonCode(language, code)) {
+    return <JsonCodeBlock value={code} />
+  }
 
   const handleCopy = async () => {
     haptics.selection()

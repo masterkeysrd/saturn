@@ -192,6 +192,7 @@ vi.mock("react-native-gesture-handler/ReanimatedSwipeable", async () => {
 
 vi.mock("expo-router", () => ({
   useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
+  useIsFocused: () => true,
 }))
 
 vi.mock("lucide-react-native", async () => {

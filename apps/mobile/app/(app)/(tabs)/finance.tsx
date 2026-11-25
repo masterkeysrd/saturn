@@ -34,6 +34,7 @@ import {
   resolveFinancePeriodBounds,
 } from "@saturn/core"
 import { useI18n, useTimezone } from "@saturn/hooks"
+import { useMobileCopilotView } from "@/lib/copilot-sheet-context"
 import {
   useListTransactionsQuery,
   useGetInsightsQuery,
@@ -117,6 +118,16 @@ export default function FinanceHubScreen() {
     () => getFinanceQuickCaptureActions(activeSpaceRole),
     [activeSpaceRole]
   )
+
+  useMobileCopilotView({
+    viewId: "mobile.finance",
+    title: t("nav.finance"),
+    suggestions: [
+      t("finance.insights.suggestion.summarize"),
+      t("finance.insights.suggestion.limits"),
+      t("finance.insights.suggestion.savings"),
+    ],
+  })
 
   // 1. Settings & Base Currency
   const { data: settingsData } = useGetSettingsQuery(

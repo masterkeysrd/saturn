@@ -2,44 +2,37 @@ import { useState } from "react"
 import { Share, Text, TouchableOpacity, View } from "react-native"
 import * as Clipboard from "expo-clipboard"
 import {
-  describeToolCall,
-  formatToolDuration,
   getStreamPhaseLabel,
+  splitThinkingFromText,
   type ThreadStreamPhase,
-  type ToolDomain,
 } from "@saturn/core"
 import type { ThreadMessage } from "@saturn/api/saturn/platform/ai/v1/ai"
 import type { StreamingAssistantDraft } from "@saturn/hooks/ai"
 import { useI18n } from "@saturn/hooks"
 import {
-  Bot,
   Brain,
-  Building2,
-  Calendar,
   Check,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   Copy,
   FileText,
-  GitBranch,
-  Mail,
-  Plug,
   Share2,
-  Wallet,
-  Wrench,
-  XCircle,
 } from "lucide-react-native"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../lib/theme"
+import { haptics } from "../../lib/haptics"
 import { MarkdownText } from "./markdown-text"
+import {
+  MobileToolCallCard,
+  type MobileToolResultEntry,
+} from "./mobile-tool-call-card"
 import { StreamingDots } from "./streaming-dots"
-import { getToolDomainLabelKey } from "./tool-domain-label"
 
-export interface ToolResultEntry {
-  result?: Record<string, unknown>
-  isError?: boolean
-}
+export type ToolResultEntry = MobileToolResultEntry
 
 interface ChatMessageBubbleProps {
   message?: ThreadMessage
@@ -48,59 +41,6 @@ interface ChatMessageBubbleProps {
   streamPhase?: ThreadStreamPhase
   activeToolName?: string
   toolResultsByCallId?: Map<string, ToolResultEntry>
-}
-
-function getDomainColor(
-  domain: ToolDomain,
-  colors: SaturnMobileTheme["colors"]
-): string {
-  switch (domain) {
-    case "finance":
-      return colors.success
-    case "calendar":
-      return colors.primary
-    case "mail":
-      return colors.accent
-    case "workflows":
-      return colors.warning
-    case "space":
-      return colors.textSecondary
-    case "agent":
-      return colors.accent
-    case "mcp":
-      return colors.primary
-    default:
-      return colors.textMuted
-  }
-}
-
-function DomainIcon({
-  domain,
-  size = 12,
-}: {
-  domain: ToolDomain
-  size?: number
-}) {
-  const { colors } = useTheme()
-  const color = getDomainColor(domain, colors)
-  switch (domain) {
-    case "finance":
-      return <Wallet size={size} color={color} />
-    case "calendar":
-      return <Calendar size={size} color={color} />
-    case "mail":
-      return <Mail size={size} color={color} />
-    case "workflows":
-      return <GitBranch size={size} color={color} />
-    case "space":
-      return <Building2 size={size} color={color} />
-    case "agent":
-      return <Bot size={size} color={color} />
-    case "mcp":
-      return <Plug size={size} color={color} />
-    default:
-      return <Wrench size={size} color={color} />
-  }
 }
 
 export function ChatMessageBubble({
@@ -116,23 +56,7 @@ export function ChatMessageBubble({
   const { t } = useI18n()
   const [thinkingOpen, setThinkingOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
-  const [expandedToolIds, setExpandedToolIds] = useState<
-    Record<string, boolean>
-  >({})
   const [copied, setCopied] = useState(false)
-
-  const toggleTool = (id: string) => {
-    haptics.selection()
-    setExpandedToolIds((prev) => ({ ...prev, [id]: !prev[id] }))
-  }
-
-  const renderDomainLabel = (desc: {
-    domain: ToolDomain
-    domainLabel: string
-  }) =>
-    desc.domain === "mcp"
-      ? desc.domainLabel
-      : t(getToolDomainLabelKey(desc.domain))
 
   if (streamingDraft) {
     const phaseLabel =
@@ -152,12 +76,30 @@ export function ChatMessageBubble({
         hasCompletedTools: streamingDraft.toolCalls.length > 0,
       }) ||
       t("ai.streamPhase.runningTool")
-    const trimmedThinking = streamingDraft.thinking.trim()
-    const trimmedText = streamingDraft.text.trimStart()
+    const streamExtracted = splitThinkingFromText(streamingDraft.text)
+    const trimmedThinking = [
+      streamingDraft.thinking.trim(),
+      streamExtracted.thinking,
+    ]
+      .filter(Boolean)
+      .join("\n\n")
+    const trimmedText = streamExtracted.text.trimStart()
     const hasText = trimmedText.trim().length > 0
     const runningTools = streamingDraft.toolCalls.filter(
       (tc) => tc.status === "running"
     )
+    const isActivelyStreamingThoughts =
+      isStreaming &&
+      Boolean(trimmedThinking) &&
+      (streamPhase === "thinking" || streamExtracted.hasUnclosedThink) &&
+      streamingDraft.toolCalls.length === 0 &&
+      !hasText
+    const shouldShowStatusRow =
+      isStreaming &&
+      !isActivelyStreamingThoughts &&
+      runningTools.length === 0 &&
+      !(streamPhase === "generating" && hasText) &&
+      streamPhase !== "awaiting_approval"
     const allCompleted =
       streamingDraft.toolCalls.length > 1 &&
       runningTools.length === 0 &&
@@ -173,12 +115,18 @@ export function ChatMessageBubble({
               setThinkingOpen(!thinkingOpen)
             }}
           >
-            <Brain size={12} color={colors.primary} />
+            <Brain
+              size={12}
+              color={
+                isActivelyStreamingThoughts ? colors.primary : colors.textMuted
+              }
+            />
             <Text style={styles.pillText}>
-              {streamPhase === "thinking"
+              {isActivelyStreamingThoughts
                 ? t("ai.conversation.thinking")
                 : t("ai.chatMobile.thoughtProcess")}
             </Text>
+            {isActivelyStreamingThoughts ? <StreamingDots /> : null}
             {thinkingOpen ? (
               <ChevronDown size={12} color={colors.textMuted} />
             ) : (
@@ -210,60 +158,30 @@ export function ChatMessageBubble({
                 <ChevronRight size={12} color={colors.textMuted} />
               </TouchableOpacity>
             ) : (
-              streamingDraft.toolCalls.map((tc) => {
-                const desc = describeToolCall({
-                  toolName: tc.toolName,
-                  arguments: tc.arguments,
-                  result: tc.result,
-                })
-                const durationText = formatToolDuration(tc.durationMs)
-                const label =
-                  tc.status === "running"
-                    ? desc.activeLabel
-                    : tc.status === "completed"
-                      ? desc.completedLabel
-                      : desc.label
-                return (
-                  <View
-                    key={tc.toolCallId}
-                    style={[
-                      styles.toolPill,
-                      tc.status === "running" && styles.toolPillActive,
-                      tc.status === "error" && styles.toolPillError,
-                    ]}
-                  >
-                    <DomainIcon domain={desc.domain} />
-                    <Text style={styles.toolDomainText}>
-                      {renderDomainLabel(desc)}
-                    </Text>
-                    <Text style={styles.pillText} numberOfLines={1}>
-                      {label}
-                    </Text>
-                    {desc.summary ? (
-                      <Text style={styles.toolSummaryText} numberOfLines={1}>
-                        · {desc.summary}
-                      </Text>
-                    ) : null}
-                    {durationText ? (
-                      <Text style={styles.pillMono}>{durationText}</Text>
-                    ) : null}
-                    {tc.status === "running" ? (
-                      <StreamingDots />
-                    ) : tc.status === "completed" ? (
-                      <CheckCircle2 size={12} color={colors.success} />
-                    ) : (
-                      <XCircle size={12} color={colors.destructive} />
-                    )}
-                  </View>
-                )
-              })
+              streamingDraft.toolCalls.map((tc) => (
+                <MobileToolCallCard
+                  key={tc.toolCallId}
+                  toolCall={{
+                    callId: tc.toolCallId,
+                    toolName: tc.toolName,
+                    arguments: tc.arguments,
+                  }}
+                  resultEntry={
+                    tc.result !== undefined || tc.isError
+                      ? { result: tc.result, isError: tc.isError }
+                      : toolResultsByCallId?.get(tc.toolCallId)
+                  }
+                  isRunning={tc.status === "running"}
+                  durationMs={tc.durationMs}
+                />
+              ))
             )}
           </View>
         )}
 
         {hasText ? <MarkdownText text={trimmedText} /> : null}
 
-        {isStreaming && (
+        {shouldShowStatusRow && (
           <View style={styles.statusRow} accessibilityRole="text">
             <StreamingDots />
             <Text style={styles.statusText}>{phaseLabel}</Text>
@@ -281,17 +199,27 @@ export function ChatMessageBubble({
     (b) => b.type === "attachment" && b.attachment
   )
 
-  const thinkingText = blocks
+  const explicitThinkingText = blocks
     .filter((b) => b.type === "thinking" && b.text)
     .map((b) => b.text?.trim() ?? "")
     .filter(Boolean)
     .join("\n")
 
-  const textBody = blocks
+  const rawTextBody = blocks
     .filter((b) => b.type === "text" && b.text)
     .map((b) => b.text?.trim() ?? "")
     .filter(Boolean)
     .join("\n")
+
+  const extractedFinal = isUser
+    ? { thinking: "", text: rawTextBody }
+    : splitThinkingFromText(rawTextBody)
+
+  const thinkingText = [explicitThinkingText, extractedFinal.thinking]
+    .filter(Boolean)
+    .join("\n\n")
+
+  const textBody = extractedFinal.text
 
   const toolBlocks = blocks.filter((b) => b.type === "tool_call")
 
@@ -398,53 +326,16 @@ export function ChatMessageBubble({
               const res = tc.toolCallId
                 ? toolResultsByCallId?.get(tc.toolCallId)
                 : undefined
-              const desc = describeToolCall({
-                toolName: tc.toolName ?? "tool",
-                arguments: tc.arguments,
-                result: res?.result,
-              })
-              const isExpanded = Boolean(expandedToolIds[callId])
               return (
-                <View key={callId} style={styles.toolBlock}>
-                  <TouchableOpacity
-                    style={[
-                      styles.toolPill,
-                      res?.isError && styles.toolPillError,
-                    ]}
-                    onPress={() => toggleTool(callId)}
-                  >
-                    <DomainIcon domain={desc.domain} />
-                    <Text style={styles.toolDomainText}>
-                      {renderDomainLabel(desc)}
-                    </Text>
-                    <Text style={styles.pillText} numberOfLines={1}>
-                      {res && !res.isError ? desc.completedLabel : desc.label}
-                    </Text>
-                    {desc.summary ? (
-                      <Text style={styles.toolSummaryText} numberOfLines={1}>
-                        · {desc.summary}
-                      </Text>
-                    ) : null}
-                    {res ? (
-                      res.isError ? (
-                        <XCircle size={12} color={colors.destructive} />
-                      ) : (
-                        <CheckCircle2 size={12} color={colors.success} />
-                      )
-                    ) : null}
-                    {isExpanded ? (
-                      <ChevronDown size={12} color={colors.textMuted} />
-                    ) : (
-                      <ChevronRight size={12} color={colors.textMuted} />
-                    )}
-                  </TouchableOpacity>
-
-                  {isExpanded && (
-                    <Text style={styles.thinkingBody}>
-                      {tc.toolName}({JSON.stringify(tc.arguments ?? {})})
-                    </Text>
-                  )}
-                </View>
+                <MobileToolCallCard
+                  key={callId}
+                  toolCall={{
+                    callId,
+                    toolName: tc.toolName ?? "tool",
+                    arguments: tc.arguments,
+                  }}
+                  resultEntry={res}
+                />
               )
             })}
         </View>
@@ -541,54 +432,15 @@ const createStyles = (t: SaturnMobileTheme) => ({
     borderWidth: 1,
     borderColor: t.colors.border,
   },
-  toolBlock: {
-    gap: 3,
-  },
-  toolPill: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 5,
-    alignSelf: "flex-start" as const,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: t.radius.full,
-    backgroundColor: t.colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-    maxWidth: "100%" as const,
-  },
-  toolPillActive: {
-    borderColor: t.colors.primary,
-    backgroundColor: t.colors.primarySubtle,
-  },
-  toolPillError: {
-    borderColor: t.colors.destructive,
-    backgroundColor: t.colors.destructiveSubtle,
-  },
-  toolDomainText: {
-    fontSize: 11,
-    fontWeight: "700" as const,
-    color: t.colors.textSecondary,
-  },
-  toolSummaryText: {
-    fontSize: 11,
-    color: t.colors.textMuted,
-    flexShrink: 1,
-  },
   pillText: {
     fontSize: 12,
     color: t.colors.textPrimary,
     fontWeight: "600" as const,
     flexShrink: 1,
   },
-  pillMono: {
-    fontSize: 10,
-    fontFamily: t.typography.mono,
-    color: t.colors.textMuted,
-  },
   toolsWrap: {
     flexDirection: "column" as const,
-    gap: 4,
+    gap: 6,
   },
   statusRow: {
     flexDirection: "row" as const,

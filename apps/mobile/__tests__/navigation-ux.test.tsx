@@ -98,6 +98,7 @@ vi.mock("../components/ui/bottom-sheet", async () => {
 const mockRouterPush = vi.fn()
 vi.mock("expo-router", () => ({
   useRouter: () => ({ push: mockRouterPush, back: vi.fn() }),
+  useIsFocused: () => true,
 }))
 
 vi.mock("lucide-react-native", async () => {

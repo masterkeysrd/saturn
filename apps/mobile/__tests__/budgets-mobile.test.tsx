@@ -313,6 +313,7 @@ vi.mock("expo-router", () => ({
     dismiss: vi.fn(),
   }),
   useLocalSearchParams: () => ({}),
+  useIsFocused: () => true,
   Stack: {
     Screen: ({ options }: { options?: Record<string, unknown> }) => {
       mockStackOptionsRef.current = options ?? null

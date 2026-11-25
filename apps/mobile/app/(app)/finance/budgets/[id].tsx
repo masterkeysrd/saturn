@@ -42,7 +42,7 @@ import {
   type Budget,
   type Budget_Status,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { formatAmount, parseDate } from "@saturn/core"
+import { buildCopilotEntityKey, formatAmount, parseDate } from "@saturn/core"
 import {
   invalidateFinanceQueries,
   useDateSections,
@@ -50,10 +50,15 @@ import {
   useTimezone,
 } from "@saturn/hooks"
 import { getLocalizedIntervalLabel, type TranslationKey } from "@saturn/i18n"
+import {
+  useMobileCopilotView,
+  useOptionalMobileCopilotSheet,
+} from "@/lib/copilot-sheet-context"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { getBudgetIcon } from "@/lib/budget-icons"
 import { haptics } from "@/lib/haptics"
+import { AIHeaderButton } from "@/components/app-header"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Caption } from "@/components/ui/typography"
@@ -203,6 +208,33 @@ export default function BudgetDetailScreen() {
   const periodEndDate = currentPeriod?.endDate
   const budgetInterval = budget?.interval
   const isOneTime = budgetInterval === "ONE_TIME"
+  const copilotSheet = useOptionalMobileCopilotSheet()
+
+  useMobileCopilotView(
+    budget?.id
+      ? {
+          viewId: "mobile.finance.budget.detail",
+          title: budget.name || t("nav.budgets"),
+          activeEntity: {
+            key: buildCopilotEntityKey("budget", budget.id),
+            kind: "budget",
+            id: budget.id,
+            label: budget.name || t("nav.budgets"),
+            summary: {
+              currency: budget.currency || baseCurrency,
+              limitAmount: budget.limitAmount || "0",
+              spentAmount: currentPeriod?.spentAmount || "0",
+              interval: budget.interval || "MONTHLY",
+            },
+          },
+          suggestions: [
+            t("ai.copilotSheet.suggestBudget"),
+            t("finance.budgets.suggestion.pacingAhead"),
+            t("finance.budgets.suggestion.adjustments"),
+          ],
+        }
+      : null
+  )
 
   // Fetch expense transactions for this budget and period directly from the backend
   const {
@@ -1026,103 +1058,117 @@ export default function BudgetDetailScreen() {
                       ],
                     },
                   },
+                  {
+                    type: "button",
+                    label: t("menu.aiAssistant"),
+                    icon: { type: "sfSymbol", name: "sparkles" },
+                    tintColor: colors.primary,
+                    sharesBackground: false,
+                    onPress: () => {
+                      haptics.light()
+                      copilotSheet?.openCopilotSheet()
+                    },
+                  },
                 ],
               }
             : {
                 headerRight: () => (
-                  <ActionMenu
-                    title={budget.name}
-                    colorScheme={resolvedMode}
-                    onPressAction={({ nativeEvent }) => {
-                      if (nativeEvent.event === "expense") {
-                        haptics.light()
-                        router.push({
-                          pathname: "/modal/add-transaction",
-                          params: {
-                            type: "EXPENSE",
-                            budgetId: budget.id,
-                            ...(budget.defaultAccountId
-                              ? { accountId: budget.defaultAccountId }
-                              : {}),
-                          },
-                        })
-                      } else if (nativeEvent.event === "pause") {
-                        handleUpdateStatus("PAUSED", "paused")
-                      } else if (nativeEvent.event === "resume") {
-                        handleUpdateStatus("ACTIVE", "resumed")
-                      } else if (nativeEvent.event === "close") {
-                        handleUpdateStatus("CLOSED", "closed")
-                      } else if (nativeEvent.event === "reopen") {
-                        handleUpdateStatus("ACTIVE", "reopened")
-                      } else if (nativeEvent.event === "edit") {
-                        haptics.light()
-                        router.push({
-                          pathname: "/modal/manage-budget",
-                          params: { id: budget.id },
-                        })
-                      } else if (nativeEvent.event === "delete") {
-                        handleDeleteBudget()
-                      }
-                    }}
-                    actions={[
-                      ...(budget.status === "ACTIVE" || !budget.status
-                        ? [
-                            {
-                              id: "expense",
-                              title: t("finance.budgets.recordExpense"),
-                              image: addExpenseIcon,
+                  <View style={styles.headerRightRow}>
+                    <ActionMenu
+                      title={budget.name}
+                      colorScheme={resolvedMode}
+                      onPressAction={({ nativeEvent }) => {
+                        if (nativeEvent.event === "expense") {
+                          haptics.light()
+                          router.push({
+                            pathname: "/modal/add-transaction",
+                            params: {
+                              type: "EXPENSE",
+                              budgetId: budget.id,
+                              ...(budget.defaultAccountId
+                                ? { accountId: budget.defaultAccountId }
+                                : {}),
                             },
-                          ]
-                        : []),
-                      ...(budget.status === "PAUSED"
-                        ? [
-                            {
-                              id: "resume",
-                              title: t("finance.budgets.resumeBudget"),
-                              image: resumeIcon,
-                            },
-                          ]
-                        : budget.status === "CLOSED"
-                          ? []
+                          })
+                        } else if (nativeEvent.event === "pause") {
+                          handleUpdateStatus("PAUSED", "paused")
+                        } else if (nativeEvent.event === "resume") {
+                          handleUpdateStatus("ACTIVE", "resumed")
+                        } else if (nativeEvent.event === "close") {
+                          handleUpdateStatus("CLOSED", "closed")
+                        } else if (nativeEvent.event === "reopen") {
+                          handleUpdateStatus("ACTIVE", "reopened")
+                        } else if (nativeEvent.event === "edit") {
+                          haptics.light()
+                          router.push({
+                            pathname: "/modal/manage-budget",
+                            params: { id: budget.id },
+                          })
+                        } else if (nativeEvent.event === "delete") {
+                          handleDeleteBudget()
+                        }
+                      }}
+                      actions={[
+                        ...(budget.status === "ACTIVE" || !budget.status
+                          ? [
+                              {
+                                id: "expense",
+                                title: t("finance.budgets.recordExpense"),
+                                image: addExpenseIcon,
+                              },
+                            ]
+                          : []),
+                        ...(budget.status === "PAUSED"
+                          ? [
+                              {
+                                id: "resume",
+                                title: t("finance.budgets.resumeBudget"),
+                                image: resumeIcon,
+                              },
+                            ]
+                          : budget.status === "CLOSED"
+                            ? []
+                            : [
+                                {
+                                  id: "pause",
+                                  title: t("finance.budgets.pauseBudget"),
+                                  image: pauseIcon,
+                                },
+                              ]),
+                        ...(budget.status === "CLOSED"
+                          ? [
+                              {
+                                id: "reopen",
+                                title: t("finance.budgets.reopenBudget"),
+                                image: reopenIcon,
+                              },
+                            ]
                           : [
                               {
-                                id: "pause",
-                                title: t("finance.budgets.pauseBudget"),
-                                image: pauseIcon,
+                                id: "close",
+                                title: t("finance.budgets.closeBudget"),
+                                image: closeIcon,
                               },
                             ]),
-                      ...(budget.status === "CLOSED"
-                        ? [
-                            {
-                              id: "reopen",
-                              title: t("finance.budgets.reopenBudget"),
-                              image: reopenIcon,
-                            },
-                          ]
-                        : [
-                            {
-                              id: "close",
-                              title: t("finance.budgets.closeBudget"),
-                              image: closeIcon,
-                            },
-                          ]),
-                      {
-                        id: "edit",
-                        title: t("finance.budgets.mobile.menuEdit"),
-                        image: editIcon,
-                      },
-                      {
-                        id: "delete",
-                        title: t("finance.budgets.mobile.menuDelete"),
-                        image: deleteIcon,
-                        attributes: { destructive: true },
-                      },
-                    ]}
-                  >
-                    <View style={styles.headerDotsBtn}>
-                      <MoreVertical size={20} color={colors.textPrimary} />
-                    </View>
-                  </ActionMenu>
+                        {
+                          id: "edit",
+                          title: t("finance.budgets.mobile.menuEdit"),
+                          image: editIcon,
+                        },
+                        {
+                          id: "delete",
+                          title: t("finance.budgets.mobile.menuDelete"),
+                          image: deleteIcon,
+                          attributes: { destructive: true },
+                        },
+                      ]}
+                    >
+                      <View style={styles.headerDotsBtn}>
+                        <MoreVertical size={20} color={colors.textPrimary} />
+                      </View>
+                    </ActionMenu>
+                    <AIHeaderButton testID="budget-detail-header-ai" />
+                  </View>
                 ),
               }),
         }}
@@ -1253,9 +1299,13 @@ const createStyles = (t: SaturnMobileTheme) => ({
     fontWeight: "600" as const,
     color: t.colors.primary,
   },
+  headerRightRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+  },
   headerDotsBtn: {
     padding: 6,
-    marginRight: 4,
   },
   container: {
     flex: 1,

@@ -41,17 +41,27 @@ import {
 } from "@saturn/hooks"
 import type { Message, Attachment } from "@saturn/api/saturn/mail/v1/mail"
 import {
+  buildCopilotEntityKey,
   formatAttachmentBytes,
   computeHumanizedMailTimestamp,
   partitionThreadMessagesForSuperCollapse,
   type HumanizedMailTimestamp,
 } from "@saturn/core"
-import { getApiBaseUrl } from "@/lib/config"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
-import { useToast } from "@/components/ui/toast"
-import { MessageWebView } from "@/components/mail/message-webview"
-import { ThreadAvatar } from "@/components/mail/thread-avatar"
+import { getApiBaseUrl } from "../../../lib/config"
+import {
+  useMobileCopilotView,
+  useOptionalMobileCopilotSheet,
+} from "../../../lib/copilot-sheet-context"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../../lib/theme"
+import { haptics } from "../../../lib/haptics"
+import { AIHeaderButton } from "../../../components/app-header"
+import { useToast } from "../../../components/ui/toast"
+import { MessageWebView } from "../../../components/mail/message-webview"
+import { ThreadAvatar } from "../../../components/mail/thread-avatar"
 import type { TranslationKey } from "@saturn/i18n"
 
 function translateHumanizedMailTimestamp(
@@ -91,6 +101,31 @@ export default function MobileThreadReaderScreen() {
   const toast = useToast()
   const tz = useTimezone()
   const { t, language } = useI18n()
+  const copilotSheet = useOptionalMobileCopilotSheet()
+
+  useMobileCopilotView(
+    thread?.id
+      ? {
+          viewId: "mobile.mail.thread",
+          title: thread.subject || t("mail.noSubject"),
+          activeEntity: {
+            key: buildCopilotEntityKey("mail_thread", thread.id),
+            kind: "mail_thread",
+            id: thread.id,
+            label: thread.subject || t("mail.noSubject"),
+            summary: {
+              isUnread: Boolean(thread.isUnread),
+              messageCount: thread.messageCount,
+            },
+          },
+          suggestions: [
+            t("mail.suggestion.threadSummarize"),
+            t("mail.suggestion.threadReply"),
+            t("mail.suggestion.threadDeadlines"),
+          ],
+        }
+      : null
+  )
 
   const summarizeMutation = useSummarizeMailThread({
     onError: () => {
@@ -395,6 +430,14 @@ export default function MobileThreadReaderScreen() {
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            headerTitle: "",
+            headerStyle: { backgroundColor: colors.background },
+            headerShadowVisible: false,
+          }}
+        />
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     )
@@ -403,6 +446,14 @@ export default function MobileThreadReaderScreen() {
   if (error || !thread) {
     return (
       <View style={styles.centerContainer}>
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            headerTitle: "",
+            headerStyle: { backgroundColor: colors.background },
+            headerShadowVisible: false,
+          }}
+        />
         <Text style={styles.errorText}>{t("mail.conversationNotFound")}</Text>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Text style={styles.backBtnText}>{t("common.back")}</Text>
@@ -424,64 +475,69 @@ export default function MobileThreadReaderScreen() {
                 unstable_headerRightItems: () => [
                   {
                     type: "button",
-                    label: thread.isStarred ? t("mail.unstar") : t("mail.star"),
-                    icon: {
-                      type: "sfSymbol",
-                      name: thread.isStarred ? "star.fill" : "star",
-                    },
-                    tintColor: thread.isStarred
-                      ? "#eab308"
-                      : colors.textPrimary,
-                    onPress: handleToggleStar,
-                  },
-                  {
-                    type: "button",
-                    label: t("mail.threadHeader.markUnread"),
-                    icon: { type: "sfSymbol", name: "envelope" },
-                    onPress: handleMarkUnread,
-                  },
-                  {
-                    type: "button",
                     label: t("mail.archive"),
                     icon: { type: "sfSymbol", name: "archivebox" },
                     onPress: handleArchive,
                   },
                   {
-                    type: "button",
-                    label: t("common.delete"),
-                    icon: { type: "sfSymbol", name: "trash" },
-                    tintColor: colors.destructive,
-                    onPress: handleTrash,
+                    type: "menu",
+                    label: t("mail.threadHeader.moreActions"),
+                    icon: { type: "sfSymbol", name: "ellipsis" },
+                    menu: {
+                      title: thread.subject || t("mail.noSubject"),
+                      items: [
+                        {
+                          type: "action",
+                          label: thread.isStarred
+                            ? t("mail.unstar")
+                            : t("mail.star"),
+                          icon: {
+                            type: "sfSymbol",
+                            name: thread.isStarred ? "star.fill" : "star",
+                          },
+                          onPress: handleToggleStar,
+                        },
+                        {
+                          type: "action",
+                          label: t("mail.threadHeader.markUnread"),
+                          icon: { type: "sfSymbol", name: "envelope" },
+                          onPress: handleMarkUnread,
+                        },
+                        {
+                          type: "action",
+                          label: t("mail.createEventShort"),
+                          icon: {
+                            type: "sfSymbol",
+                            name: "calendar.badge.plus",
+                          },
+                          onPress: handleCreateEvent,
+                        },
+                        {
+                          type: "action",
+                          label: t("common.delete"),
+                          icon: { type: "sfSymbol", name: "trash" },
+                          destructive: true,
+                          onPress: handleTrash,
+                        },
+                      ],
+                    },
                   },
                   {
                     type: "button",
-                    label: t("mail.createEventShort"),
-                    icon: { type: "sfSymbol", name: "calendar.badge.plus" },
+                    label: t("menu.aiAssistant"),
+                    icon: { type: "sfSymbol", name: "sparkles" },
                     tintColor: colors.primary,
                     sharesBackground: false,
-                    onPress: handleCreateEvent,
+                    onPress: () => {
+                      haptics.light()
+                      copilotSheet?.openCopilotSheet()
+                    },
                   },
                 ],
               }
             : {
                 headerRight: () => (
                   <View style={styles.headerRightActions}>
-                    <Pressable
-                      testID="mobile-thread-action-star"
-                      hitSlop={8}
-                      accessibilityLabel={
-                        thread.isStarred ? t("mail.unstar") : t("mail.star")
-                      }
-                      onPress={handleToggleStar}
-                      style={styles.headerBtn}
-                    >
-                      <Star
-                        size={19}
-                        color={thread.isStarred ? "#eab308" : colors.textMuted}
-                        fill={thread.isStarred ? "#eab308" : "transparent"}
-                      />
-                    </Pressable>
-
                     <Pressable
                       testID="mobile-thread-action-mark-unread"
                       hitSlop={8}
@@ -522,6 +578,11 @@ export default function MobileThreadReaderScreen() {
                     >
                       <CalendarPlus size={18} color={colors.primary} />
                     </Pressable>
+
+                    <AIHeaderButton
+                      testID="mobile-thread-action-ai"
+                      style={styles.headerBtn}
+                    />
                   </View>
                 ),
               }),
@@ -534,9 +595,27 @@ export default function MobileThreadReaderScreen() {
       >
         {/* Thread Subject Header */}
         <View style={styles.subjectCard}>
-          <Text style={styles.subjectText}>
-            {thread.subject || t("mail.noSubject")}
-          </Text>
+          <View style={styles.subjectTitleRow}>
+            <Text style={styles.subjectText}>
+              {thread.subject || t("mail.noSubject")}
+            </Text>
+            <Pressable
+              testID="mobile-thread-action-star"
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={
+                thread.isStarred ? t("mail.unstar") : t("mail.star")
+              }
+              onPress={handleToggleStar}
+              style={styles.subjectStarBtn}
+            >
+              <Star
+                size={20}
+                color={thread.isStarred ? "#eab308" : colors.textMuted}
+                fill={thread.isStarred ? "#eab308" : "transparent"}
+              />
+            </Pressable>
+          </View>
           <View style={styles.subjectMetaRow}>
             <Pressable
               testID="mobile-summarize-thread-btn"
@@ -962,8 +1041,8 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
 
   headerBtn: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     alignItems: "center" as const,
     justifyContent: "center" as const,
     borderRadius: t.radius.sm,
@@ -1009,11 +1088,24 @@ const createStyles = (t: SaturnMobileTheme) => ({
     backgroundColor: t.colors.background,
   },
 
+  subjectTitleRow: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    justifyContent: "space-between" as const,
+    gap: 12,
+  },
+
   subjectText: {
+    flex: 1,
     fontSize: 20,
     fontWeight: "600" as const,
     color: t.colors.textPrimary,
     lineHeight: 26,
+  },
+
+  subjectStarBtn: {
+    paddingTop: 3,
+    paddingLeft: 4,
   },
 
   subjectMetaRow: {

@@ -2,6 +2,8 @@ import { ActivityIndicator, Platform, View } from "react-native"
 import { Redirect, Stack } from "expo-router"
 import { useI18n } from "@saturn/hooks"
 import { useAuth } from "@/lib/auth-context"
+import { MobileCopilotProvider } from "@/lib/copilot-sheet-context"
+import { MobileCopilotSheet } from "@/components/ai/mobile-copilot-sheet"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
 export const unstable_settings = {
@@ -27,186 +29,189 @@ export default function AppLayout() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        headerStyle: {
-          backgroundColor:
-            Platform.OS === "ios" ? "transparent" : colors.background,
-        },
-        headerUserInterfaceStyle: resolvedMode,
-        headerShadowVisible: false,
-        headerBackButtonDisplayMode: "minimal",
-        headerTintColor: colors.textPrimary,
-        headerTitleStyle: {
-          fontWeight: "600",
-        },
-        contentStyle: {
-          backgroundColor: colors.background,
-        },
-      }}
-    >
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="ai" />
-      <Stack.Screen
-        name="settings/index"
-        options={{
-          headerShown: true,
-          headerTitle: t("nav.settings"),
-          headerBackTitle: t("common.back"),
-        }}
-      />
-      <Stack.Screen
-        name="settings/space"
-        options={{
-          headerShown: true,
-          headerTitle: t("settings.spaces.mobile.title"),
-          headerBackTitle: t("nav.settings"),
-        }}
-      />
-      <Stack.Screen
-        name="settings/security"
-        options={{
-          headerShown: true,
-          headerTitle: t("settings.sessions.mobile.headerTitle"),
-          headerBackTitle: t("nav.settings"),
-        }}
-      />
-      <Stack.Screen
-        name="settings/api-keys"
-        options={{
-          headerShown: true,
-          headerTitle: t("settings.apiKeys.mobile.headerTitle"),
-          headerBackTitle: t("settings.sessions.mobile.headerTitle"),
-        }}
-      />
-      <Stack.Screen
-        name="settings/connected-accounts"
-        options={{
-          headerShown: true,
-          headerTitle: t("settings.connectors.connectedAccountsTitle"),
-          headerBackTitle: t("nav.settings"),
-        }}
-      />
-      <Stack.Screen
-        name="settings/design-system"
-        options={{
-          headerShown: true,
-          headerTitle: "Design System",
-          headerBackTitle: t("nav.menu"),
-        }}
-      />
-      <Stack.Screen
-        name="finance/transactions/index"
-        options={{
+    <MobileCopilotProvider>
+      <Stack
+        screenOptions={{
           headerShown: false,
+          headerStyle: {
+            backgroundColor:
+              Platform.OS === "ios" ? "transparent" : colors.background,
+          },
+          headerUserInterfaceStyle: resolvedMode,
+          headerShadowVisible: false,
+          headerBackButtonDisplayMode: "minimal",
+          headerTintColor: colors.textPrimary,
+          headerTitleStyle: {
+            fontWeight: "600",
+          },
+          contentStyle: {
+            backgroundColor: colors.background,
+          },
         }}
-      />
-      <Stack.Screen
-        name="finance/transactions/[id]"
-        options={{
-          headerShown: true,
-          headerTitle: "Transaction Details",
-          headerBackTitle: t("nav.transactions"),
-        }}
-      />
-      <Stack.Screen
-        name="finance/inbox"
-        options={{
-          headerShown: true,
-          headerTitle: t("nav.inbox"),
-          headerBackTitle: t("nav.finance"),
-        }}
-      />
-      <Stack.Screen
-        name="finance/budgets"
-        options={{
-          headerShown: true,
-          headerTitle: t("nav.budgets"),
-          headerBackTitle: t("nav.finance"),
-        }}
-      />
-      <Stack.Screen
-        name="finance/budgets/[id]"
-        options={{
-          headerShown: true,
-          headerTitle: "Budget Details",
-          headerBackTitle: t("nav.budgets"),
-        }}
-      />
-      <Stack.Screen
-        name="finance/accounts"
-        options={{
-          headerShown: true,
-          headerTitle: t("nav.accounts"),
-          headerBackTitle: t("nav.finance"),
-        }}
-      />
-      <Stack.Screen
-        name="finance/accounts/[id]"
-        options={{
-          headerShown: true,
-          headerTitle: "Account Details",
-          headerBackTitle: t("nav.accounts"),
-        }}
-      />
-      <Stack.Screen
-        name="finance/recurring"
-        options={{
-          headerShown: true,
-          headerTitle: t("nav.recurring"),
-          headerBackTitle: t("nav.finance"),
-        }}
-      />
-      <Stack.Screen
-        name="finance/borrowing"
-        options={{
-          headerShown: true,
-          headerTitle: t("nav.borrowing"),
-          headerBackTitle: t("nav.finance"),
-        }}
-      />
-      <Stack.Screen
-        name="finance/borrowing/[id]"
-        options={{
-          headerShown: true,
-          headerTitle: "Agreement Details",
-          headerBackTitle: t("nav.borrowing"),
-        }}
-      />
-      <Stack.Screen
-        name="mail/[threadId]"
-        options={{
-          headerShown: true,
-          headerTitle: "Conversation",
-          headerBackTitle: t("nav.mail"),
-        }}
-      />
-      <Stack.Screen
-        name="workflows/index"
-        options={{
-          headerShown: true,
-          headerTitle: t("nav.workflows"),
-          headerBackTitle: t("common.back"),
-        }}
-      />
-      <Stack.Screen
-        name="workflows/[id]"
-        options={{
-          headerShown: true,
-          headerTitle: t("workflows.editor.copilotTitle"),
-          headerBackTitle: t("nav.workflows"),
-        }}
-      />
-      <Stack.Screen
-        name="workflows/runs/[runId]"
-        options={{
-          headerShown: true,
-          headerTitle: t("workflows.mobile.runTraceTitle"),
-          headerBackTitle: t("nav.workflows"),
-        }}
-      />
-    </Stack>
+      >
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="ai" />
+        <Stack.Screen
+          name="settings/index"
+          options={{
+            headerShown: true,
+            headerTitle: t("nav.settings"),
+            headerBackTitle: t("common.back"),
+          }}
+        />
+        <Stack.Screen
+          name="settings/space"
+          options={{
+            headerShown: true,
+            headerTitle: t("settings.spaces.mobile.title"),
+            headerBackTitle: t("nav.settings"),
+          }}
+        />
+        <Stack.Screen
+          name="settings/security"
+          options={{
+            headerShown: true,
+            headerTitle: t("settings.sessions.mobile.headerTitle"),
+            headerBackTitle: t("nav.settings"),
+          }}
+        />
+        <Stack.Screen
+          name="settings/api-keys"
+          options={{
+            headerShown: true,
+            headerTitle: t("settings.apiKeys.mobile.headerTitle"),
+            headerBackTitle: t("settings.sessions.mobile.headerTitle"),
+          }}
+        />
+        <Stack.Screen
+          name="settings/connected-accounts"
+          options={{
+            headerShown: true,
+            headerTitle: t("settings.connectors.connectedAccountsTitle"),
+            headerBackTitle: t("nav.settings"),
+          }}
+        />
+        <Stack.Screen
+          name="settings/design-system"
+          options={{
+            headerShown: true,
+            headerTitle: "Design System",
+            headerBackTitle: t("nav.menu"),
+          }}
+        />
+        <Stack.Screen
+          name="finance/transactions/index"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="finance/transactions/[id]"
+          options={{
+            headerShown: true,
+            headerTitle: "Transaction Details",
+            headerBackTitle: t("nav.transactions"),
+          }}
+        />
+        <Stack.Screen
+          name="finance/inbox"
+          options={{
+            headerShown: true,
+            headerTitle: t("nav.inbox"),
+            headerBackTitle: t("nav.finance"),
+          }}
+        />
+        <Stack.Screen
+          name="finance/budgets"
+          options={{
+            headerShown: true,
+            headerTitle: t("nav.budgets"),
+            headerBackTitle: t("nav.finance"),
+          }}
+        />
+        <Stack.Screen
+          name="finance/budgets/[id]"
+          options={{
+            headerShown: true,
+            headerTitle: "Budget Details",
+            headerBackTitle: t("nav.budgets"),
+          }}
+        />
+        <Stack.Screen
+          name="finance/accounts"
+          options={{
+            headerShown: true,
+            headerTitle: t("nav.accounts"),
+            headerBackTitle: t("nav.finance"),
+          }}
+        />
+        <Stack.Screen
+          name="finance/accounts/[id]"
+          options={{
+            headerShown: true,
+            headerTitle: "Account Details",
+            headerBackTitle: t("nav.accounts"),
+          }}
+        />
+        <Stack.Screen
+          name="finance/recurring"
+          options={{
+            headerShown: true,
+            headerTitle: t("nav.recurring"),
+            headerBackTitle: t("nav.finance"),
+          }}
+        />
+        <Stack.Screen
+          name="finance/borrowing"
+          options={{
+            headerShown: true,
+            headerTitle: t("nav.borrowing"),
+            headerBackTitle: t("nav.finance"),
+          }}
+        />
+        <Stack.Screen
+          name="finance/borrowing/[id]"
+          options={{
+            headerShown: true,
+            headerTitle: "Agreement Details",
+            headerBackTitle: t("nav.borrowing"),
+          }}
+        />
+        <Stack.Screen
+          name="mail/[threadId]"
+          options={{
+            headerShown: true,
+            headerTitle: "Conversation",
+            headerBackTitle: t("nav.mail"),
+          }}
+        />
+        <Stack.Screen
+          name="workflows/index"
+          options={{
+            headerShown: true,
+            headerTitle: t("nav.workflows"),
+            headerBackTitle: t("common.back"),
+          }}
+        />
+        <Stack.Screen
+          name="workflows/[id]"
+          options={{
+            headerShown: true,
+            headerTitle: t("workflows.editor.copilotTitle"),
+            headerBackTitle: t("nav.workflows"),
+          }}
+        />
+        <Stack.Screen
+          name="workflows/runs/[runId]"
+          options={{
+            headerShown: true,
+            headerTitle: t("workflows.mobile.runTraceTitle"),
+            headerBackTitle: t("nav.workflows"),
+          }}
+        />
+      </Stack>
+      <MobileCopilotSheet />
+    </MobileCopilotProvider>
   )
 }
 

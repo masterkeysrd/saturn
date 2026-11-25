@@ -37,6 +37,7 @@ import type {
 import { stripHtmlToPlainText } from "@saturn/core"
 import { SpaceAvatarButton, AIHeaderButton } from "@/components/app-header"
 import { QuickCaptureFab } from "@/components/ui/quick-capture-sheet"
+import { useMobileCopilotView } from "@/lib/copilot-sheet-context"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -59,6 +60,16 @@ export default function MobileMailScreen() {
   const [isUnreadFilter, setIsUnreadFilter] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
+
+  useMobileCopilotView({
+    viewId: "mobile.mail",
+    title: t("nav.mail"),
+    suggestions: [
+      t("mail.suggestion.inboxSummarize"),
+      t("mail.suggestion.inboxReplies"),
+      t("mail.suggestion.inboxReceipts"),
+    ],
+  })
 
   // Reset account selection and search filters on workspace switch
   useEffect(() => {

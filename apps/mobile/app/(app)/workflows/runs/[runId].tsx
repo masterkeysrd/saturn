@@ -3,6 +3,7 @@ import { useLocalSearchParams } from "expo-router"
 import { useI18n, useTimezone } from "@saturn/hooks"
 import { useGetFlowRunQuery } from "@saturn/api/saturn/platform/workflow/v1/workflow"
 import { Badge } from "@/components/ui/badge"
+import { JsonCodeBlock } from "@/components/ui/json-code-block"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
 export default function WorkflowRunDetailScreen() {
@@ -157,11 +158,7 @@ export default function WorkflowRunDetailScreen() {
               <Text style={styles.errorBody}>{sr.error.message}</Text>
             )}
 
-            {sr.output && (
-              <Text style={styles.codeBlock}>
-                {JSON.stringify(sr.output, null, 2)}
-              </Text>
-            )}
+            {sr.output && <JsonCodeBlock value={sr.output} maxHeight={240} />}
           </View>
         )
       })}
@@ -171,9 +168,7 @@ export default function WorkflowRunDetailScreen() {
           <Text style={styles.sectionLabel}>
             {t("workflows.runs.terminalOutput").toUpperCase()}
           </Text>
-          <Text style={styles.codeBlock}>
-            {JSON.stringify(run.output, null, 2)}
-          </Text>
+          <JsonCodeBlock value={run.output} maxHeight={260} />
         </View>
       )}
     </ScrollView>
@@ -265,14 +260,6 @@ const createStyles = (t: SaturnMobileTheme) => ({
     fontSize: 10,
     fontFamily: t.typography.mono,
     color: t.colors.textSecondary,
-  },
-  codeBlock: {
-    fontSize: 11,
-    fontFamily: t.typography.mono,
-    color: t.colors.textPrimary,
-    backgroundColor: t.colors.surfaceElevated,
-    padding: 10,
-    borderRadius: t.radius.md,
   },
   errorCard: {
     padding: 12,

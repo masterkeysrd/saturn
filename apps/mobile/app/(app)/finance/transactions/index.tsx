@@ -46,9 +46,11 @@ import {
   useI18n,
   useTimezone,
 } from "@saturn/hooks"
+import { useMobileCopilotView } from "@/lib/copilot-sheet-context"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
+import { AIHeaderButton } from "@/components/app-header"
 import { Card } from "@/components/ui/card"
 import { TransactionListItem } from "@/components/finance/transaction-list-item"
 import { DateSectionHeader } from "@/components/finance/date-section-header"
@@ -71,6 +73,16 @@ export default function TransactionsScreen() {
   const [search, setSearch] = useState("")
   const debouncedSearch = useDebounce(search, 300)
   const [refreshing, setRefreshing] = useState(false)
+
+  useMobileCopilotView({
+    viewId: "mobile.finance.transactions",
+    title: t("nav.transactions"),
+    suggestions: [
+      t("finance.transactions.suggestion.spendingTrends"),
+      t("finance.transactions.suggestion.unusualCharges"),
+      t("finance.transactions.suggestion.categories"),
+    ],
+  })
 
   // Filters
   const [selectedType, setSelectedType] = useState<string>("")
@@ -339,6 +351,11 @@ export default function TransactionsScreen() {
               </View>
             )}
           </TouchableOpacity>
+
+          <AIHeaderButton
+            testID="transactions-header-ai"
+            style={styles.aiHeaderBtn}
+          />
         </View>
 
         {/* Month Stepper + Contextual Active Filter Chips */}
@@ -862,6 +879,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
   filterButtonActive: {
     borderColor: t.colors.primary,
     backgroundColor: t.colors.primarySubtle,
+  },
+  aiHeaderBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: t.radius.md,
   },
   filterBadge: {
     position: "absolute" as const,

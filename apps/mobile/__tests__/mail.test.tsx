@@ -86,6 +86,7 @@ vi.mock("expo-secure-store", () => ({
 
 vi.mock("expo-router", () => ({
   useRouter: () => ({ push: mockRouterPush, back: vi.fn() }),
+  useIsFocused: () => true,
 }))
 
 vi.mock("@react-native-async-storage/async-storage", () => ({
