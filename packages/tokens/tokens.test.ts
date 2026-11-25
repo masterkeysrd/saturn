@@ -24,6 +24,22 @@ describe("@saturn/tokens", () => {
     expect(lightColors.primary).not.toBe(darkColors.primary)
   })
 
+  it("provides valid hex colors for all JSON syntax tokens in light and dark palettes", () => {
+    const syntaxKeys = [
+      "syntaxKey",
+      "syntaxString",
+      "syntaxNumber",
+      "syntaxBoolean",
+      "syntaxNull",
+      "syntaxPunctuation",
+    ] as const
+
+    for (const key of syntaxKeys) {
+      expect(lightColors[key]).toMatch(/^#[0-9a-f]{6}$/i)
+      expect(darkColors[key]).toMatch(/^#[0-9a-f]{6}$/i)
+    }
+  })
+
   it("exports all 12 perceptually balanced categorical hues plus legacy rose alias", () => {
     expect(CATEGORICAL_HUES).toHaveLength(12)
     expect(CATEGORICAL_PALETTE).toHaveLength(12)

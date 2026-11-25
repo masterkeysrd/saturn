@@ -1,8 +1,11 @@
 import { useI18n, useTimezone } from "@saturn/hooks"
 import { getLocalizedEnumLabel } from "@saturn/i18n"
+import { prettifyJsonValue } from "@saturn/core"
 import { useGetRunQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { WorkspaceInspectorPanel } from "@/components/ui/inspector-panel"
 import { Badge } from "@/components/ui/badge"
+import { CollapsibleContent } from "@/components/ui/collapsible"
+import { CodeBlock } from "@/components/ai-elements/code-block"
 import {
   Reasoning,
   ReasoningContent,
@@ -141,7 +144,7 @@ export function RunTraceSheet({ runId, onOpenChange }: RunTraceSheetProps) {
                     const outText =
                       typeof step.output?.text === "string"
                         ? step.output.text
-                        : JSON.stringify(step.output ?? {}, null, 2)
+                        : null
                     return (
                       <Reasoning key={step.id ?? step.seq} defaultOpen={false}>
                         <ReasoningTrigger
@@ -149,7 +152,16 @@ export function RunTraceSheet({ runId, onOpenChange }: RunTraceSheetProps) {
                             `Step ${step.seq}: LLM (${step.name}) · ${step.metrics?.durationMs ?? 0}ms`
                           }
                         />
-                        <ReasoningContent>{outText}</ReasoningContent>
+                        {outText !== null ? (
+                          <ReasoningContent>{outText}</ReasoningContent>
+                        ) : (
+                          <CollapsibleContent className="border-t border-border/40 px-3 py-2.5 text-xs">
+                            <CodeBlock
+                              code={prettifyJsonValue(step.output ?? {})}
+                              language="json"
+                            />
+                          </CollapsibleContent>
+                        )}
                       </Reasoning>
                     )
                   }

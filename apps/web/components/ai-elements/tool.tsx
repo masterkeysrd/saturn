@@ -16,6 +16,7 @@ import {
   isEmptyToolParam,
   isIsoTimestampLike,
   isPlainRecord,
+  prettifyJsonValue,
   stripCentsSuffix,
   unwrapToolResult,
   type ToolDomain,
@@ -373,7 +374,7 @@ export const ToolInput = ({ className, input, ...props }: ToolInputProps) => {
           Parameters
         </h4>
         <CodeBlock
-          code={JSON.stringify(input, null, 2)}
+          code={prettifyJsonValue(input)}
           language="json"
           className="rounded-lg border-border/40 text-[11px]"
         />
@@ -659,9 +660,7 @@ export const ToolOutput = ({
 
   if (showRaw) {
     const rawPayload = rawOutput ?? output
-    const code = rawPayload
-      ? JSON.stringify(rawPayload, null, 2)
-      : (errorText ?? "")
+    const code = rawPayload ? prettifyJsonValue(rawPayload) : (errorText ?? "")
     return (
       <div className={cn("mt-2.5 space-y-1.5", className)} {...props}>
         <h4 className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">

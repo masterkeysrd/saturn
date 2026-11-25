@@ -3,9 +3,11 @@ import { useI18n } from "@saturn/hooks"
 import { useListAgentsQuery } from "@saturn/api/gen/saturn/platform/ai/v1/ai"
 import {
   discoverVariablesAtStep,
+  prettifyJsonValue,
   type WorkflowStepRef,
   type WorkflowVariable,
 } from "@saturn/core"
+import { CodeBlock } from "@/components/ai-elements/code-block"
 import type {
   Catalog_Loader,
   Catalog_Step,
@@ -969,9 +971,11 @@ export function NodeInspectorPanel({
                 )}
 
                 {stepRun.output && (
-                  <pre className="overflow-x-auto rounded-xl bg-muted/50 p-3 font-mono text-[11px]">
-                    {JSON.stringify(stepRun.output, null, 2)}
-                  </pre>
+                  <CodeBlock
+                    code={prettifyJsonValue(stepRun.output)}
+                    language="json"
+                    className="max-h-60 overflow-auto"
+                  />
                 )}
               </div>
             )}

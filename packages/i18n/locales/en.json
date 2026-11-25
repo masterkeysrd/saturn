@@ -289,6 +289,16 @@
       "thoughtProcess": "Thought process",
       "workspaceDefaultModelDesc": "Uses workspace default model"
     },
+    "code": {
+      "copied": "Copied",
+      "copy": "Copy JSON",
+      "inputLabel": "Input",
+      "outputLabel": "Output",
+      "parametersLabel": "Parameters",
+      "rawToggle": "Raw",
+      "resultLabel": "Result",
+      "structuredToggle": "Formatted"
+    },
     "connect": {
       "descAfter": ").",
       "descBefore": "Connect Claude Desktop, Cursor, or VS Code to your Saturn workspace using an API key with the required scopes (e.g.",
@@ -321,6 +331,23 @@
       "turnFailed": "Failed to execute AI turn",
       "via": "via {server}",
       "workspaceDefault": "Workspace Default"
+    },
+    "copilotSheet": {
+      "askPlaceholder": "Ask Saturn about this view…",
+      "clearContext": "Remove context",
+      "close": "Close Copilot",
+      "generating": "Generating response…",
+      "newChat": "New chat",
+      "openFullScreen": "Open full chat",
+      "suggestAccount": "Summarize recent activity on this account",
+      "suggestBudget": "How is my spending pacing on this budget?",
+      "suggestCalendar": "What's coming up on my schedule?",
+      "suggestFinance": "Analyze my spending this month",
+      "suggestMail": "Draft a concise reply to this thread",
+      "suggestOverview": "Give me a quick daily briefing",
+      "suggestTransactions": "Spot unusual expenses in my recent transactions",
+      "thinking": "Thinking…",
+      "title": "Saturn Copilot"
     },
     "domain": {
       "agent": "Agent",
@@ -3312,6 +3339,7 @@
       "dateLabel": "Date:",
       "fromLabel": "From:",
       "markUnread": "Mark unread",
+      "moreActions": "More actions",
       "stageToFinance": "Stage to Finance",
       "toLabel": "To:"
     },

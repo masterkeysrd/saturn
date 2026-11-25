@@ -1,8 +1,52 @@
+import {
+  CodeBlock,
+  CodeBlockCopyButton,
+  CodeBlockHeader,
+} from "@/components/ai-elements/code-block"
 import { cn } from "@/lib/utils"
 import { CheckIcon, CopyIcon } from "lucide-react"
-import type { ComponentProps } from "react"
-import { useRef, useState } from "react"
+import {
+  cloneElement,
+  isValidElement,
+  type ComponentProps,
+  type ReactElement,
+  useRef,
+  useState,
+} from "react"
 import { Streamdown } from "streamdown"
+
+function extractReactText(node: unknown): string {
+  if (typeof node === "string") return node
+  if (typeof node === "number") return String(node)
+  if (Array.isArray(node)) return node.map(extractReactText).join("")
+  if (
+    isValidElement(node) &&
+    node.props &&
+    typeof node.props === "object" &&
+    "children" in node.props
+  ) {
+    return extractReactText(node.props.children)
+  }
+  return ""
+}
+
+function isValidJsonBlock(raw: string): boolean {
+  const trimmed = raw.trim()
+  if (!(
+    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+    (trimmed.startsWith("[") && trimmed.endsWith("]"))
+  )) {
+    return false
+  }
+  try {
+    const parsed: unknown = JSON.parse(trimmed)
+    return (
+      Array.isArray(parsed) || (typeof parsed === "object" && parsed !== null)
+    )
+  } catch {
+    return false
+  }
+}
 
 function extractTableTsv(tableEl: HTMLTableElement): string {
   const lines: string[] = []
@@ -142,6 +186,40 @@ const SATURN_MARKDOWN_COMPONENTS: ComponentProps<
       >
         {children}
       </p>
+    )
+  },
+  pre: ({ children, className, node: _n, ...props }) => {
+    void _n
+    if (isValidElement(children)) {
+      const childProps = children.props as {
+        className?: string
+        children?: unknown
+      }
+      const codeClassName =
+        typeof childProps.className === "string" ? childProps.className : ""
+      const rawText = extractReactText(childProps.children).replace(/\n$/, "")
+      const isJsonLang = /\blanguage-jsonc?\b/i.test(codeClassName)
+      const hasNoLang = !/\blanguage-[^\s]+/.test(codeClassName)
+      if (isJsonLang || (hasNoLang && isValidJsonBlock(rawText))) {
+        return (
+          <CodeBlock code={rawText} language="json" className="my-3">
+            <CodeBlockHeader>
+              <span className="font-mono text-[10px] font-medium tracking-wider uppercase">
+                json
+              </span>
+              <CodeBlockCopyButton />
+            </CodeBlockHeader>
+          </CodeBlock>
+        )
+      }
+      return cloneElement(children as ReactElement<Record<string, unknown>>, {
+        "data-block": "true",
+      })
+    }
+    return (
+      <pre className={className} {...props}>
+        {children}
+      </pre>
     )
   },
   table: MarkdownTable,

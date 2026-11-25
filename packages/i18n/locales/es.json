@@ -289,6 +289,16 @@
       "thoughtProcess": "Proceso de razonamiento",
       "workspaceDefaultModelDesc": "Usa el modelo predeterminado del espacio"
     },
+    "code": {
+      "copied": "Copiado",
+      "copy": "Copiar JSON",
+      "inputLabel": "Entrada",
+      "outputLabel": "Salida",
+      "parametersLabel": "Parámetros",
+      "rawToggle": "JSON",
+      "resultLabel": "Resultado",
+      "structuredToggle": "Formateado"
+    },
     "connect": {
       "descAfter": ").",
       "descBefore": "Conecta Claude Desktop, Cursor o VS Code a tu espacio de Saturn mediante una clave de API con los ámbitos requeridos (p. ej.",
@@ -321,6 +331,23 @@
       "turnFailed": "Error al ejecutar el turno de IA",
       "via": "vía {server}",
       "workspaceDefault": "Predeterminado del espacio"
+    },
+    "copilotSheet": {
+      "askPlaceholder": "Pregunta a Saturn sobre esta vista…",
+      "clearContext": "Quitar contexto",
+      "close": "Cerrar Copilot",
+      "generating": "Generando respuesta…",
+      "newChat": "Nuevo chat",
+      "openFullScreen": "Abrir chat completo",
+      "suggestAccount": "Resume la actividad reciente de esta cuenta",
+      "suggestBudget": "¿Cómo va mi ritmo de gasto en este presupuesto?",
+      "suggestCalendar": "¿Qué tengo próximamente en mi agenda?",
+      "suggestFinance": "Analiza mis gastos de este mes",
+      "suggestMail": "Redacta una respuesta breve a este correo",
+      "suggestOverview": "Dame un resumen rápido de hoy",
+      "suggestTransactions": "Detecta gastos inusuales en mis transacciones recientes",
+      "thinking": "Pensando…",
+      "title": "Saturn Copilot"
     },
     "domain": {
       "agent": "Agente",
@@ -3312,6 +3339,7 @@
       "dateLabel": "Fecha:",
       "fromLabel": "De:",
       "markUnread": "Marcar no leído",
+      "moreActions": "Más acciones",
       "stageToFinance": "Enviar a Finanzas",
       "toLabel": "Para:"
     },

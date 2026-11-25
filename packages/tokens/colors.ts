@@ -33,6 +33,12 @@ export interface SemanticColorPalette {
   tabBarBorder: string
   tabBarActive: string
   tabBarInactive: string
+  syntaxKey: string
+  syntaxString: string
+  syntaxNumber: string
+  syntaxBoolean: string
+  syntaxNull: string
+  syntaxPunctuation: string
 }
 
 export const lightColors: SemanticColorPalette = {
@@ -70,6 +76,12 @@ export const lightColors: SemanticColorPalette = {
   tabBarBorder: "#e2e8f0",
   tabBarActive: "#0c7e95",
   tabBarInactive: "#64748b",
+  syntaxKey: "#0369a1",
+  syntaxString: "#047857",
+  syntaxNumber: "#b45309",
+  syntaxBoolean: "#4f46e5",
+  syntaxNull: "#64748b",
+  syntaxPunctuation: "#64748b",
 }
 
 export const darkColors: SemanticColorPalette = {
@@ -107,6 +119,12 @@ export const darkColors: SemanticColorPalette = {
   tabBarBorder: "rgba(255, 255, 255, 0.09)",
   tabBarActive: "#4de2cf",
   tabBarInactive: "#64748b",
+  syntaxKey: "#7dd3fc",
+  syntaxString: "#6ee7b7",
+  syntaxNumber: "#fcd34d",
+  syntaxBoolean: "#a5b4fc",
+  syntaxNull: "#94a3b8",
+  syntaxPunctuation: "#64748b",
 }
 
 export const CATEGORICAL_HUES = [

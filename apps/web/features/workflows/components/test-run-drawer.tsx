@@ -24,6 +24,8 @@ import {
   XCircle,
 } from "lucide-react"
 import { useI18n } from "@saturn/hooks"
+import { prettifyJsonValue } from "@saturn/core"
+import { CodeBlock } from "@/components/ai-elements/code-block"
 
 interface TestRunDrawerProps {
   open: boolean
@@ -242,9 +244,11 @@ export function TestRunDrawer({
                           </span>
                         </div>
                         {sr.output && (
-                          <pre className="overflow-x-auto rounded-lg bg-muted/50 p-2 font-mono text-[11px]">
-                            {JSON.stringify(sr.output, null, 2)}
-                          </pre>
+                          <CodeBlock
+                            code={prettifyJsonValue(sr.output)}
+                            language="json"
+                            className="max-h-60 overflow-auto"
+                          />
                         )}
                         {sr.error?.message && (
                           <p className="font-mono text-[11px] text-destructive">
@@ -262,9 +266,11 @@ export function TestRunDrawer({
                   <span className="text-xs font-semibold text-muted-foreground">
                     {t("workflows.testRun.terminalOutput")}
                   </span>
-                  <pre className="overflow-x-auto rounded-xl bg-muted/50 p-3 font-mono text-[11px]">
-                    {JSON.stringify(lastRun.output, null, 2)}
-                  </pre>
+                  <CodeBlock
+                    code={prettifyJsonValue(lastRun.output)}
+                    language="json"
+                    className="max-h-60 overflow-auto"
+                  />
                 </div>
               )}
             </div>

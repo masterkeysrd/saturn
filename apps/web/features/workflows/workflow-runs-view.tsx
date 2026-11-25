@@ -30,6 +30,8 @@ import {
   Sparkles,
 } from "lucide-react"
 import { openAIDrawer } from "@/features/ai/lib/drawer-events"
+import { CodeBlock } from "@/components/ai-elements/code-block"
+import { prettifyJsonValue } from "@saturn/core"
 
 const STATUS_OPTIONS = [
   "all",
@@ -472,9 +474,11 @@ export function WorkflowRunsView() {
                       )}
 
                       {sr.output && (
-                        <pre className="max-h-48 overflow-auto rounded-lg bg-muted/40 p-2 font-mono text-[11px]">
-                          {JSON.stringify(sr.output, null, 2)}
-                        </pre>
+                        <CodeBlock
+                          code={prettifyJsonValue(sr.output)}
+                          language="json"
+                          className="max-h-60 overflow-auto"
+                        />
                       )}
                     </div>
                   )
@@ -486,9 +490,11 @@ export function WorkflowRunsView() {
                   <h4 className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                     {t("workflows.runs.terminalOutput")}
                   </h4>
-                  <pre className="max-h-64 overflow-auto rounded-xl bg-muted/40 p-3 font-mono text-[11px]">
-                    {JSON.stringify(detailRun.output, null, 2)}
-                  </pre>
+                  <CodeBlock
+                    code={prettifyJsonValue(detailRun.output)}
+                    language="json"
+                    className="max-h-60 overflow-auto"
+                  />
                 </div>
               )}
 
@@ -497,9 +503,11 @@ export function WorkflowRunsView() {
                   <h4 className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                     {t("workflows.runs.normalizedInput")}
                   </h4>
-                  <pre className="max-h-48 overflow-auto rounded-xl bg-muted/40 p-3 font-mono text-[11px]">
-                    {JSON.stringify(detailRun.input, null, 2)}
-                  </pre>
+                  <CodeBlock
+                    code={prettifyJsonValue(detailRun.input)}
+                    language="json"
+                    className="max-h-60 overflow-auto"
+                  />
                 </div>
               )}
             </div>

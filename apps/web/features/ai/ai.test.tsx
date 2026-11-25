@@ -854,7 +854,14 @@ describe("Web AI Studio", () => {
       name: "Toggle raw JSON",
     })
     fireEvent.click(rawToggles[0])
-    expect(screen.getByText(/"amount_cents": 4500/)).toBeTruthy()
+    const approvalRawCode = document.querySelector(
+      '[data-language="json"] code'
+    )
+    expect(approvalRawCode?.textContent).toContain('"amount_cents": 4500')
+    expect(screen.getByText('"amount_cents"').className).toContain(
+      "text-syntax-key"
+    )
+    expect(screen.getByText("4500").className).toContain("text-syntax-number")
   })
 
   it("renders Layer 2 domain-native outputs with deep links and Layer 3 generic fallback + Raw toggle", () => {
@@ -1025,7 +1032,14 @@ describe("Web AI Studio", () => {
       name: "Toggle raw JSON",
     })
     fireEvent.click(rawButtons[2])
-    expect(screen.getByText(/"temp": "22C"/)).toBeTruthy()
+    const codeEls = Array.from(
+      document.querySelectorAll('[data-language="json"] code')
+    )
+    expect(
+      codeEls.some((el) => el.textContent?.includes('"temp": "22C"'))
+    ).toBe(true)
+    expect(screen.getByText('"temp"').className).toContain("text-syntax-key")
+    expect(screen.getByText('"22C"').className).toContain("text-syntax-string")
   })
 
   it("groups consecutive read-only completed tools into ToolChainGroup while keeping mutating tools ungrouped", () => {
@@ -1646,5 +1660,116 @@ describe("Web AI Studio", () => {
     renderWithProviders(<MCPServerSheet open={true} onOpenChange={vi.fn()} />)
     expect(screen.getByText("None")).toBeTruthy()
     expect(screen.queryByText("none")).toBeNull()
+  })
+
+  it("unwraps nested MCP content[0].text JSON in Raw mode and syntax-colors Markdown JSON blocks while keeping inline code untouched", () => {
+    vi.mocked(aiHooks.useThreadStream).mockReturnValue({
+      thread: undefined,
+      messages: [
+        {
+          id: "aim_u_json",
+          threadId: "thr_1",
+          spaceId: "spc_1",
+          seq: 1,
+          role: "user",
+          blocks: [{ type: "text", text: "Inspect payload" }],
+        },
+        {
+          id: "aim_a_json",
+          threadId: "thr_1",
+          spaceId: "spc_1",
+          seq: 2,
+          role: "assistant",
+          blocks: [
+            {
+              type: "tool_call",
+              toolCallId: "tc_mcp_nested",
+              toolName: "mcp__weather__get_forecast",
+              arguments: { city: "Lisbon" },
+            },
+            {
+              type: "text",
+              text: [
+                "Use `get_forecast` for details:",
+                "",
+                "```json",
+                '{"ok":true,"note":null,"count":3}',
+                "```",
+              ].join("\n"),
+            },
+          ],
+        },
+        {
+          id: "aim_t_json",
+          threadId: "thr_1",
+          spaceId: "spc_1",
+          seq: 3,
+          role: "tool",
+          blocks: [
+            {
+              type: "tool_result",
+              toolCallId: "tc_mcp_nested",
+              result: {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify({
+                      city: "Lisbon",
+                      sunny: true,
+                      alerts: null,
+                    }),
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      isLoadingMessages: false,
+      isStreaming: false,
+      status: "idle",
+      streamPhase: "idle",
+      activeToolCall: null,
+      activeRunId: null,
+      streamingMessage: null,
+      pendingApprovals: [],
+      error: null,
+      sendMessage,
+      resolveApprovals,
+      stop,
+      clearError: vi.fn(),
+    })
+
+    renderWithProviders(<ChatView />)
+
+    // Markdown fenced json block renders syntax-colored <CodeBlock>
+    expect(screen.getByText('"ok"').className).toContain("text-syntax-key")
+    expect(screen.getByText("true").className).toContain("text-syntax-boolean")
+    expect(screen.getByText("null").className).toContain("text-syntax-null")
+    expect(screen.getByText("3").className).toContain("text-syntax-number")
+
+    // Inline <code> remains untouched (not wrapped in a CodeBlock)
+    const inlineCode = screen.getByText("get_forecast")
+    expect(inlineCode.tagName.toLowerCase()).toBe("code")
+    expect(inlineCode.closest('[data-language="json"]')).toBeNull()
+
+    // Expand MCP tool and toggle Raw mode -> nested content[0].text JSON unwraps into structured JSON
+    fireEvent.click(screen.getByText("Ran Get Forecast"))
+    fireEvent.click(screen.getByRole("button", { name: "Toggle raw JSON" }))
+
+    const jsonBlocks = Array.from(
+      document.querySelectorAll('[data-language="json"] code')
+    )
+    const mcpRawBlock = jsonBlocks.find((el) =>
+      el.textContent?.includes('"sunny": true')
+    )
+    expect(mcpRawBlock).toBeTruthy()
+    expect(mcpRawBlock?.textContent).not.toContain('\\"sunny\\"')
+    expect(screen.getByText('"sunny"').className).toContain("text-syntax-key")
+    const lisbonTokens = screen.getAllByText('"Lisbon"')
+    expect(lisbonTokens.length).toBeGreaterThanOrEqual(2)
+    expect(
+      lisbonTokens.every((el) => el.className.includes("text-syntax-string"))
+    ).toBe(true)
   })
 })
