@@ -18,6 +18,8 @@ describe("@saturn/tokens", () => {
       Object.keys(darkColors).sort()
     )
     expect(lightColors.background).not.toBe(lightColors.surface)
+    expect(lightColors.surfaceElevated).toBe("#ffffff")
+    expect(lightColors.surfaceElevated).not.toBe(lightColors.background)
     expect(darkColors.background).not.toBe(darkColors.surface)
     expect(lightColors.primary).not.toBe(darkColors.primary)
   })

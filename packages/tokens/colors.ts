@@ -38,7 +38,7 @@ export interface SemanticColorPalette {
 export const lightColors: SemanticColorPalette = {
   background: "#f6f9fb",
   surface: "#ffffff",
-  surfaceElevated: "#f1f6f9",
+  surfaceElevated: "#ffffff",
   surfaceSubtle: "#edf3f7",
   surfaceHighlight: "#e5eef4",
   border: "rgba(15, 23, 42, 0.10)",
