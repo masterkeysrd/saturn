@@ -69,6 +69,8 @@ export function useAccountAnalytics(
     net: balance.reduce((sum, p) => sum + p.delta, 0),
     inflow: recent.reduce((sum, p) => sum + p.inflow, 0),
     outflow: recent.reduce((sum, p) => sum + p.outflow, 0),
+    periodInflow: flows.reduce((sum, p) => sum + p.inflow, 0),
+    periodOutflow: flows.reduce((sum, p) => sum + p.outflow, 0),
     points:
       mode === "balance"
         ? balance.map((p) => ({

@@ -8,7 +8,6 @@ import {
 } from "react-native"
 import { useRouter, Stack } from "expo-router"
 import { Landmark, Plus, ArrowRightLeft } from "lucide-react-native"
-import { formatAmount } from "@saturn/core"
 import {
   useListAccountsQuery,
   useListInstitutionsQuery,
@@ -17,20 +16,25 @@ import {
   type Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
-import { useI18n } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import type { TranslationKey } from "@saturn/i18n"
-import { useSpace } from "@/lib/space-context"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { Caption } from "@/components/ui/typography"
-import { SkeletonCard } from "@/components/ui/skeleton-loader"
-import { EmptyState } from "@/components/ui/empty-state"
-import { CardAccountItem } from "@/components/finance/card-account-item"
-import { haptics } from "@/lib/haptics"
+import { useSpace } from "../../../lib/space-context"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../../lib/theme"
+import { Caption } from "../../../components/ui/typography"
+import { SkeletonCard } from "../../../components/ui/skeleton-loader"
+import { EmptyState } from "../../../components/ui/empty-state"
+import { CardAccountItem } from "../../../components/finance/card-account-item"
+import { haptics } from "../../../lib/haptics"
 
 export default function AccountsScreen() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
   const { t } = useI18n()
+  const tz = useTimezone()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
   const [refreshing, setRefreshing] = useState(false)
@@ -143,11 +147,11 @@ export default function AccountsScreen() {
     let convertedStr = ""
     if (isDifferentCurrency) {
       const preview = getConversionPreview(
-        String(Math.abs(balanceNum) / 100),
+        String(balanceNum / 100),
         acc.currency
       )
       if (preview && "amount" in preview) {
-        convertedStr = `≈ ${formatAmount(
+        convertedStr = `≈ ${tz.formatMoney(
           Math.round(preview.amount * 100),
           baseCurrency
         )}`

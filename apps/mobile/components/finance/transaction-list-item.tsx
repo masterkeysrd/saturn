@@ -1,5 +1,5 @@
 import React from "react"
-import { Text, View, TouchableOpacity } from "react-native"
+import { StyleSheet, Text, View, TouchableOpacity } from "react-native"
 import {
   ArrowUpRight,
   ArrowDownLeft,
@@ -7,16 +7,21 @@ import {
   Repeat,
   Coins,
 } from "lucide-react-native"
-import { formatAmount } from "@saturn/core"
+import { signedTransactionAmount } from "@saturn/core"
 import { useI18n, useTimezone } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import {
   type Transaction,
   type Budget,
   type Account,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { BudgetCategoryIcon } from "@/lib/budget-icons"
-import { MonoAmount } from "@/components/ui/typography"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../lib/theme"
+import { BudgetCategoryIcon } from "../../lib/budget-icons"
+import { MonoAmount } from "../ui/typography"
 
 export interface TransactionListItemProps {
   item: Transaction
@@ -43,11 +48,11 @@ export function TransactionListItem({
 }: TransactionListItemProps) {
   const { colors, getBudgetColors } = useTheme()
   const styles = useThemedStyles(createStyles)
-  const { t } = useI18n()
+  const { t, language } = useI18n()
 
   const isExpense = item.type === "EXPENSE"
   const isIncome = item.type === "INCOME"
-  const displaySign = isExpense ? "-" : isIncome ? "+" : ""
+  const signed = signedTransactionAmount(item)
 
   // Cross currency check: shows base value when transaction currency differs from base
   const isCrossCurrency = Boolean(
@@ -157,11 +162,17 @@ export function TransactionListItem({
         >
           <Coins size={10} color={colors.warning} />
           <Text style={[styles.tagText, { color: colors.warning }]}>
-            {borrowingRole === "REPAYMENT"
-              ? t("finance.transactions.repayment")
-              : borrowingRole === "INITIAL_FUNDING" && isExpense
-                ? t("finance.transactions.lend")
-                : t("finance.transactions.borrow")}
+            {borrowingRole === "REPAYMENT" ||
+            borrowingRole === "INITIAL_FUNDING" ||
+            borrowingRole === "DISBURSEMENT" ||
+            borrowingRole === "ADJUSTMENT"
+              ? getLocalizedEnumLabel(
+                  "finance",
+                  "borrowingRole",
+                  borrowingRole,
+                  language
+                )
+              : t("nav.borrowing")}
           </Text>
         </View>
       )}
@@ -219,16 +230,15 @@ export function TransactionListItem({
           <MonoAmount
             size="md"
             color={
-              isExpense
-                ? colors.textPrimary
-                : isIncome
+              signed < 0
+                ? colors.destructive
+                : signed > 0
                   ? colors.success
-                  : colors.accent
+                  : colors.textPrimary
             }
             style={styles.mainAmount}
           >
-            {displaySign}
-            {formatAmount(item.amount, item.currency)}
+            {tz.formatMoney(signed, item.currency, { showSign: true })}
           </MonoAmount>
         </View>
 
@@ -252,8 +262,12 @@ export function TransactionListItem({
 
               {isCrossCurrency && item.amountInBase ? (
                 <Text style={styles.baseAmountText}>
-                  ≈ {displaySign}
-                  {formatAmount(item.amountInBase, baseCurrency)}
+                  ≈{" "}
+                  {tz.formatMoney(
+                    Math.sign(signed) * Math.abs(Number(item.amountInBase)),
+                    baseCurrency,
+                    { showSign: true }
+                  )}
                 </Text>
               ) : null}
             </View>
@@ -271,8 +285,12 @@ export function TransactionListItem({
 
               {isCrossCurrency && item.amountInBase ? (
                 <Text style={styles.baseAmountText}>
-                  ≈ {displaySign}
-                  {formatAmount(item.amountInBase, baseCurrency)}
+                  ≈{" "}
+                  {tz.formatMoney(
+                    Math.sign(signed) * Math.abs(Number(item.amountInBase)),
+                    baseCurrency,
+                    { showSign: true }
+                  )}
                 </Text>
               ) : null}
             </View>
@@ -287,11 +305,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flexDirection: "row" as const,
     alignItems: "flex-start" as const,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 12,
   },
   borderBottom: {
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: t.colors.border,
   },
   iconBadge: {

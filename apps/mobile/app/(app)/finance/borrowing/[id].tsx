@@ -1,3 +1,10 @@
+import { DetailChart } from "../../../../components/finance/detail-chart"
+import { useBorrowingAnalytics, useDetailLedger } from "@saturn/hooks/finance"
+import { AIHeaderButton } from "../../../../components/app-header"
+import {
+  useOptionalMobileCopilotSheet,
+  useMobileCopilotView,
+} from "../../../../lib/copilot-sheet-context"
 import { useState, useMemo } from "react"
 import {
   StyleSheet,
@@ -15,38 +22,32 @@ import { useQueryClient } from "@tanstack/react-query"
 import {
   TrendingUp,
   TrendingDown,
-  Calendar,
   CalendarClock,
   MoreVertical,
   Scale,
   ReceiptText,
   AlertCircle,
-  Edit3,
   Plus,
+  PlusCircle,
   Landmark,
   FileText,
-  Phone,
 } from "lucide-react-native"
 import { Icon } from "@expo/ui"
-import { ActionMenu } from "@/components/ui/action-menu"
+import { ActionMenu } from "../../../../components/ui/action-menu"
 import {
   useGetBorrowingQuery,
-  useListBorrowingsQuery,
-  useListTransactionsQuery,
   useListAccountsQuery,
+  useListExchangeRatesQuery,
   useGetSettingsQuery,
   useDeleteBorrowingMutation,
-  useDeleteBorrowingTransactionMutation,
-  type Borrowing,
   type Account,
   type Transaction,
 } from "@saturn/api/saturn/finance/v1/finance"
 import {
-  formatAmount,
-  parseDate,
-  getStartOfDay,
-  getTimezoneParts,
-  formatDateWithTimezone,
+  buildCopilotEntityKey,
+  convertCentsToBase,
+  signedTransactionAmount,
+  getDaysDiff,
 } from "@saturn/core"
 import {
   invalidateFinanceQueries,
@@ -54,28 +55,22 @@ import {
   useTimezone,
   useI18n,
 } from "@saturn/hooks"
-import { useSpace } from "@/lib/space-context"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { MonoAmount, Caption } from "@/components/ui/typography"
-import { EmptyState } from "@/components/ui/empty-state"
-import { SkeletonCard } from "@/components/ui/skeleton-loader"
-import { TransactionListItem } from "@/components/finance/transaction-list-item"
-import { DateSectionHeader } from "@/components/finance/date-section-header"
-import { useToast } from "@/components/ui/toast"
-
-// Cross-platform menu icons
-const paymentIcon = Icon.select({
-  ios: "dollarsign.circle",
-  android: require("@expo/material-symbols/payments.xml"),
-})
-
-const adjustIcon = Icon.select({
-  ios: "slider.horizontal.3",
-  android: require("@expo/material-symbols/scale.xml"),
-})
+import { getLocalizedEnumLabel } from "@saturn/i18n"
+import { useSpace } from "../../../../lib/space-context"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../../../lib/theme"
+import { haptics } from "../../../../lib/haptics"
+import { Card } from "../../../../components/ui/card"
+import { Badge } from "../../../../components/ui/badge"
+import { MonoAmount } from "../../../../components/ui/typography"
+import { EmptyState } from "../../../../components/ui/empty-state"
+import { SkeletonCard } from "../../../../components/ui/skeleton-loader"
+import { TransactionListItem } from "../../../../components/finance/transaction-list-item"
+import { DateSectionHeader } from "../../../../components/finance/date-section-header"
+import { useToast } from "../../../../components/ui/toast"
 
 const editIcon = Icon.select({
   ios: "pencil",
@@ -87,55 +82,26 @@ const deleteIcon = Icon.select({
   android: require("@expo/material-symbols/delete.xml"),
 })
 
-function getDaysDiff(
-  dateStr?: string,
-  timezone: string = "UTC"
-): number | null {
-  if (!dateStr) return null
-  const target = parseDate(dateStr)
-  if (!target) return null
-  const now = new Date()
-  const startToday = getStartOfDay(now, timezone)
-  const startTarget = getStartOfDay(target, timezone)
-  const diffTime = startTarget.getTime() - startToday.getTime()
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-}
-
-function formatDate(
-  dateStr?: string,
-  timezone: string = "UTC",
-  locale?: string
-): string {
-  if (!dateStr) return ""
-  const d = parseDate(dateStr)
-  if (!d) return ""
-  const now = new Date()
-  const dParts = getTimezoneParts(d, timezone)
-  const nowParts = getTimezoneParts(now, timezone)
-  const showYear = dParts && nowParts ? dParts.year !== nowParts.year : false
-  return formatDateWithTimezone(
-    d,
-    timezone,
-    {
-      month: "short",
-      day: "numeric",
-      year: showYear ? "numeric" : undefined,
-    },
-    locale
-  )
-}
-
 export default function BorrowingDetailScreen() {
   const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
-  const { t, locale } = useI18n()
+  const { t, language } = useI18n()
   const queryClient = useQueryClient()
   const toast = useToast()
   const { colors, resolvedMode } = useTheme()
   const styles = useThemedStyles(createStyles)
   const [refreshing, setRefreshing] = useState(false)
+  const copilotSheet = useOptionalMobileCopilotSheet()
+  const [notesExpanded, setNotesExpanded] = useState(false)
+  const [activeTab, setActiveTab] = useState<"transactions" | "analytics">(
+    "transactions"
+  )
+  const { data: rates } = useListExchangeRatesQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!activeSpaceId }
+  )
 
   // Fetch base currency settings
   const { data: settingsData } = useGetSettingsQuery(
@@ -144,50 +110,54 @@ export default function BorrowingDetailScreen() {
   )
   const baseCurrency = settingsData?.baseCurrency || "USD"
 
-  // Fetch borrowings list
   const {
-    data: borrowingsData,
-    isLoading: isBorrowingsLoading,
-    refetch: refetchBorrowings,
-  } = useListBorrowingsQuery(
-    { pageSize: 100, pageToken: "" },
-    { enabled: !!activeSpaceId }
-  )
-
-  const borrowingFromList = useMemo(
-    () => borrowingsData?.borrowings?.find((b: Borrowing) => b.id === id),
-    [borrowingsData, id]
-  )
-
-  // Fallback to single get query
-  const {
-    data: borrowingFromGet,
+    data: borrowing,
     isLoading: isSingleLoading,
     refetch: refetchSingleBorrowing,
   } = useGetBorrowingQuery(
     { id: id || "" },
-    { enabled: !!id && !!activeSpaceId && !borrowingFromList }
-  )
-
-  const borrowing = borrowingFromList || borrowingFromGet
-
-  // Fetch transactions for this borrowing
-  const {
-    data: txnsData,
-    isLoading: isTxnsLoading,
-    refetch: refetchTxns,
-  } = useListTransactionsQuery(
-    {
-      borrowingId: id || "",
-      types: [],
-      pageSize: 100,
-      pageToken: "",
-      view: "FULL",
-    },
     { enabled: !!id && !!activeSpaceId }
   )
-
-  // Fetch accounts to map account info
+  const chart = useBorrowingAnalytics(
+      activeSpaceId || undefined,
+      activeTab === "analytics" ? borrowing : undefined
+    ),
+    ledger = useDetailLedger(
+      activeSpaceId || undefined,
+      { borrowingId: id },
+      !!id
+    ),
+    { isLoading: isTxnsLoading, refetch: refetchTxns } = ledger
+  useMobileCopilotView(
+    borrowing?.id
+      ? {
+          viewId: "mobile.finance.borrowing.detail",
+          title:
+            borrowing.counterparty ||
+            t("finance.borrowing.mobile.headerFallback"),
+          activeEntity: {
+            kind: "borrowing",
+            id: borrowing.id,
+            key: buildCopilotEntityKey("borrowing", borrowing.id),
+            label:
+              borrowing.counterparty ||
+              t("finance.borrowing.mobile.headerFallback"),
+            summary: {
+              direction: borrowing.direction || "BORROWED",
+              currency: borrowing.currency || baseCurrency,
+              totalAmount: borrowing.totalAmount || "0",
+              remainingAmount: borrowing.remainingAmount || "0",
+              status: borrowing.status || "ACTIVE",
+            },
+          },
+          suggestions: [
+            t("ai.copilotSheet.suggestBorrowing"),
+            t("finance.borrowing.suggestion.paymentHistory"),
+            t("finance.borrowing.suggestion.payoffPlan"),
+          ],
+        }
+      : null
+  )
   const { data: accountsData } = useListAccountsQuery(
     {},
     { enabled: !!activeSpaceId }
@@ -205,21 +175,19 @@ export default function BorrowingDetailScreen() {
   }, [accounts])
 
   const transactions = useMemo<Transaction[]>(
-    () => txnsData?.transactions || [],
-    [txnsData?.transactions]
+    () => ledger.data?.pages.flatMap((p) => p.transactions || []) || [],
+    [ledger.data]
   )
 
   const sections = useDateSections(transactions)
 
   const deleteBorrowingMutation = useDeleteBorrowingMutation()
-  const deleteTxMutation = useDeleteBorrowingTransactionMutation()
 
   const handleRefresh = async () => {
     haptics.light()
     setRefreshing(true)
     try {
       await Promise.all([
-        refetchBorrowings(),
         refetchSingleBorrowing(),
         refetchTxns(),
         invalidateFinanceQueries(queryClient),
@@ -274,54 +242,7 @@ export default function BorrowingDetailScreen() {
     )
   }
 
-  const handleDeleteTransaction = (transactionId?: string) => {
-    if (!borrowing?.id || !transactionId) return
-    haptics.warning()
-    Alert.alert(
-      t("finance.borrowing.mobile.deleteTxTitle"),
-      t("finance.borrowing.mobile.deleteTxDesc"),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("common.delete"),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteTxMutation.mutateAsync({
-                borrowing_id: borrowing.id || "",
-                transaction_id: transactionId,
-                req: {
-                  borrowingId: borrowing.id || "",
-                  transactionId: transactionId,
-                },
-              })
-              haptics.success()
-              toast.show({
-                title: t("finance.transactions.deletedSuccessTitle"),
-                message: t("finance.borrowing.mobile.toastTxDeletedDesc"),
-                type: "info",
-              })
-              await invalidateFinanceQueries(queryClient)
-              refetchTxns()
-              refetchBorrowings()
-              refetchSingleBorrowing()
-            } catch (err: any) {
-              haptics.error()
-              toast.show({
-                title: t("finance.borrowing.delete.failedTitle"),
-                message:
-                  err?.message ||
-                  t("finance.borrowing.mobile.toastTxDeleteFailed"),
-                type: "error",
-              })
-            }
-          },
-        },
-      ]
-    )
-  }
-
-  if (isBorrowingsLoading || isSingleLoading) {
+  if (isSingleLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -371,162 +292,110 @@ export default function BorrowingDetailScreen() {
     ? accountsMap.get(borrowing.accountId)
     : null
 
+  const eligibleRates = (rates?.exchangeRates || []).filter(
+    (rate) =>
+      rate.rate > 0 &&
+      ((rate.fromCurrency === curr && rate.toCurrency === baseCurrency) ||
+        (rate.toCurrency === curr && rate.fromCurrency === baseCurrency))
+  )
+  const preview =
+    curr !== baseCurrency && eligibleRates.length > 0
+      ? convertCentsToBase(remaining, curr, baseCurrency, eligibleRates)
+      : null
+  const accent = isPaid
+    ? colors.textMuted
+    : isLent
+      ? colors.success
+      : colors.warning
+  const Direction = isLent ? TrendingUp : TrendingDown
+  const dueColor = isOverdue
+    ? colors.destructive
+    : isDueSoon || isDueToday
+      ? colors.warning
+      : colors.textMuted
+  const dueLabel = !borrowing.dueAt
+    ? t("finance.borrowing.mobile.startedOn", {
+        date: tz.format(borrowing.establishedAt),
+      })
+    : isOverdue
+      ? t("finance.borrowing.mobile.overdueBy", {
+          days: Math.abs(daysDiff!),
+          date: tz.format(borrowing.dueAt),
+        })
+      : isDueToday
+        ? t("finance.borrowing.mobile.dueToday")
+        : t("finance.borrowing.mobile.dueOn", {
+            date: tz.format(borrowing.dueAt),
+          })
   const renderHeader = () => (
     <View style={styles.headerSection}>
-      {/* 1. Hero Agreement Card */}
       <Card style={styles.heroCard}>
-        {/* Top: Icon + Counterparty + Badges */}
         <View style={styles.heroTopRow}>
-          <View style={styles.heroLeftGroup}>
-            <View
-              style={[
-                styles.iconBadge,
-                {
-                  backgroundColor: isPaid
-                    ? colors.surfaceElevated
-                    : isLent
-                      ? colors.successSubtle
-                      : colors.warningSubtle,
-                },
-              ]}
-            >
-              {isLent ? (
-                <TrendingUp
-                  size={20}
-                  color={isPaid ? colors.textMuted : colors.success}
-                />
-              ) : (
-                <TrendingDown
-                  size={20}
-                  color={isPaid ? colors.textMuted : colors.warning}
-                />
-              )}
-            </View>
-            <View style={styles.heroTitleCol}>
-              <Text style={styles.counterpartyText} numberOfLines={1}>
-                {borrowing.counterparty ||
-                  t("finance.borrowing.mobile.unknownCounterparty")}
-              </Text>
-              {borrowing.contactInfo ? (
-                <View style={styles.contactRow}>
-                  <Phone size={12} color={colors.textMuted} />
-                  <Text style={styles.contactText} numberOfLines={1}>
-                    {borrowing.contactInfo}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
+          <View
+            style={[
+              styles.iconBadge,
+              {
+                backgroundColor: isPaid
+                  ? colors.surfaceSubtle
+                  : isLent
+                    ? colors.successSubtle
+                    : colors.warningSubtle,
+              },
+            ]}
+          >
+            <Direction size={20} color={accent} />
           </View>
-
+          <View style={styles.heroTitleCol}>
+            <Text style={styles.progressLabel}>
+              {t(
+                isPaid
+                  ? "finance.borrowing.mobile.finalSettled"
+                  : "finance.borrowing.remainingBalance"
+              )}
+            </Text>
+            <MonoAmount
+              size="lg"
+              color={accent}
+              adjustsFontSizeToFit
+              numberOfLines={1}
+            >
+              {tz.formatMoney(remaining, curr)}
+            </MonoAmount>
+            {preview !== null && (
+              <Text style={styles.progressAmounts}>
+                ≈ {tz.formatMoney(preview, baseCurrency)}
+              </Text>
+            )}
+          </View>
           <View style={styles.badgesCol}>
             <Badge
               size="sm"
-              label={
-                isPaid
-                  ? t("finance.borrowing.mobile.badgeSettled")
-                  : isLent
-                    ? t("finance.borrowing.mobile.badgeLentTo")
-                    : t("finance.borrowing.mobile.badgeBorrowedFrom")
-              }
+              label={t(
+                isLent
+                  ? "finance.borrowing.filterLent"
+                  : "finance.borrowing.filterBorrowed"
+              )}
+              color={accent}
               bg={
                 isPaid
-                  ? colors.surfaceElevated
+                  ? colors.surfaceSubtle
                   : isLent
                     ? colors.successSubtle
                     : colors.warningSubtle
               }
-              color={
-                isPaid
-                  ? colors.textMuted
-                  : isLent
-                    ? colors.success
-                    : colors.warning
-              }
-              border={
-                isPaid
-                  ? colors.border
-                  : isLent
-                    ? "rgba(16, 185, 129, 0.3)"
-                    : "rgba(245, 158, 11, 0.3)"
-              }
+              border={colors.border}
             />
-            {isPaid ? (
+            {isPaid && (
               <Badge
                 size="sm"
-                label={t("finance.borrowing.mobile.badgePaidOff")}
-                bg={colors.successSubtle}
-                color={colors.success}
-              />
-            ) : (
-              <Badge
-                size="sm"
-                label={t("finance.borrowing.mobile.badgeActive")}
-                bg={colors.primarySubtle}
-                color={colors.primary}
+                label={t("finance.borrowing.mobile.badgeSettled")}
+                color={colors.textMuted}
+                bg={colors.surfaceSubtle}
               />
             )}
           </View>
         </View>
-
-        {/* Financial Row */}
-        <View style={styles.financialRow}>
-          <View>
-            <Text style={styles.financialStatLabel}>
-              {isPaid
-                ? t("finance.borrowing.mobile.finalSettled").toUpperCase()
-                : t("finance.borrowing.remainingBalance").toUpperCase()}
-            </Text>
-            <MonoAmount
-              size="xl"
-              color={
-                isPaid
-                  ? colors.textMuted
-                  : isLent
-                    ? colors.success
-                    : colors.warning
-              }
-            >
-              {formatAmount(remaining, curr)}
-            </MonoAmount>
-          </View>
-
-          <View style={styles.financialRightCol}>
-            <View style={{ alignItems: "flex-end" }}>
-              <Text style={styles.financialStatLabel}>
-                {t("finance.borrowing.mobile.principal").toUpperCase()}
-              </Text>
-              <MonoAmount size="sm" color={colors.textMuted}>
-                {formatAmount(total, curr)}
-              </MonoAmount>
-            </View>
-            <View style={{ alignItems: "flex-end", marginTop: 4 }}>
-              <Text style={styles.financialStatLabel}>
-                {t("finance.borrowing.mobile.repaid").toUpperCase()}
-              </Text>
-              <MonoAmount size="sm" color={colors.textSecondary}>
-                {formatAmount(paidAmount, curr)}
-              </MonoAmount>
-            </View>
-          </View>
-        </View>
-
-        {/* Progress Bar */}
         <View style={styles.progressContainer}>
-          <View style={styles.progressHeaderRow}>
-            <Text style={styles.progressLabel}>
-              {isPaid
-                ? t("finance.borrowing.mobile.repaidSettled")
-                : t("finance.borrowing.mobile.payoffProgress", {
-                    pct: percentage.toFixed(0),
-                  })}
-            </Text>
-            <Text style={styles.progressAmounts}>
-              {t("finance.borrowing.mobile.progressOf", {
-                paid: formatAmount(paidAmount, curr),
-                total: formatAmount(total, curr),
-              })}
-            </Text>
-          </View>
           <View style={styles.progressBarTrack}>
             <View
               style={[
@@ -537,97 +406,54 @@ export default function BorrowingDetailScreen() {
                     ? colors.textMuted
                     : isLent
                       ? colors.success
-                      : colors.warning,
+                      : colors.primary,
                 },
               ]}
             />
           </View>
-        </View>
-
-        {/* Info Rows */}
-        <View style={styles.metaSection}>
-          <View style={styles.metaRow}>
-            <Calendar size={14} color={colors.textMuted} />
-            <Text style={styles.metaText}>
-              {t("finance.borrowing.mobile.startedOn", {
-                date: formatDate(borrowing.establishedAt, tz.timezone, locale),
+          <View style={styles.progressHeaderRow}>
+            <Text style={styles.progressLabel}>
+              {isPaid
+                ? t("finance.borrowing.mobile.badgeSettled")
+                : t("finance.borrowing.mobile.payoffProgress", {
+                    pct: percentage.toFixed(0),
+                  })}
+            </Text>
+            <Text style={styles.progressAmounts}>
+              {t("finance.borrowing.mobile.progressOf", {
+                paid: tz.formatMoney(paidAmount, curr),
+                total: tz.formatMoney(total, curr),
               })}
             </Text>
           </View>
-
-          {borrowing.dueAt ? (
-            <View style={styles.metaRow}>
-              <CalendarClock
-                size={14}
-                color={
-                  isPaid
-                    ? colors.textMuted
-                    : isOverdue
-                      ? colors.destructive
-                      : isDueToday || isDueSoon
-                        ? colors.warning
-                        : colors.textMuted
-                }
-              />
-              <Text
-                style={[
-                  styles.metaText,
-                  isOverdue && styles.overdueText,
-                  (isDueToday || isDueSoon) && styles.dueSoonText,
-                ]}
-              >
-                {isPaid
-                  ? t("finance.borrowing.mobile.dueOn", {
-                      date: formatDate(borrowing.dueAt, tz.timezone, locale),
-                    })
-                  : isOverdue
-                    ? t("finance.borrowing.mobile.overdueBy", {
-                        days: Math.abs(daysDiff!),
-                        date: formatDate(borrowing.dueAt, tz.timezone, locale),
-                      })
-                    : isDueToday
-                      ? t("finance.borrowing.mobile.dueToday")
-                      : t("finance.borrowing.mobile.dueIn", {
-                          days: daysDiff ?? 0,
-                          date: formatDate(
-                            borrowing.dueAt,
-                            tz.timezone,
-                            locale
-                          ),
-                        })}
-              </Text>
-            </View>
-          ) : null}
-
-          {linkedAccount ? (
-            <View style={styles.metaRow}>
+        </View>
+        <View style={[styles.metaSection, styles.metaRow]}>
+          <CalendarClock size={14} color={dueColor} />
+          <Text
+            numberOfLines={1}
+            style={[styles.metaText, { color: dueColor }]}
+          >
+            {dueLabel}
+          </Text>
+          {linkedAccount && (
+            <>
               <Landmark size={14} color={colors.textMuted} />
-              <Text style={styles.metaText}>
-                {t("finance.borrowing.mobile.accountMeta", {
-                  name: linkedAccount.name,
-                  currency: linkedAccount.currency,
-                })}
+              <Text style={styles.metaText} numberOfLines={1}>
+                {linkedAccount.name}
               </Text>
-            </View>
-          ) : null}
-
-          {borrowing.notes ? (
-            <View style={[styles.metaRow, { alignItems: "flex-start" }]}>
-              <FileText
-                size={14}
-                color={colors.textMuted}
-                style={{ marginTop: 2 }}
-              />
-              <Text style={styles.metaText}>{borrowing.notes}</Text>
-            </View>
-          ) : null}
+            </>
+          )}
         </View>
       </Card>
-
-      {/* 2. Quick Actions Row */}
       <View style={styles.actionsRow}>
         {!isPaid ? (
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={
+              isLent
+                ? t("finance.borrowing.mobile.receivePayment")
+                : t("finance.borrowing.mobile.repayDebt")
+            }
             onPress={() => {
               haptics.light()
               router.push({
@@ -639,18 +465,46 @@ export default function BorrowingDetailScreen() {
               })
             }}
             style={styles.actionBtnPrimary}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
           >
-            <Plus size={16} color={colors.primaryForeground} />
+            <Plus size={15} color={colors.primaryForeground} />
             <Text style={styles.actionBtnPrimaryText} numberOfLines={1}>
               {isLent
-                ? t("finance.borrowing.mobile.receivePayment")
-                : t("finance.borrowing.mobile.repayDebt")}
+                ? t("finance.borrowing.mobile.quickReceive")
+                : t("finance.borrowing.mobile.quickRepay")}
             </Text>
           </TouchableOpacity>
         ) : null}
-
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={getLocalizedEnumLabel(
+            "finance",
+            "borrowingRole",
+            "DISBURSEMENT",
+            language
+          )}
+          style={styles.actionBtnSecondary}
+          activeOpacity={0.7}
+          onPress={() => {
+            haptics.light()
+            router.push({
+              pathname: "/modal/add-transaction",
+              params: {
+                type: "BORROWING",
+                borrowingId: borrowing.id,
+                borrowingAction: "BORROWING_TRANSACTION_TYPE_DISBURSEMENT",
+              },
+            })
+          }}
+        >
+          <PlusCircle size={15} color={colors.textPrimary} />
+          <Text style={styles.actionBtnSecondaryText} numberOfLines={1}>
+            {t("finance.borrowing.mobile.quickDisburse")}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={t("finance.borrowing.adjustBalance")}
           onPress={() => {
             haptics.light()
             router.push({
@@ -661,38 +515,180 @@ export default function BorrowingDetailScreen() {
           style={styles.actionBtnSecondary}
           activeOpacity={0.7}
         >
-          <Scale size={16} color={colors.textPrimary} />
+          <Scale size={15} color={colors.textPrimary} />
           <Text style={styles.actionBtnSecondaryText} numberOfLines={1}>
-            {t("finance.borrowing.adjustBalance")}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => {
-            haptics.light()
-            router.push({
-              pathname: "/modal/manage-borrowing",
-              params: { id: borrowing.id },
-            })
-          }}
-          style={[
-            styles.actionBtnSecondary,
-            !isPaid && styles.actionBtnCompact,
-          ]}
-          activeOpacity={0.7}
-        >
-          <Edit3 size={16} color={colors.textPrimary} />
-          <Text style={styles.actionBtnSecondaryText} numberOfLines={1}>
-            {t("common.edit")}
+            {t("finance.borrowing.detail.adjust")}
           </Text>
         </TouchableOpacity>
       </View>
-
-      <Caption style={styles.ledgerHeader}>
-        {t("finance.borrowing.mobile.repaymentsN", {
-          count: transactions.length,
-        }).toUpperCase()}
-      </Caption>
+      {!!borrowing.notes?.trim() && (
+        <TouchableOpacity
+          style={[styles.metaRow, { minHeight: 44 }]}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: notesExpanded }}
+          onPress={() => {
+            haptics.selection()
+            setNotesExpanded(!notesExpanded)
+          }}
+        >
+          <FileText size={15} color={colors.textMuted} />
+          <Text
+            style={styles.metaText}
+            numberOfLines={notesExpanded ? undefined : 1}
+          >
+            {borrowing.notes}
+          </Text>
+        </TouchableOpacity>
+      )}
+      <View style={styles.underlineTabBar} accessibilityRole="tablist">
+        {(
+          [
+            ["transactions", t("nav.transactions")],
+            ["analytics", t("finance.detail.analytics")],
+          ] as const
+        ).map(([tabKey, tabLabel]) => {
+          const isSelected = activeTab === tabKey
+          return (
+            <TouchableOpacity
+              key={tabKey}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isSelected }}
+              activeOpacity={0.75}
+              style={[
+                styles.underlineTab,
+                isSelected && styles.underlineTabSelected,
+              ]}
+              onPress={() => {
+                haptics.selection()
+                setActiveTab(tabKey)
+              }}
+            >
+              <Text
+                style={[styles.tabLabel, isSelected && styles.tabLabelSelected]}
+                numberOfLines={1}
+              >
+                {tabLabel}
+              </Text>
+              {tabKey === "transactions" && !isTxnsLoading && (
+                <View
+                  style={[
+                    styles.tabCountBadge,
+                    isSelected && styles.tabCountBadgeSelected,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tabCountText,
+                      isSelected && styles.tabCountTextSelected,
+                    ]}
+                  >
+                    {`${transactions.length}${ledger.hasNextPage ? "+" : ""}`}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )
+        })}
+      </View>
+      {activeTab === "analytics" && (
+        <>
+          <Card style={styles.kpiCard}>
+            <View style={styles.kpiRow}>
+              <View style={styles.kpiCell}>
+                <Text style={styles.progressAmounts} numberOfLines={1}>
+                  {t("finance.borrowing.remainingBalance")}
+                </Text>
+                <MonoAmount size="md" numberOfLines={1} adjustsFontSizeToFit>
+                  {tz.formatMoney(remaining, curr)}
+                </MonoAmount>
+              </View>
+              <View style={[styles.kpiCell, styles.kpiCellRight]}>
+                <Text style={styles.progressAmounts} numberOfLines={1}>
+                  {t("finance.borrowing.mobile.principal")}
+                </Text>
+                <MonoAmount size="md" numberOfLines={1} adjustsFontSizeToFit>
+                  {tz.formatMoney(total, curr)}
+                </MonoAmount>
+              </View>
+            </View>
+            <View style={[styles.kpiRow, styles.kpiRowDivider]}>
+              <View style={styles.kpiCell}>
+                <Text style={styles.progressAmounts} numberOfLines={1}>
+                  {t("finance.borrowing.mobile.repaid")}
+                </Text>
+                <MonoAmount size="md" numberOfLines={1} adjustsFontSizeToFit>
+                  {tz.formatMoney(paidAmount, curr)}
+                </MonoAmount>
+              </View>
+              <View style={[styles.kpiCell, styles.kpiCellRight]}>
+                <Text style={styles.progressAmounts} numberOfLines={1}>
+                  {t("finance.borrowing.mobile.payoffLabel")}
+                </Text>
+                <MonoAmount size="md" numberOfLines={1} adjustsFontSizeToFit>
+                  {`${percentage.toFixed(0)}%`}
+                </MonoAmount>
+              </View>
+            </View>
+          </Card>
+          {chart.query.isLoading ? (
+            <SkeletonCard height={180} />
+          ) : chart.query.isError ? (
+            <Text style={styles.progressLabel}>
+              {t("finance.detail.error")}
+            </Text>
+          ) : chart.query.isSuccess && chart.points.length > 0 ? (
+            <DetailChart
+              stepped
+              title={t("finance.detail.paydown")}
+              valueLabel={t("finance.detail.paydown")}
+              comparisonLabel={t("finance.detail.target")}
+              points={chart.points}
+              currency={curr}
+              accent={isLent ? colors.success : colors.primary}
+            />
+          ) : (
+            <Text style={styles.progressLabel}>
+              {t("finance.borrowing.mobile.noPaydown")}
+            </Text>
+          )}
+          {(() => {
+            const extraDetails = [
+              ...(borrowing.dueAt && borrowing.establishedAt
+                ? [
+                    [
+                      t("finance.borrowing.detail.establishedLabel"),
+                      tz.format(borrowing.establishedAt),
+                    ] as const,
+                  ]
+                : []),
+              ...(borrowing.contactInfo?.trim()
+                ? [
+                    [
+                      t("finance.borrowing.mobile.contactShort"),
+                      borrowing.contactInfo.trim(),
+                    ] as const,
+                  ]
+                : []),
+            ]
+            if (extraDetails.length === 0) return null
+            return (
+              <Card style={styles.heroCard}>
+                <Text style={styles.progressLabel}>
+                  {t("finance.borrowing.mobile.headerFallback")}
+                </Text>
+                {extraDetails.map(([key, value]) => (
+                  <View key={key} style={[styles.metaSection, styles.metaRow]}>
+                    <Text style={styles.detailKey}>{key}</Text>
+                    <Text style={styles.detailValue} numberOfLines={1}>
+                      {value}
+                    </Text>
+                  </View>
+                ))}
+              </Card>
+            )
+          })()}
+        </>
+      )}
     </View>
   )
 
@@ -715,49 +711,6 @@ export default function BorrowingDetailScreen() {
                         borrowing.counterparty ||
                         t("finance.borrowing.mobile.agreementFallback"),
                       items: [
-                        ...(!isPaid
-                          ? [
-                              {
-                                type: "action" as const,
-                                label: isLent
-                                  ? t(
-                                      "finance.borrowing.mobile.menuRecordPaymentReceived"
-                                    )
-                                  : t(
-                                      "finance.borrowing.mobile.menuLogRepayment"
-                                    ),
-                                icon: {
-                                  type: "sfSymbol" as const,
-                                  name: "dollarsign.circle" as const,
-                                },
-                                onPress: () => {
-                                  haptics.light()
-                                  router.push({
-                                    pathname: "/modal/add-transaction",
-                                    params: {
-                                      type: "BORROWING",
-                                      borrowingId: borrowing.id,
-                                    },
-                                  })
-                                },
-                              },
-                            ]
-                          : []),
-                        {
-                          type: "action",
-                          label: t("finance.borrowing.adjustBalance"),
-                          icon: {
-                            type: "sfSymbol",
-                            name: "scalemass",
-                          } as const,
-                          onPress: () => {
-                            haptics.light()
-                            router.push({
-                              pathname: "/modal/adjust-borrowing",
-                              params: { borrowingId: borrowing.id },
-                            })
-                          },
-                        },
                         {
                           type: "action",
                           label: t("finance.borrowing.editAgreement"),
@@ -782,82 +735,61 @@ export default function BorrowingDetailScreen() {
                       ],
                     },
                   },
+                  {
+                    type: "button",
+                    label: t("menu.aiAssistant"),
+                    icon: { type: "sfSymbol", name: "sparkles" },
+                    sharesBackground: false,
+                    tintColor: colors.primary,
+                    onPress: () => {
+                      haptics.light()
+                      copilotSheet?.openCopilotSheet()
+                    },
+                  },
                 ],
               }
             : {
                 headerRight: () => (
-                  <ActionMenu
-                    title={
-                      borrowing.counterparty ||
-                      t("finance.borrowing.mobile.agreementFallback")
-                    }
-                    colorScheme={resolvedMode}
-                    onPressAction={({ nativeEvent }) => {
-                      if (nativeEvent.event === "pay") {
-                        haptics.light()
-                        router.push({
-                          pathname: "/modal/add-transaction",
-                          params: {
-                            type: "BORROWING",
-                            borrowingId: borrowing.id,
-                          },
-                        })
-                      } else if (nativeEvent.event === "adjust") {
-                        haptics.light()
-                        router.push({
-                          pathname: "/modal/adjust-borrowing",
-                          params: { borrowingId: borrowing.id },
-                        })
-                      } else if (nativeEvent.event === "edit") {
-                        haptics.light()
-                        router.push({
-                          pathname: "/modal/manage-borrowing",
-                          params: { id: borrowing.id },
-                        })
-                      } else if (nativeEvent.event === "delete") {
-                        handleDeleteBorrowing()
+                  <View style={styles.metaRow}>
+                    <ActionMenu
+                      title={
+                        borrowing.counterparty ||
+                        t("finance.borrowing.mobile.agreementFallback")
                       }
-                    }}
-                    actions={[
-                      ...(!isPaid
-                        ? [
-                            {
-                              id: "pay",
-                              title: isLent
-                                ? t(
-                                    "finance.borrowing.mobile.menuRecordPaymentReceived"
-                                  )
-                                : t(
-                                    "finance.borrowing.mobile.menuLogRepayment"
-                                  ),
-                              image: paymentIcon,
-                            },
-                          ]
-                        : []),
-                      {
-                        id: "adjust",
-                        title: t("finance.borrowing.adjustBalance"),
-                        image: adjustIcon,
-                      },
-                      {
-                        id: "edit",
-                        title: t("finance.borrowing.editAgreement"),
-                        image: editIcon,
-                      },
-                      {
-                        id: "delete",
-                        title: t(
-                          "finance.borrowing.mobile.menuDeleteAgreement"
-                        ),
-                        image: deleteIcon,
-                        attributes: { destructive: true },
-                      },
-                    ]}
-                  >
-                    <View style={styles.headerDotsBtn}>
-                      <MoreVertical size={20} color={colors.textPrimary} />
-                    </View>
-                  </ActionMenu>
+                      colorScheme={resolvedMode}
+                      onPressAction={({ nativeEvent }) => {
+                        if (nativeEvent.event === "edit") {
+                          haptics.light()
+                          router.push({
+                            pathname: "/modal/manage-borrowing",
+                            params: { id: borrowing.id },
+                          })
+                        } else if (nativeEvent.event === "delete") {
+                          handleDeleteBorrowing()
+                        }
+                      }}
+                      actions={[
+                        {
+                          id: "edit",
+                          title: t("finance.borrowing.editAgreement"),
+                          image: editIcon,
+                        },
+                        {
+                          id: "delete",
+                          title: t(
+                            "finance.borrowing.mobile.menuDeleteAgreement"
+                          ),
+                          image: deleteIcon,
+                          attributes: { destructive: true },
+                        },
+                      ]}
+                    >
+                      <View style={styles.headerDotsBtn}>
+                        <MoreVertical size={20} color={colors.textPrimary} />
+                      </View>
+                    </ActionMenu>
+                    <AIHeaderButton testID="borrowing-detail-header-ai" />
+                  </View>
                 ),
               }),
         }}
@@ -865,9 +797,18 @@ export default function BorrowingDetailScreen() {
 
       <View style={styles.container}>
         <SectionList
-          sections={sections}
+          keyboardShouldPersistTaps="handled"
+          sections={activeTab === "transactions" ? sections : []}
           keyExtractor={(item) => item.id || ""}
-          ListHeaderComponent={renderHeader}
+          ListHeaderComponent={renderHeader()}
+          onEndReached={() => {
+            if (
+              activeTab === "transactions" &&
+              ledger.hasNextPage &&
+              !ledger.isFetchingNextPage
+            )
+              void ledger.fetchNextPage()
+          }}
           stickySectionHeadersEnabled={false}
           contentContainerStyle={styles.listContent}
           refreshControl={
@@ -879,11 +820,49 @@ export default function BorrowingDetailScreen() {
               progressBackgroundColor={colors.surfaceElevated}
             />
           }
-          renderSectionHeader={({ section }) => (
-            <DateSectionHeader title={section.title} />
-          )}
-          renderItem={({ item }) => (
+          ListFooterComponent={
+            activeTab === "transactions" && ledger.isFetchingNextPage ? (
+              <ActivityIndicator color={colors.primary} />
+            ) : undefined
+          }
+          renderSectionHeader={({ section }) => {
+            const firstCurrency = section.data[0]?.currency || baseCurrency
+            const currency = section.data.every(
+              (tx) => (tx.currency || baseCurrency) === firstCurrency
+            )
+              ? firstCurrency
+              : baseCurrency
+            const net = section.data.reduce(
+              (sum, tx) =>
+                sum +
+                signedTransactionAmount(
+                  tx,
+                  Number(
+                    (tx.currency || baseCurrency) === currency
+                      ? tx.amount
+                      : tx.amountInBase || NaN
+                  )
+                ),
+              0
+            )
+            return (
+              <DateSectionHeader
+                insetHorizontal
+                title={section.title}
+                rightContent={
+                  Number.isFinite(net) && (
+                    <MonoAmount size="sm" amount={net} colored>
+                      {tz.formatMoney(net, currency, { showSign: true })}
+                    </MonoAmount>
+                  )
+                }
+              />
+            )
+          }}
+          renderItem={({ item, index, section }) => (
             <TransactionListItem
+              showDate={false}
+              showBorderBottom={index < section.data.length - 1}
               item={item}
               baseCurrency={baseCurrency}
               account={
@@ -891,32 +870,13 @@ export default function BorrowingDetailScreen() {
               }
               onPress={() => {
                 haptics.light()
-                Alert.alert(
-                  item.description ||
-                    t("finance.borrowing.mobile.borrowingTransaction"),
-                  `${formatAmount(item.amount, item.currency || baseCurrency)} • ${tz.format(item.transactionDate)}`,
-                  [
-                    {
-                      text: t("finance.borrowing.mobile.viewTxDetails"),
-                      onPress: () => {
-                        if (item.id) {
-                          router.push(`/(app)/finance/transactions/${item.id}`)
-                        }
-                      },
-                    },
-                    {
-                      text: t("finance.borrowing.deleteRecord"),
-                      style: "destructive",
-                      onPress: () => handleDeleteTransaction(item.id),
-                    },
-                    { text: t("common.cancel"), style: "cancel" },
-                  ]
-                )
+                if (item.id)
+                  router.push(`/(app)/finance/transactions/${item.id}`)
               }}
             />
           )}
           ListEmptyComponent={
-            isTxnsLoading ? (
+            activeTab !== "transactions" ? undefined : isTxnsLoading ? (
               <View style={{ gap: 8, paddingHorizontal: 16 }}>
                 <SkeletonCard height={60} />
                 <SkeletonCard height={60} />
@@ -929,25 +889,6 @@ export default function BorrowingDetailScreen() {
                   description={t(
                     "finance.borrowing.mobile.emptyRepaymentsDesc"
                   )}
-                  actionLabel={
-                    !isPaid
-                      ? isLent
-                        ? t("finance.borrowing.mobile.receivePayment")
-                        : t("finance.borrowing.mobile.menuLogRepayment")
-                      : undefined
-                  }
-                  onAction={
-                    !isPaid
-                      ? () =>
-                          router.push({
-                            pathname: "/modal/add-transaction",
-                            params: {
-                              type: "BORROWING",
-                              borrowingId: borrowing.id,
-                            },
-                          })
-                      : undefined
-                  }
                 />
               </View>
             )
@@ -998,7 +939,10 @@ const createStyles = (t: SaturnMobileTheme) => ({
     color: t.colors.primary,
   },
   headerDotsBtn: {
-    padding: 6,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     marginRight: 4,
   },
   container: {
@@ -1016,8 +960,9 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   heroCard: {
     padding: 16,
-    borderRadius: 18,
-    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.lg,
+    borderColor: t.colors.border,
+    backgroundColor: t.colors.surface,
     gap: 16,
   },
   heroTopRow: {
@@ -1026,15 +971,9 @@ const createStyles = (t: SaturnMobileTheme) => ({
     justifyContent: "space-between" as const,
     gap: 12,
   },
-  heroLeftGroup: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 12,
-    flex: 1,
-  },
   iconBadge: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: 14,
     alignItems: "center" as const,
     justifyContent: "center" as const,
@@ -1043,39 +982,9 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flex: 1,
     gap: 3,
   },
-  counterpartyText: {
-    fontSize: 18,
-    fontWeight: "700" as const,
-    color: t.colors.textPrimary,
-  },
-  contactRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 4,
-  },
-  contactText: {
-    fontSize: 12,
-    color: t.colors.textMuted,
-  },
   badgesCol: {
     alignItems: "flex-end" as const,
     gap: 4,
-  },
-  financialRow: {
-    flexDirection: "row" as const,
-    justifyContent: "space-between" as const,
-    alignItems: "flex-end" as const,
-    paddingTop: 4,
-  },
-  financialStatLabel: {
-    fontSize: 10,
-    fontWeight: "700" as const,
-    color: t.colors.textMuted,
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  financialRightCol: {
-    alignItems: "flex-end" as const,
   },
   progressContainer: {
     gap: 6,
@@ -1091,13 +1000,14 @@ const createStyles = (t: SaturnMobileTheme) => ({
     color: t.colors.textSecondary,
   },
   progressAmounts: {
+    fontVariant: ["tabular-nums" as const],
     fontSize: 11,
     color: t.colors.textMuted,
   },
   progressBarTrack: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: t.colors.surface,
+    backgroundColor: t.colors.surfaceSubtle,
     overflow: "hidden" as const,
   },
   progressBarFill: {
@@ -1120,29 +1030,60 @@ const createStyles = (t: SaturnMobileTheme) => ({
     color: t.colors.textSecondary,
     flex: 1,
   },
-  overdueText: {
-    color: t.colors.destructive,
-    fontWeight: "600" as const,
+  detailKey: {
+    fontSize: 13,
+    color: t.colors.textMuted,
   },
-  dueSoonText: {
-    color: t.colors.warning,
-    fontWeight: "600" as const,
+  detailValue: {
+    fontSize: 13,
+    fontWeight: "500" as const,
+    color: t.colors.textPrimary,
+    flex: 1,
+    textAlign: "right" as const,
   },
   actionsRow: {
     flexDirection: "row" as const,
-    alignItems: "center" as const,
     gap: 8,
   },
-  actionBtnPrimary: {
+  kpiCard: {
+    padding: 14,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
+    gap: 12,
+  },
+  kpiRow: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 12,
+  },
+  kpiRowDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: t.colors.border,
+    paddingTop: 12,
+  },
+  kpiCell: {
     flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  kpiCellRight: {
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: t.colors.border,
+    paddingLeft: 12,
+  },
+  actionBtnPrimary: {
+    paddingVertical: 10,
     flexDirection: "row" as const,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    gap: 6,
-    height: 42,
-    borderRadius: 12,
+    gap: 5,
+    flexGrow: 1,
+    flexBasis: 96,
+    minHeight: 44,
+    overflow: "hidden" as const,
+    borderRadius: t.radius.md,
     backgroundColor: t.colors.primary,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
   },
   actionBtnPrimaryText: {
     fontSize: 13,
@@ -1151,21 +1092,18 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flexShrink: 1,
   },
   actionBtnSecondary: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: 88,
+    paddingVertical: 10,
     flexDirection: "row" as const,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    gap: 6,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: t.colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-    paddingHorizontal: 10,
-  },
-  actionBtnCompact: {
-    flex: 0,
-    paddingHorizontal: 14,
+    gap: 5,
+    minHeight: 44,
+    overflow: "hidden" as const,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceSubtle,
+    paddingHorizontal: 8,
   },
   actionBtnSecondaryText: {
     fontSize: 13,
@@ -1173,12 +1111,50 @@ const createStyles = (t: SaturnMobileTheme) => ({
     color: t.colors.textPrimary,
     flexShrink: 1,
   },
-  ledgerHeader: {
-    fontSize: 11,
-    fontWeight: "700" as const,
+  underlineTabBar: {
+    flexDirection: "row" as const,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: t.colors.border,
+    gap: 20,
+  },
+  underlineTab: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+    marginBottom: -StyleSheet.hairlineWidth,
+  },
+  underlineTabSelected: {
+    borderBottomColor: t.colors.primary,
+  },
+  tabLabel: {
+    fontSize: 14,
+    fontWeight: "500" as const,
     color: t.colors.textMuted,
-    letterSpacing: 0.8,
-    marginTop: 8,
+  },
+  tabLabelSelected: {
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
+  },
+  tabCountBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 1.5,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceSubtle,
+  },
+  tabCountBadgeSelected: {
+    backgroundColor: t.colors.primarySubtle,
+  },
+  tabCountText: {
+    fontSize: 11,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
+    fontVariant: ["tabular-nums" as const],
+  },
+  tabCountTextSelected: {
+    color: t.colors.primary,
   },
   emptyWrap: {
     paddingTop: 16,

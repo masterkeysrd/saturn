@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react"
 import {
+  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -22,7 +23,12 @@ import {
 } from "lucide-react-native"
 import { Icon } from "@expo/ui"
 import { ActionMenu } from "../../../components/ui/action-menu"
-import { convertCentsToBase, formatAmount, parseDate } from "@saturn/core"
+import {
+  convertCentsToBase,
+  getStartOfDay,
+  getEndOfDay,
+  parseDate,
+} from "@saturn/core"
 import {
   useListBudgetsQuery,
   useGetSettingsQuery,
@@ -56,7 +62,6 @@ import { Card } from "../../../components/ui/card"
 import { MonoAmount } from "../../../components/ui/typography"
 import { SkeletonCard } from "../../../components/ui/skeleton-loader"
 import { EmptyState } from "../../../components/ui/empty-state"
-import { QuickCaptureFab } from "../../../components/ui/quick-capture-sheet"
 import { useToast } from "../../../components/ui/toast"
 import { haptics } from "../../../lib/haptics"
 
@@ -111,7 +116,8 @@ const STATUS_ACTION_KEYS: Record<BudgetStatusAction, TranslationKey> = {
 
 export function computeBudgetPacePercent(
   budget: Budget,
-  now: Date
+  now: Date,
+  timezone?: string
 ): number | null {
   if (budget.interval === "ONE_TIME" || budget.status === "CLOSED") {
     return null
@@ -120,8 +126,13 @@ export function computeBudgetPacePercent(
   if (!period?.startDate || !period?.endDate) {
     return null
   }
-  const startMs = new Date(period.startDate).getTime()
-  const endMs = new Date(period.endDate).getTime()
+  if (!parseDate(period.startDate) || !parseDate(period.endDate)) return null
+  const startMs = timezone
+    ? +getStartOfDay(period.startDate, timezone)
+    : +new Date(period.startDate)
+  const endMs = timezone
+    ? +getEndOfDay(period.endDate, timezone)
+    : +new Date(period.endDate)
   const totalMs = endMs - startMs
   if (isNaN(startMs) || isNaN(endMs) || totalMs <= 0) {
     return null
@@ -256,11 +267,11 @@ export default function BudgetsScreen() {
       totalLimitBaseCents += limitBase
       totalSpentBaseCents += spentBase
 
-      const limitLocal = Number(b.limitAmount || "0")
+      const limitLocal = Number(b.limitAmount ?? 0)
       const spentLocal = Number(b.currentPeriod?.spentAmount || "0")
       const actualLocalPct =
         limitLocal > 0 ? (spentLocal / limitLocal) * 100 : 0
-      const pacePct = computeBudgetPacePercent(b, now)
+      const pacePct = computeBudgetPacePercent(b, now, tz.timezone)
 
       if (
         (limitLocal > 0 && spentLocal > limitLocal) ||
@@ -312,12 +323,33 @@ export default function BudgetsScreen() {
   }, [budgets, baseCurrency, exchangeRates, tz])
 
   const filteredBudgets = useMemo(() => {
-    const byStatus = budgets.filter((b) => {
+    let byStatus = budgets.filter((b) => {
       if (statusFilter === "ALL") return true
       if (statusFilter === "ACTIVE") return b.status === "ACTIVE" || !b.status
       return b.status === statusFilter
     })
 
+    if (statusFilter === "ACTIVE" || statusFilter === "ALL") {
+      const now = tz.now()
+      const ranked = byStatus.map((b) => {
+        const spent = Number(b.currentPeriod?.spentAmount || 0)
+        const limit = Number(b.limitAmount)
+        const utilization = limit > 0 ? (spent / limit) * 100 : 0
+        const pace = computeBudgetPacePercent(b, now, tz.timezone)
+        const status = b.status === "CLOSED" ? 2 : b.status === "PAUSED" ? 1 : 0
+        const urgency =
+          spent > limit ? 2 : pace !== null && utilization > pace + 5 ? 1 : 0
+        return { b, status, urgency, utilization }
+      })
+      ranked.sort(
+        (a, b) =>
+          a.status - b.status ||
+          (!a.status &&
+            (b.urgency - a.urgency || b.utilization - a.utilization)) ||
+          a.b.name.localeCompare(b.b.name, locale)
+      )
+      byStatus = ranked.map(({ b }) => b)
+    }
     if (!searchQuery.trim()) return byStatus
     const q = searchQuery.toLowerCase().trim()
     return byStatus.filter((b) => {
@@ -329,7 +361,7 @@ export default function BudgetsScreen() {
       const matchAccount = accountName?.includes(q)
       return matchName || matchCurrency || matchAccount
     })
-  }, [budgets, statusFilter, searchQuery, accountsMap])
+  }, [budgets, statusFilter, searchQuery, accountsMap, tz, locale])
 
   const isSearchVisible = searchOpen || searchQuery.trim().length > 0
 
@@ -453,18 +485,6 @@ export default function BudgetsScreen() {
                 unstable_headerRightItems: () => [
                   {
                     type: "button",
-                    label: t("finance.budgets.mobile.searchToggleAria"),
-                    icon: {
-                      type: "sfSymbol",
-                      name: isSearchVisible ? "xmark" : "magnifyingglass",
-                    },
-                    tintColor: isSearchVisible
-                      ? colors.primary
-                      : colors.textPrimary,
-                    onPress: toggleSearch,
-                  },
-                  {
-                    type: "button",
                     label: t("finance.budgets.mobile.menuNew"),
                     icon: { type: "sfSymbol", name: "plus" },
                     tintColor: colors.primary,
@@ -489,21 +509,6 @@ export default function BudgetsScreen() {
                 headerRight: () => (
                   <View style={styles.headerRightRow}>
                     <TouchableOpacity
-                      testID="budgets-search-toggle"
-                      accessibilityLabel={t(
-                        "finance.budgets.mobile.searchToggleAria"
-                      )}
-                      onPress={toggleSearch}
-                      style={styles.headerIconBtn}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      {isSearchVisible ? (
-                        <X size={20} color={colors.primary} />
-                      ) : (
-                        <Search size={20} color={colors.textPrimary} />
-                      )}
-                    </TouchableOpacity>
-                    <TouchableOpacity
                       testID="budgets-header-add"
                       accessibilityLabel={t("finance.budgets.mobile.menuNew")}
                       onPress={() => {
@@ -524,7 +529,11 @@ export default function BudgetsScreen() {
 
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 32 + insets.bottom },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -536,8 +545,8 @@ export default function BudgetsScreen() {
         }
       >
         {/* 1. Hero Summary Card (Always reflects active period workspace totals in baseCurrency) */}
-        <Card style={styles.summaryCard} testID="budgets-hero-summary">
-          <View style={styles.summaryHeroRow}>
+        {budgets.length > 0 && (
+          <Card style={styles.summaryCard} testID="budgets-hero-summary">
             <View style={styles.summaryHeroMain}>
               <Text style={styles.summaryLabel}>
                 {summaryStats.isOver
@@ -551,73 +560,73 @@ export default function BudgetsScreen() {
                 }
                 testID="budgets-hero-amount"
               >
-                {summaryStats.isOver
-                  ? t("finance.budgets.mobile.amountOver", {
-                      amount: formatAmount(
-                        summaryStats.overBaseCents,
-                        baseCurrency
-                      ),
-                    })
-                  : formatAmount(summaryStats.remainingBaseCents, baseCurrency)}
+                {tz.formatMoney(
+                  summaryStats.isOver
+                    ? summaryStats.overBaseCents
+                    : summaryStats.remainingBaseCents,
+                  baseCurrency
+                )}
               </MonoAmount>
             </View>
-            <Text style={styles.summaryOfLimitText} numberOfLines={1}>
-              {t("finance.budgets.mobile.summarySpentOfLimit", {
-                spent: formatAmount(
-                  summaryStats.totalSpentBaseCents,
-                  baseCurrency
-                ),
-                limit: formatAmount(
-                  summaryStats.totalLimitBaseCents,
-                  baseCurrency
-                ),
-              })}
-            </Text>
-          </View>
 
-          <View style={styles.summaryProgressWrap}>
-            <View style={styles.summaryProgressTrack}>
-              <View
-                style={[
-                  styles.summaryProgressBar,
-                  {
-                    width: `${summaryStats.overallUtilization}%`,
-                    backgroundColor: summaryStats.isOver
-                      ? colors.destructive
-                      : summaryStats.isWarning
-                        ? colors.warning
-                        : colors.primary,
-                  },
-                ]}
-              />
-            </View>
-            {summaryStats.aggregatePacePercent !== null ? (
-              <View
-                testID="summary-pace-tick"
-                accessibilityLabel={t("finance.budgets.paceTick", {
-                  pct: Math.round(summaryStats.aggregatePacePercent),
-                })}
-                style={[
-                  styles.paceTickSummary,
-                  { left: `${summaryStats.aggregatePacePercent}%` },
-                ]}
-              />
-            ) : null}
-          </View>
-
-          {summaryStats.activeBudgetsCount > 0 ? (
-            <Text style={styles.summaryPaceText} numberOfLines={1}>
-              {summaryStats.aheadOfPaceCount > 0
-                ? t("finance.budgets.mobile.summaryPaceSummary", {
-                    onTrack: summaryStats.onTrackCount,
-                    ahead: summaryStats.aheadOfPaceCount,
-                  })
-                : t("finance.budgets.mobile.summaryOnTrackOnly", {
-                    count: summaryStats.onTrackCount,
+            <View style={styles.summaryProgressWrap}>
+              <View style={styles.summaryProgressTrack}>
+                <View
+                  style={[
+                    styles.summaryProgressBar,
+                    {
+                      width: `${summaryStats.overallUtilization}%`,
+                      backgroundColor: summaryStats.isOver
+                        ? colors.destructive
+                        : summaryStats.isWarning
+                          ? colors.warning
+                          : colors.primary,
+                    },
+                  ]}
+                />
+              </View>
+              {summaryStats.aggregatePacePercent !== null ? (
+                <View
+                  testID="summary-pace-tick"
+                  accessibilityLabel={t("finance.budgets.paceTick", {
+                    pct: Math.round(summaryStats.aggregatePacePercent),
                   })}
-            </Text>
-          ) : null}
-        </Card>
+                  style={[
+                    styles.paceTickSummary,
+                    { left: `${summaryStats.aggregatePacePercent}%` },
+                  ]}
+                />
+              ) : null}
+            </View>
+
+            <View style={styles.budgetFooter}>
+              <Text style={styles.summaryOfLimitText} numberOfLines={1}>
+                {t("finance.budgets.mobile.summarySpentOfLimit", {
+                  spent: tz.formatMoney(
+                    summaryStats.totalSpentBaseCents,
+                    baseCurrency
+                  ),
+                  limit: tz.formatMoney(
+                    summaryStats.totalLimitBaseCents,
+                    baseCurrency
+                  ),
+                })}
+              </Text>
+              {summaryStats.activeBudgetsCount > 0 ? (
+                <Text style={styles.summaryPaceText} numberOfLines={1}>
+                  {summaryStats.aheadOfPaceCount > 0
+                    ? t("finance.budgets.mobile.summaryPaceSummary", {
+                        onTrack: summaryStats.onTrackCount,
+                        ahead: summaryStats.aheadOfPaceCount,
+                      })
+                    : t("finance.budgets.mobile.summaryOnTrackOnly", {
+                        count: summaryStats.onTrackCount,
+                      })}
+                </Text>
+              ) : null}
+            </View>
+          </Card>
+        )}
 
         {/* 2. Compact Status Filter Pills + Optional Inline Search Toggle */}
         <View style={styles.filterToolbar}>
@@ -687,6 +696,7 @@ export default function BudgetsScreen() {
               styles.inlineSearchBtn,
               isSearchVisible && styles.inlineSearchBtnActive,
             ]}
+            hitSlop={4}
             onPress={toggleSearch}
             activeOpacity={0.7}
           >
@@ -714,7 +724,11 @@ export default function BudgetsScreen() {
             />
             {searchQuery.length > 0 ? (
               <TouchableOpacity
-                onPress={() => setSearchQuery("")}
+                accessibilityLabel={t("finance.transactions.clearSearchAria")}
+                onPress={() => {
+                  haptics.selection()
+                  setSearchQuery("")
+                }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <X size={15} color={colors.textMuted} />
@@ -764,12 +778,12 @@ export default function BudgetsScreen() {
             }}
           />
         ) : (
-          <View style={styles.budgetList}>
+          <View>
             {filteredBudgets.map((b: Budget) => {
               const nativeColors = getBudgetColors(b.color || "indigo")
 
               const spentCents = Number(b.currentPeriod?.spentAmount || "0")
-              const limitCents = Number(b.limitAmount || "0")
+              const limitCents = Number(b.limitAmount ?? 0)
               const actualPercentage =
                 limitCents > 0 ? Math.round((spentCents / limitCents) * 100) : 0
               const progressWidth = Math.min(actualPercentage, 100)
@@ -780,7 +794,7 @@ export default function BudgetsScreen() {
               const overCents = Math.max(spentCents - limitCents, 0)
 
               const endParsed = b.currentPeriod?.endDate
-                ? parseDate(b.currentPeriod.endDate)
+                ? parseDate(b.currentPeriod.endDate, tz.timezone)
                 : null
               let daysLeft = 1
               if (endParsed) {
@@ -815,7 +829,7 @@ export default function BudgetsScreen() {
                 ? `${dateRangeStr} · ${intervalStr}`
                 : intervalStr
 
-              const pacePercent = computeBudgetPacePercent(b, now)
+              const pacePercent = computeBudgetPacePercent(b, now, tz.timezone)
 
               const barColor = isOver
                 ? colors.destructive
@@ -841,18 +855,15 @@ export default function BudgetsScreen() {
               }
 
               return (
-                <Card
-                  key={b.id}
-                  style={styles.budgetCard}
-                  testID={`budget-card-${b.id}`}
-                >
-                  {/* Row 1: Icon + Name/Subtitle on left, Left/Over amount + ActionMenu on right */}
-                  <View style={styles.budgetRowTop}>
-                    <TouchableOpacity
-                      style={styles.budgetHeaderMain}
-                      activeOpacity={0.7}
-                      onPress={navigateToDetails}
-                    >
+                <View key={b.id} style={styles.budgetRow}>
+                  <TouchableOpacity
+                    testID={`budget-row-${b.id}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={b.name}
+                    onPress={navigateToDetails}
+                    style={styles.rowPressable}
+                  >
+                    <View style={styles.budgetHeaderMain}>
                       <View
                         style={[
                           styles.budgetIconBadge,
@@ -915,12 +926,12 @@ export default function BudgetsScreen() {
                             </View>
                           ) : null}
                         </View>
-
-                        <Text style={styles.budgetSubtitle} numberOfLines={1}>
-                          {subtitleText}
-                        </Text>
                       </View>
-
+                    </View>
+                    <View style={styles.budgetFooter}>
+                      <Text style={styles.budgetSubtitle} numberOfLines={1}>
+                        {subtitleText}
+                      </Text>
                       <MonoAmount
                         size="sm"
                         color={isOver ? colors.destructive : colors.textPrimary}
@@ -928,129 +939,19 @@ export default function BudgetsScreen() {
                       >
                         {isOver
                           ? t("finance.budgets.mobile.amountOver", {
-                              amount: formatAmount(
+                              amount: tz.formatMoney(
                                 String(overCents),
                                 b.currency
                               ),
                             })
                           : t("finance.budgets.mobile.amountLeft", {
-                              amount: formatAmount(
+                              amount: tz.formatMoney(
                                 String(remainingCents),
                                 b.currency
                               ),
                             })}
                       </MonoAmount>
-                    </TouchableOpacity>
-
-                    <ActionMenu
-                      title={b.name}
-                      colorScheme={resolvedMode}
-                      style={styles.menuTriggerWrapper}
-                      onPressAction={({ nativeEvent }) => {
-                        if (nativeEvent.event === "details") {
-                          haptics.light()
-                          router.push(`/(app)/finance/budgets/${b.id}`)
-                        } else if (nativeEvent.event === "expense") {
-                          haptics.light()
-                          router.push({
-                            pathname: "/modal/add-transaction",
-                            params: {
-                              type: "EXPENSE",
-                              budgetId: b.id,
-                              ...(b.defaultAccountId
-                                ? { accountId: b.defaultAccountId }
-                                : {}),
-                            },
-                          })
-                        } else if (nativeEvent.event === "pause") {
-                          handleUpdateStatus(b, "PAUSED", "Paused")
-                        } else if (nativeEvent.event === "resume") {
-                          handleUpdateStatus(b, "ACTIVE", "Resumed")
-                        } else if (nativeEvent.event === "close") {
-                          handleUpdateStatus(b, "CLOSED", "Closed")
-                        } else if (nativeEvent.event === "reopen") {
-                          handleUpdateStatus(b, "ACTIVE", "Reopened")
-                        } else if (nativeEvent.event === "edit") {
-                          haptics.light()
-                          router.push({
-                            pathname: "/modal/manage-budget",
-                            params: { id: b.id },
-                          })
-                        } else if (nativeEvent.event === "delete") {
-                          handleDeleteBudget(b)
-                        }
-                      }}
-                      actions={[
-                        {
-                          id: "details",
-                          title: t("finance.budgets.mobile.menuViewDetails"),
-                          image: detailsIcon,
-                        },
-                        ...(b.status === "ACTIVE" || !b.status
-                          ? [
-                              {
-                                id: "expense",
-                                title: t("finance.budgets.recordExpense"),
-                                image: addExpenseIcon,
-                              },
-                            ]
-                          : []),
-                        ...(b.status === "PAUSED"
-                          ? [
-                              {
-                                id: "resume",
-                                title: t("finance.budgets.resumeBudget"),
-                                image: resumeIcon,
-                              },
-                            ]
-                          : b.status === "CLOSED"
-                            ? []
-                            : [
-                                {
-                                  id: "pause",
-                                  title: t("finance.budgets.pauseBudget"),
-                                  image: pauseIcon,
-                                },
-                              ]),
-                        ...(b.status === "CLOSED"
-                          ? [
-                              {
-                                id: "reopen",
-                                title: t("finance.budgets.reopenBudget"),
-                                image: reopenIcon,
-                              },
-                            ]
-                          : [
-                              {
-                                id: "close",
-                                title: t("finance.budgets.closeBudget"),
-                                image: closeIcon,
-                              },
-                            ]),
-                        {
-                          id: "edit",
-                          title: t("finance.budgets.mobile.menuEdit"),
-                          image: editIcon,
-                        },
-                        {
-                          id: "delete",
-                          title: t("finance.budgets.mobile.menuDelete"),
-                          image: deleteIcon,
-                          attributes: { destructive: true },
-                        },
-                      ]}
-                    >
-                      <View style={styles.dotsBtn}>
-                        <MoreVertical size={18} color={colors.textMuted} />
-                      </View>
-                    </ActionMenu>
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.budgetBodyPressable}
-                    activeOpacity={0.75}
-                    onPress={navigateToDetails}
-                  >
+                    </View>
                     {isRateMissing ? (
                       <View style={styles.exchangeRateWarning}>
                         <AlertTriangle size={13} color={colors.warning} />
@@ -1092,8 +993,8 @@ export default function BudgetsScreen() {
                     <View style={styles.budgetFooter}>
                       <Text style={styles.spentOfLimitText} numberOfLines={1}>
                         {t("finance.budgets.mobile.summarySpentOfLimit", {
-                          spent: formatAmount(String(spentCents), b.currency),
-                          limit: formatAmount(String(limitCents), b.currency),
+                          spent: tz.formatMoney(String(spentCents), b.currency),
+                          limit: tz.formatMoney(String(limitCents), b.currency),
                         })}
                       </Text>
 
@@ -1101,10 +1002,11 @@ export default function BudgetsScreen() {
                         <Text style={styles.exceededText} numberOfLines={1}>
                           {t("finance.budgets.progress.exceeded")}
                         </Text>
-                      ) : b.status !== "CLOSED" && dailyAllowanceCents > 0 ? (
+                      ) : (!b.status || b.status === "ACTIVE") &&
+                        dailyAllowanceCents > 0 ? (
                         <Text style={styles.dailySafeText} numberOfLines={1}>
                           {t("finance.budgets.mobile.perDaySafe", {
-                            amount: formatAmount(
+                            amount: tz.formatMoney(
                               String(dailyAllowanceCents),
                               b.currency
                             ),
@@ -1113,19 +1015,114 @@ export default function BudgetsScreen() {
                       ) : null}
                     </View>
                   </TouchableOpacity>
-                </Card>
+                  <ActionMenu
+                    title={b.name}
+                    colorScheme={resolvedMode}
+                    style={styles.menuTriggerWrapper}
+                    onPressAction={({ nativeEvent }) => {
+                      if (nativeEvent.event === "details") {
+                        haptics.light()
+                        router.push(`/(app)/finance/budgets/${b.id}`)
+                      } else if (nativeEvent.event === "expense") {
+                        haptics.light()
+                        router.push({
+                          pathname: "/modal/add-transaction",
+                          params: {
+                            type: "EXPENSE",
+                            budgetId: b.id,
+                            ...(b.defaultAccountId
+                              ? { accountId: b.defaultAccountId }
+                              : {}),
+                          },
+                        })
+                      } else if (nativeEvent.event === "pause") {
+                        handleUpdateStatus(b, "PAUSED", "Paused")
+                      } else if (nativeEvent.event === "resume") {
+                        handleUpdateStatus(b, "ACTIVE", "Resumed")
+                      } else if (nativeEvent.event === "close") {
+                        handleUpdateStatus(b, "CLOSED", "Closed")
+                      } else if (nativeEvent.event === "reopen") {
+                        handleUpdateStatus(b, "ACTIVE", "Reopened")
+                      } else if (nativeEvent.event === "edit") {
+                        haptics.light()
+                        router.push({
+                          pathname: "/modal/manage-budget",
+                          params: { id: b.id },
+                        })
+                      } else if (nativeEvent.event === "delete") {
+                        handleDeleteBudget(b)
+                      }
+                    }}
+                    actions={[
+                      {
+                        id: "details",
+                        title: t("finance.budgets.mobile.menuViewDetails"),
+                        image: detailsIcon,
+                      },
+                      ...(b.status === "ACTIVE" || !b.status
+                        ? [
+                            {
+                              id: "expense",
+                              title: t("finance.budgets.recordExpense"),
+                              image: addExpenseIcon,
+                            },
+                          ]
+                        : []),
+                      ...(b.status === "PAUSED"
+                        ? [
+                            {
+                              id: "resume",
+                              title: t("finance.budgets.resumeBudget"),
+                              image: resumeIcon,
+                            },
+                          ]
+                        : b.status === "CLOSED"
+                          ? []
+                          : [
+                              {
+                                id: "pause",
+                                title: t("finance.budgets.pauseBudget"),
+                                image: pauseIcon,
+                              },
+                            ]),
+                      ...(b.status === "CLOSED"
+                        ? [
+                            {
+                              id: "reopen",
+                              title: t("finance.budgets.reopenBudget"),
+                              image: reopenIcon,
+                            },
+                          ]
+                        : [
+                            {
+                              id: "close",
+                              title: t("finance.budgets.closeBudget"),
+                              image: closeIcon,
+                            },
+                          ]),
+                      {
+                        id: "edit",
+                        title: t("finance.budgets.mobile.menuEdit"),
+                        image: editIcon,
+                      },
+                      {
+                        id: "delete",
+                        title: t("finance.budgets.mobile.menuDelete"),
+                        image: deleteIcon,
+                        attributes: { destructive: true },
+                      },
+                    ]}
+                  >
+                    <View style={styles.dotsBtn}>
+                      <MoreVertical size={18} color={colors.textMuted} />
+                    </View>
+                  </ActionMenu>
+                </View>
               )
             })}
           </View>
         )}
       </ScrollView>
-
-      <QuickCaptureFab
-        testID="budgets-fab-add"
-        accessibilityLabel={t("finance.budgets.mobile.menuNew")}
-        onPress={() => router.push("/modal/manage-budget")}
-        style={{ bottom: Math.max(insets.bottom, 16) + 4 }}
-      />
     </View>
   )
 }
@@ -1151,7 +1148,6 @@ const createStyles = (t: SaturnMobileTheme) => ({
   content: {
     padding: 16,
     paddingTop: 12,
-    paddingBottom: 96,
     gap: 12,
   },
   summaryCard: {
@@ -1162,14 +1158,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     borderColor: t.colors.border,
     gap: 10,
   },
-  summaryHeroRow: {
-    flexDirection: "row" as const,
-    alignItems: "flex-end" as const,
-    justifyContent: "space-between" as const,
-    gap: 12,
-  },
   summaryHeroMain: {
-    flex: 1,
     minWidth: 0,
     gap: 2,
   },
@@ -1225,12 +1214,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
     gap: 6,
   },
   filterPill: {
-    paddingVertical: 5,
+    minHeight: 40,
+    justifyContent: "center" as const,
     paddingHorizontal: 11,
     borderRadius: t.radius.full,
-    backgroundColor: t.colors.surface,
-    borderWidth: 1,
-    borderColor: t.colors.border,
+    backgroundColor: t.colors.surfaceSubtle,
   },
   filterPillActive: {
     backgroundColor: t.colors.primarySubtle,
@@ -1246,12 +1234,10 @@ const createStyles = (t: SaturnMobileTheme) => ({
     fontWeight: "700" as const,
   },
   inlineSearchBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: t.colors.surface,
-    borderWidth: 1,
-    borderColor: t.colors.border,
+    width: 40,
+    height: 40,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceSubtle,
     alignItems: "center" as const,
     justifyContent: "center" as const,
     flexShrink: 0,
@@ -1264,12 +1250,10 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 8,
-    height: 38,
+    height: 40,
     paddingHorizontal: 12,
     borderRadius: t.radius.md,
-    backgroundColor: t.colors.surface,
-    borderWidth: 1,
-    borderColor: t.colors.border,
+    backgroundColor: t.colors.surfaceSubtle,
   },
   searchInput: {
     flex: 1,
@@ -1280,28 +1264,16 @@ const createStyles = (t: SaturnMobileTheme) => ({
   skeletonStack: {
     gap: 10,
   },
-  budgetList: {
-    gap: 10,
+  budgetRow: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: t.colors.border,
   },
-  budgetCard: {
-    padding: 14,
-    borderRadius: t.radius.lg,
-    backgroundColor: t.colors.surface,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-    gap: 10,
-  },
-  budgetRowTop: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "space-between" as const,
-    gap: 4,
-  },
+  rowPressable: { paddingVertical: 12, gap: 8 },
   budgetHeaderMain: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
-    flex: 1,
-    minWidth: 0,
+    minHeight: 44,
+    paddingRight: 48,
     gap: 10,
   },
   budgetIconBadge: {
@@ -1349,19 +1321,19 @@ const createStyles = (t: SaturnMobileTheme) => ({
     marginLeft: 4,
   },
   menuTriggerWrapper: {
+    position: "absolute" as const,
+    right: 0,
+    top: 12,
     alignItems: "center" as const,
     justifyContent: "center" as const,
     flexShrink: 0,
   },
   dotsBtn: {
-    width: 28,
-    height: 28,
+    width: 44,
+    height: 44,
     borderRadius: 8,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-  },
-  budgetBodyPressable: {
-    gap: 8,
   },
   exchangeRateWarning: {
     flexDirection: "row" as const,
@@ -1406,6 +1378,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   budgetFooter: {
     flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     justifyContent: "space-between" as const,
     alignItems: "center" as const,
     gap: 8,

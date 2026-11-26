@@ -64,15 +64,17 @@ export function formatMoneyWithLocale(
   locale: string = "en-US",
   options?: FormatMoneyOptions
 ): string {
-  const amount = formatCents(cents)
+  const rawAmount = formatCents(cents)
+  const amount = rawAmount === 0 ? 0 : rawAmount
   const resolvedLocale = sanitizeLocale(options?.locale || locale)
   const minimumFractionDigits = options?.minimumFractionDigits ?? 2
   const maximumFractionDigits = options?.maximumFractionDigits ?? 2
   const signDisplay = options?.showSign ? "exceptZero" : "auto"
 
+  let formatted: string
   if (currency) {
     try {
-      return new Intl.NumberFormat(resolvedLocale, {
+      formatted = new Intl.NumberFormat(resolvedLocale, {
         style: "currency",
         currency,
         minimumFractionDigits,
@@ -86,16 +88,22 @@ export function formatMoneyWithLocale(
         maximumFractionDigits,
         signDisplay,
       }).format(amount)
-      return `${fallback} ${currency}`
+      formatted = `${fallback} ${currency}`
     }
+  } else {
+    formatted = new Intl.NumberFormat(resolvedLocale, {
+      style: "decimal",
+      minimumFractionDigits,
+      maximumFractionDigits,
+      signDisplay,
+    }).format(amount)
   }
 
-  return new Intl.NumberFormat(resolvedLocale, {
-    style: "decimal",
-    minimumFractionDigits,
-    maximumFractionDigits,
-    signDisplay,
-  }).format(amount)
+  if (options?.showSign && amount > 0 && !formatted.includes("+")) {
+    return `+${formatted}`
+  }
+
+  return formatted
 }
 
 export function TimezoneProvider({

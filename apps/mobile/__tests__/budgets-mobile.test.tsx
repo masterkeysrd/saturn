@@ -1,9 +1,9 @@
 import React from "react"
+import { Platform } from "react-native"
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { render, fireEvent, waitFor } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { Budget } from "@saturn/api/saturn/finance/v1/finance"
-import { formatAmount } from "@saturn/core"
 import { TimezoneProvider } from "@saturn/hooks"
 import BudgetsScreen, {
   computeBudgetPacePercent,
@@ -946,14 +946,8 @@ describe("Track E Part 2: Mobile Budgets Redesign & Fluent Form", () => {
 
       // DF-20: Hero summary converts EUR->USD via exchangeRates (1000+220=1220 limit, 300+55=355 spent -> 865.00 USD left)
       expect(getByText("Left to spend")).toBeTruthy()
-      expect(getByTestId("budgets-hero-amount").textContent).toBe(
-        formatAmount(86500, "USD")
-      )
-      expect(
-        getByText(
-          `${formatAmount(35500, "USD")} of ${formatAmount(122000, "USD")}`
-        )
-      ).toBeTruthy()
+      expect(getByTestId("budgets-hero-amount").textContent).toBe("$865.00")
+      expect(getByText("$355.00 of $1,220.00")).toBeTruthy()
       expect(queryByText(/Base:\s*USD/i)).toBeNull()
 
       // Today elapsed-period pace ticks on both summary bar and active budget cards
@@ -975,14 +969,83 @@ describe("Track E Part 2: Mobile Budgets Redesign & Fluent Form", () => {
       // List switches to Paused budget, while hero summary preserves active workspace totals
       expect(getByText("Dining Out")).toBeTruthy()
       expect(queryByText("Groceries")).toBeNull()
-      expect(getByTestId("budgets-hero-amount").textContent).toBe(
-        formatAmount(86500, "USD")
-      )
+      expect(getByTestId("budgets-hero-amount").textContent).toBe("$865.00")
+      expect(getByText("$355.00 of $1,220.00")).toBeTruthy()
+    })
+
+    it("keeps creation in the header and hides the hero on an empty workspace", () => {
+      mockBudgetsListRef.current = []
+      const ui = renderWithProviders(<BudgetsScreen />)
+      const items = (
+        mockStackOptionsRef.current!.unstable_headerRightItems as () => {
+          icon: { name: string }
+          onPress: () => void
+        }[]
+      )()
+      expect(items.map((i) => i.icon.name)).toEqual(["plus", "sparkles"])
+      items[0].onPress()
+      expect(mockRouterPush).toHaveBeenCalledWith("/modal/manage-budget")
+      expect(ui.queryByTestId("budgets-fab-add")).toBeNull()
+      expect(ui.queryByTestId("budgets-hero-summary")).toBeNull()
+      expect(ui.getAllByTestId("budgets-inline-search-toggle")).toHaveLength(1)
+    })
+
+    it("keeps the Android header limited to New and AI", () => {
+      const previous = Platform.OS
+      try {
+        Platform.OS = "android"
+        renderWithProviders(<BudgetsScreen />)
+        const header = (
+          mockStackOptionsRef.current!.headerRight as () => React.ReactElement<{
+            children: React.ReactElement<{ testID: string }>[]
+          }>
+        )()
+        expect(
+          header.props.children.map((child) => child.props.testID)
+        ).toEqual(["budgets-header-add", "budgets-header-ai"])
+      } finally {
+        Platform.OS = previous
+      }
+    })
+
+    it("orders flat navigable rows by urgency, then paused and closed", () => {
+      const [groceries, travel, paused] = mockBudgetsListRef.current
+      mockBudgetsListRef.current = [
+        { ...paused, id: "closed", status: "CLOSED" },
+        paused,
+        groceries,
+        {
+          ...travel,
+          currentPeriod: { ...travel.currentPeriod, spentAmount: "22000" },
+        },
+      ]
+      const ui = renderWithProviders(<BudgetsScreen />)
+      fireEvent.click(ui.getByTestId("budgets-filter-all"))
+      const rows = ui.getAllByTestId(/^budget-row-/)
+      expect(rows.map((r) => r.dataset.testid)).toEqual([
+        "budget-row-bud_euro_travel",
+        "budget-row-bud_groceries",
+        "budget-row-bud_paused",
+        "budget-row-closed",
+      ])
+      expect(rows[1].parentElement?.style.borderBottomWidth).toBe("0.5px")
+      expect(rows[1].textContent).toMatch(/day safe/)
+      expect(rows[2].textContent).not.toMatch(/day safe/)
+      fireEvent.click(rows[0])
+      expect(mockRouterPush).toHaveBeenCalledWith({
+        pathname: "/(app)/finance/budgets/[id]",
+        params: { id: "bud_euro_travel" },
+      })
+    })
+
+    it("places the pace origin at workspace midnight", () => {
       expect(
-        getByText(
-          `${formatAmount(35500, "USD")} of ${formatAmount(122000, "USD")}`
+        computeBudgetPacePercent(
+          mockBudgetsListRef.current[0],
+          new Date("2026-10-01T03:00:00Z"),
+          "America/New_York"
         )
-      ).toBeTruthy()
+      ).toBe(0)
     })
 
     it("collapses search bar by default and toggles inline when search icon is tapped", () => {

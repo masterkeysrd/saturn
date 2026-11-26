@@ -1,8 +1,12 @@
+import { DetailChart } from "../../../../components/finance/detail-chart"
+import { useBudgetAnalytics, useDetailLedger } from "@saturn/hooks/finance"
 import { useState, useMemo } from "react"
 import {
+  StyleSheet,
   Text,
   View,
   SectionList,
+  TextInput,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
@@ -13,38 +17,36 @@ import { useRouter, useLocalSearchParams, Stack } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   Calendar,
-  Plus,
-  Edit3,
   AlertCircle,
   ReceiptText,
   Sparkles,
-  Pause,
-  Play,
+  Plus,
+  PlayCircle,
   Unlock,
+  Search,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  CreditCard,
+  X,
   AlertTriangle,
   MoreVertical,
 } from "lucide-react-native"
 import { Icon } from "@expo/ui"
-import { ActionMenu } from "@/components/ui/action-menu"
+import { ActionMenu } from "../../../../components/ui/action-menu"
 import {
   useGetBudgetQuery,
   useGetBudgetPeriodQuery,
-  useListBudgetsQuery,
-  useListTransactionsQuery,
   useListAccountsQuery,
   useGetSettingsQuery,
   useUpdateBudgetMutation,
   useDeleteBudgetMutation,
   type Account,
-  type Budget,
   type Budget_Status,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { buildCopilotEntityKey, formatAmount, parseDate } from "@saturn/core"
+import { buildCopilotEntityKey, getDaysDiff } from "@saturn/core"
 import {
   invalidateFinanceQueries,
+  useDebounce,
   useDateSections,
   useI18n,
   useTimezone,
@@ -53,26 +55,24 @@ import { getLocalizedIntervalLabel, type TranslationKey } from "@saturn/i18n"
 import {
   useMobileCopilotView,
   useOptionalMobileCopilotSheet,
-} from "@/lib/copilot-sheet-context"
-import { useSpace } from "@/lib/space-context"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { getBudgetIcon } from "@/lib/budget-icons"
-import { haptics } from "@/lib/haptics"
-import { AIHeaderButton } from "@/components/app-header"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Caption } from "@/components/ui/typography"
-import { EmptyState } from "@/components/ui/empty-state"
-import { SkeletonCard } from "@/components/ui/skeleton-loader"
-import { TransactionListItem } from "@/components/finance/transaction-list-item"
-import { DateSectionHeader } from "@/components/finance/date-section-header"
-import { useToast } from "@/components/ui/toast"
-
-// Cross-platform menu icons
-const addExpenseIcon = Icon.select({
-  ios: "plus.circle",
-  android: require("@expo/material-symbols/add_circle.xml"),
-})
+} from "../../../../lib/copilot-sheet-context"
+import { useSpace } from "../../../../lib/space-context"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../../../lib/theme"
+import { getBudgetIcon } from "../../../../lib/budget-icons"
+import { haptics } from "../../../../lib/haptics"
+import { AIHeaderButton } from "../../../../components/app-header"
+import { Card } from "../../../../components/ui/card"
+import { Badge } from "../../../../components/ui/badge"
+import { MonoAmount } from "../../../../components/ui/typography"
+import { EmptyState } from "../../../../components/ui/empty-state"
+import { SkeletonCard } from "../../../../components/ui/skeleton-loader"
+import { TransactionListItem } from "../../../../components/finance/transaction-list-item"
+import { DateSectionHeader } from "../../../../components/finance/date-section-header"
+import { useToast } from "../../../../components/ui/toast"
 
 const pauseIcon = Icon.select({
   ios: "pause.circle",
@@ -104,25 +104,6 @@ const deleteIcon = Icon.select({
   android: require("@expo/material-symbols/delete.xml"),
 })
 
-function calculateDaysLeft(
-  endDateStr: string | undefined,
-  tz: ReturnType<typeof useTimezone>
-): number {
-  const now = tz.now()
-  if (!endDateStr) {
-    const parts = tz.parts(now)
-    if (!parts) return 1
-    const daysInMonth = new Date(
-      Date.UTC(parts.year, parts.month, 0)
-    ).getUTCDate()
-    return Math.max(1, daysInMonth - parts.day + 1)
-  }
-  const end = parseDate(endDateStr)
-  if (!end) return 1
-  const diff = tz.endOfDay(end).getTime() - now.getTime()
-  return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)))
-}
-
 type BudgetStatusAction = "Paused" | "Resumed" | "Closed" | "Reopened"
 
 const STATUS_ACTION_KEYS: Record<BudgetStatusAction, TranslationKey> = {
@@ -150,8 +131,6 @@ export default function BudgetDetailScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
 
-  const isHistorical = selectedDate !== null
-
   // Fetch base currency settings
   const { data: settingsData } = useGetSettingsQuery(
     {},
@@ -159,51 +138,30 @@ export default function BudgetDetailScreen() {
   )
   const baseCurrency = settingsData?.baseCurrency || "USD"
 
-  // Fetch budgets list (view: FULL populates currentPeriod with spentAmount & dates)
   const {
-    data: budgetsData,
-    isLoading: isBudgetsLoading,
-    refetch: refetchBudgets,
-  } = useListBudgetsQuery(
-    { pageSize: 100, pageToken: "", view: "FULL" },
-    { enabled: !!activeSpaceId }
-  )
-
-  const budgetFromList = useMemo(
-    () => budgetsData?.budgets?.find((b: Budget) => b.id === id),
-    [budgetsData, id]
-  )
-
-  // Fallback to single get query
-  const {
-    data: budgetFromGet,
+    data: budget,
     isLoading: isSingleBudgetLoading,
     refetch: refetchSingleBudget,
-  } = useGetBudgetQuery(
-    { id: id || "" },
-    { enabled: !!id && !!activeSpaceId && !budgetFromList }
+  } = useGetBudgetQuery({ id: id || "" }, { enabled: !!id && !!activeSpaceId })
+  const today = tz.startOfDay(tz.now()).toISOString()
+  const { data: latest } = useGetBudgetPeriodQuery(
+    { budgetId: id || "", date: today },
+    { enabled: !!id && !!activeSpaceId }
   )
-
-  const budget = budgetFromList || budgetFromGet
-
-  // Fetch budget period (for selected historical date or fallback when currentPeriod not populated)
-  const { data: periodData, refetch: refetchPeriod } = useGetBudgetPeriodQuery(
-    {
-      budgetId: id || "",
-      date: (selectedDate || new Date()).toISOString(),
-    },
-    {
-      enabled:
-        !!id &&
-        !!activeSpaceId &&
-        (isHistorical || !budgetFromList?.currentPeriod),
-    }
+  const { data: currentPeriod, refetch: refetchPeriod } =
+    useGetBudgetPeriodQuery(
+      { budgetId: id || "", date: selectedDate?.toISOString() || today },
+      { enabled: !!id && !!activeSpaceId }
+    )
+  const isHistorical =
+    selectedDate !== null &&
+    (!currentPeriod || currentPeriod.startDate !== latest?.startDate)
+  const chart = useBudgetAnalytics(
+    activeSpaceId || undefined,
+    budget,
+    currentPeriod,
+    latest
   )
-
-  const currentPeriod = isHistorical
-    ? periodData
-    : budget?.currentPeriod || periodData
-
   const periodStartDate = currentPeriod?.startDate
   const periodEndDate = currentPeriod?.endDate
   const budgetInterval = budget?.interval
@@ -236,30 +194,28 @@ export default function BudgetDetailScreen() {
       : null
   )
 
-  // Fetch expense transactions for this budget and period directly from the backend
-  const {
-    data: txnsData,
-    isLoading: isTxnsLoading,
-    refetch: refetchTxns,
-  } = useListTransactionsQuery(
-    {
-      budgetId: id || "",
-      types: ["EXPENSE"],
-      startDate: isOneTime ? undefined : periodStartDate || undefined,
-      endDate: isOneTime ? undefined : periodEndDate || undefined,
-      pageSize: 100,
-      pageToken: "",
-      view: "FULL",
-    },
-    {
-      enabled:
-        !!id &&
-        !!activeSpaceId &&
-        !!budget &&
-        (isOneTime || Boolean(periodStartDate && periodEndDate)),
-    }
+  const [search, setSearch] = useState("")
+  const [activeTab, setActiveTab] = useState<"transactions" | "analytics">(
+    "transactions"
   )
-
+  const debouncedSearch = useDebounce(search, 300)
+  const searching = debouncedSearch.trim().length > 0
+  const clearSearch = () => {
+    haptics.selection()
+    setSearch("")
+  }
+  const ledger = useDetailLedger(
+    activeSpaceId || undefined,
+    {
+      budgetId: id,
+      types: ["EXPENSE"],
+      searchQuery: debouncedSearch,
+      startDate: periodStartDate,
+      endDate: periodEndDate,
+    },
+    !!id && !!periodStartDate && !!periodEndDate
+  )
+  const { isLoading: isTxnsLoading, refetch: refetchTxns } = ledger
   // Fetch accounts to map account info
   const { data: accountsData } = useListAccountsQuery(
     { activeOnly: false },
@@ -278,18 +234,11 @@ export default function BudgetDetailScreen() {
   }, [accounts])
 
   const periodTransactions = useMemo(
-    () => txnsData?.transactions || [],
-    [txnsData?.transactions]
+    () => ledger.data?.pages.flatMap((p) => p.transactions || []) || [],
+    [ledger.data]
   )
 
   const sections = useDateSections(periodTransactions)
-
-  const transactionsSpentInPeriodCents = useMemo(() => {
-    return periodTransactions.reduce(
-      (sum, t) => sum + Math.abs(Number(t.amount || "0")),
-      0
-    )
-  }, [periodTransactions])
 
   const updateMutation = useUpdateBudgetMutation()
   const deleteMutation = useDeleteBudgetMutation()
@@ -299,7 +248,6 @@ export default function BudgetDetailScreen() {
     setRefreshing(true)
     try {
       await Promise.all([
-        refetchBudgets(),
         refetchSingleBudget(),
         refetchPeriod(),
         refetchTxns(),
@@ -341,7 +289,6 @@ export default function BudgetDetailScreen() {
         type: "success",
       })
       await invalidateFinanceQueries(queryClient)
-      refetchBudgets()
       refetchSingleBudget()
       refetchPeriod()
     } catch (err: any) {
@@ -400,76 +347,15 @@ export default function BudgetDetailScreen() {
     )
   }
 
-  const handleStatusOptions = () => {
-    if (!budget) return
-    haptics.light()
-    const currentStatus = budget.status || "ACTIVE"
-    const options: {
-      text: string
-      style?: "default" | "cancel" | "destructive"
-      onPress?: () => void
-    }[] = []
-
-    if (currentStatus === "ACTIVE") {
-      options.push({
-        text: t("finance.budgets.pauseBudget"),
-        onPress: () => handleUpdateStatus("PAUSED", "paused"),
-      })
-      options.push({
-        text: t("finance.budgets.closeBudget"),
-        style: "destructive",
-        onPress: () => handleUpdateStatus("CLOSED", "closed"),
-      })
-    } else if (currentStatus === "PAUSED") {
-      options.push({
-        text: t("finance.budgets.resumeBudget"),
-        onPress: () => handleUpdateStatus("ACTIVE", "resumed"),
-      })
-      options.push({
-        text: t("finance.budgets.closeBudget"),
-        style: "destructive",
-        onPress: () => handleUpdateStatus("CLOSED", "closed"),
-      })
-    } else if (currentStatus === "CLOSED") {
-      options.push({
-        text: t("finance.budgets.reopenBudget"),
-        onPress: () => handleUpdateStatus("ACTIVE", "reopened"),
-      })
-    }
-
-    options.push({ text: t("common.cancel"), style: "cancel" })
-
-    Alert.alert(
-      t("finance.budgets.mobile.manageStatus"),
-      t("finance.budgets.mobile.manageStatusCurrent", {
-        status: currentStatus,
-      }),
-      options
-    )
-  }
-
-  // Stepping historical periods
   const handleStepPeriod = (step: -1 | 1) => {
+    if (step === 1 && !periodEndDate) return handleResetCurrent()
     haptics.selection()
-    const base = selectedDate || tz.now()
-    const parts = tz.parts(base)
-    if (!parts) return
-    const interval = budget?.interval || "MONTHLY"
-
-    let next: Date
-    if (interval === "WEEKLY") {
-      next = new Date(
-        Date.UTC(parts.year, parts.month - 1, parts.day + step * 7, 12, 0, 0)
-      )
-    } else if (interval === "YEARLY") {
-      next = new Date(
-        Date.UTC(parts.year + step, parts.month - 1, parts.day, 12, 0, 0)
-      )
-    } else {
-      next = new Date(
-        Date.UTC(parts.year, parts.month - 1 + step, parts.day, 12, 0, 0)
-      )
-    }
+    if (!periodStartDate || !periodEndDate) return
+    const next = new Date(
+      step < 0
+        ? +tz.startOfDay(periodStartDate) - 1
+        : +tz.endOfDay(periodEndDate) + 1
+    )
     setSelectedDate(next)
   }
 
@@ -478,7 +364,7 @@ export default function BudgetDetailScreen() {
     setSelectedDate(null)
   }
 
-  if (isBudgetsLoading || isSingleBudgetLoading) {
+  if (isSingleBudgetLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -510,52 +396,49 @@ export default function BudgetDetailScreen() {
   }
 
   const nativeColors = getBudgetColors(budget.color || "indigo")
+  const Primary =
+    budget.status === "PAUSED"
+      ? PlayCircle
+      : budget.status === "CLOSED"
+        ? Unlock
+        : Plus
   const BIcon = getBudgetIcon(budget.icon, budget.name)
 
-  const periodSpentStr = currentPeriod?.spentAmount
-  const periodSpentNum =
-    periodSpentStr !== undefined && periodSpentStr !== ""
-      ? Number(periodSpentStr)
-      : undefined
+  const spentCents = Number(
+    currentPeriod?.spentAmount ??
+      (!isHistorical ? budget.currentPeriod?.spentAmount : 0) ??
+      0
+  )
 
-  const spentCents =
-    periodSpentNum !== undefined
-      ? periodSpentNum
-      : transactionsSpentInPeriodCents
-
-  const limitCents = Number(budget.limitAmount || "0")
+  const limitCents = Number(
+    currentPeriod?.limitAmount ?? budget.limitAmount ?? 0
+  )
   const actualPercentage =
     limitCents > 0 ? Math.round((spentCents / limitCents) * 100) : 0
   const progressWidth = Math.min(actualPercentage, 100)
-  const isOver = actualPercentage >= 100
+  const isOver = spentCents > limitCents
   const isNearLimit = actualPercentage >= 85 && !isOver
 
   const remainingCents = Math.max(limitCents - spentCents, 0)
   const overCents = Math.max(spentCents - limitCents, 0)
 
-  const daysLeft = calculateDaysLeft(currentPeriod?.endDate, tz)
+  const daysLeft = (getDaysDiff(currentPeriod?.endDate, tz.timezone) ?? -1) + 1
+  const activePeriod =
+    !isOneTime &&
+    !!currentPeriod &&
+    !isHistorical &&
+    (!budget.status || budget.status === "ACTIVE") &&
+    daysLeft > 0
+  const start = periodStartDate ? +tz.startOfDay(periodStartDate) : NaN
+  const end = periodEndDate ? +tz.endOfDay(periodEndDate) : NaN
+  const elapsed =
+    end > start ? (100 * (+tz.now() - start)) / (end - start) : null
   const dailyAllowanceCents =
     !isOver && daysLeft > 0 ? Math.round(remainingCents / daysLeft) : 0
 
-  const startStr = currentPeriod?.startDate
-    ? tz.format(currentPeriod.startDate, {
-        month: "short",
-        day: "numeric",
-      })
-    : ""
-  const endStr = currentPeriod?.endDate
-    ? tz.format(currentPeriod.endDate, {
-        month: "short",
-        day: "numeric",
-      })
-    : ""
-  const dateRangeStr =
-    budget.interval === "ONE_TIME"
-      ? t("finance.budgets.mobile.lifetimeAllocation")
-      : startStr && endStr
-        ? `${startStr} - ${endStr}`
-        : t("finance.budgets.mobile.currentPeriod")
-
+  const dateRangeStr = isOneTime
+    ? t("finance.budgets.mobile.lifetimeAllocation")
+    : tz.formatDateRange(periodStartDate, periodEndDate)
   const barColor = isOver
     ? colors.destructive
     : isNearLimit
@@ -583,8 +466,59 @@ export default function BudgetDetailScreen() {
 
   const renderHeader = () => (
     <View style={styles.headerSection}>
-      {/* Hero Budget Card */}
-      <Card style={[styles.heroCard, { borderColor: nativeColors.border }]}>
+      {budget.interval !== "ONE_TIME" ? (
+        <View style={styles.periodNavControls}>
+          <TouchableOpacity
+            accessibilityLabel={t("finance.detail.previous")}
+            onPress={() => handleStepPeriod(-1)}
+            style={styles.periodNavArrow}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <ChevronLeft size={16} color={colors.textPrimary} />
+          </TouchableOpacity>
+
+          <View style={styles.periodLabelGroup}>
+            <Calendar size={13} color={colors.textMuted} />
+            <Text style={styles.periodRangeText} numberOfLines={1}>
+              {dateRangeStr}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            disabled={!isHistorical}
+            accessibilityLabel={t("finance.detail.next")}
+            onPress={() => handleStepPeriod(1)}
+            style={styles.periodNavArrow}
+            hitSlop={{
+              top: 8,
+              bottom: 8,
+              left: 8,
+              right: isHistorical ? 2 : 8,
+            }}
+          >
+            <ChevronRight
+              size={16}
+              opacity={isHistorical ? 1 : 0.35}
+              color={isHistorical ? colors.textPrimary : colors.textMuted}
+            />
+          </TouchableOpacity>
+
+          {isHistorical ? (
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={handleResetCurrent}
+              style={styles.periodResetBadge}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.periodResetText} numberOfLines={1}>
+                {t("finance.budgets.mobile.periodResetCurrent")}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
+      <Card style={styles.heroCard}>
         <View style={styles.heroTopRow}>
           <View style={styles.heroLeftGroup}>
             <View
@@ -599,66 +533,22 @@ export default function BudgetDetailScreen() {
               <BIcon size={22} color={nativeColors.bar} />
             </View>
             <View style={styles.heroTitleCol}>
-              <Text style={styles.budgetName} numberOfLines={1}>
-                {budget.name}
+              <Text style={styles.metricLabel}>
+                {t(
+                  isOver
+                    ? "finance.budgets.progress.overBudget"
+                    : "finance.budgets.mobile.summaryLeftToSpend"
+                )}
               </Text>
-              <View style={styles.periodRow}>
-                <View style={styles.intervalBadge}>
-                  <Text style={styles.intervalBadgeText}>
-                    {getLocalizedIntervalLabel(budget.interval, locale)}
-                  </Text>
-                </View>
-
-                {/* Default account badge */}
-                {defaultAccount ? (
-                  <View style={styles.accountBadge}>
-                    <CreditCard size={11} color={colors.textMuted} />
-                    <Text style={styles.accountBadgeText} numberOfLines={1}>
-                      {defaultAccount.name}
-                    </Text>
-                  </View>
-                ) : null}
-
-                {budget.status === "CLOSED" ? (
-                  <View
-                    style={[
-                      styles.intervalBadge,
-                      {
-                        backgroundColor: colors.destructiveSubtle,
-                        borderColor: "rgba(239, 68, 68, 0.3)",
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.intervalBadgeText,
-                        { color: colors.destructive },
-                      ]}
-                    >
-                      {t("finance.budgets.mobile.badgeClosed")}
-                    </Text>
-                  </View>
-                ) : budget.status === "PAUSED" ? (
-                  <View
-                    style={[
-                      styles.intervalBadge,
-                      {
-                        backgroundColor: colors.warningSubtle,
-                        borderColor: "rgba(245, 158, 11, 0.3)",
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.intervalBadgeText,
-                        { color: colors.warning },
-                      ]}
-                    >
-                      {t("finance.budgets.mobile.badgePaused")}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
+              <MonoAmount
+                size="lg"
+                color={isOver ? colors.destructive : colors.textPrimary}
+              >
+                {tz.formatMoney(
+                  isOver ? overCents : remainingCents,
+                  budget.currency
+                )}
+              </MonoAmount>
             </View>
           </View>
 
@@ -674,9 +564,9 @@ export default function BudgetDetailScreen() {
             }
             border={
               isOver
-                ? "rgba(244, 63, 94, 0.3)"
+                ? colors.border
                 : isNearLimit
-                  ? "rgba(245, 158, 11, 0.3)"
+                  ? colors.border
                   : nativeColors.border
             }
             color={
@@ -689,49 +579,58 @@ export default function BudgetDetailScreen() {
           />
         </View>
 
-        {/* Historical Period Navigation Controls */}
-        {budget.interval !== "ONE_TIME" ? (
-          <View style={styles.periodNavControls}>
-            <TouchableOpacity
-              onPress={() => handleStepPeriod(-1)}
-              style={styles.periodNavArrow}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <ChevronLeft size={16} color={colors.textPrimary} />
-            </TouchableOpacity>
-
-            <View style={styles.periodLabelGroup}>
-              <Calendar size={13} color={colors.textMuted} />
-              <Text style={styles.periodRangeText}>{dateRangeStr}</Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => handleStepPeriod(1)}
-              style={styles.periodNavArrow}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <ChevronRight size={16} color={colors.textPrimary} />
-            </TouchableOpacity>
-
-            {isHistorical ? (
-              <TouchableOpacity
-                onPress={handleResetCurrent}
-                style={styles.periodResetBadge}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.periodResetText}>
-                  {t("finance.budgets.mobile.periodResetCurrent")}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-        ) : (
-          <View style={styles.periodLabelGroup}>
-            <Calendar size={13} color={colors.textMuted} />
-            <Text style={styles.periodRangeText}>{dateRangeStr}</Text>
-          </View>
-        )}
-
+        <View style={styles.progressTrack}>
+          <View
+            style={[
+              styles.progressBar,
+              {
+                width: `${progressWidth}%`,
+                minWidth: progressWidth > 0 ? 6 : 0,
+                backgroundColor: barColor,
+              },
+            ]}
+          />
+          {activePeriod && elapsed !== null && (
+            <View
+              accessibilityLabel={t("common.today")}
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                width: 2,
+                left: `${Math.min(99, Math.max(0, elapsed))}%`,
+                backgroundColor: colors.textPrimary,
+              }}
+            />
+          )}
+        </View>
+        <View style={styles.periodRow}>
+          <MonoAmount size="sm">
+            {t("finance.budgets.mobile.summarySpentOfLimit", {
+              spent: tz.formatMoney(spentCents, budget.currency),
+              limit: tz.formatMoney(limitCents, budget.currency),
+            })}
+          </MonoAmount>
+          <Text style={styles.metaText}>
+            {[
+              isOneTime
+                ? dateRangeStr
+                : getLocalizedIntervalLabel(budget.interval, locale),
+              defaultAccount?.name,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </Text>
+          {(budget.status === "CLOSED" || budget.status === "PAUSED") && (
+            <Badge
+              label={t(
+                budget.status === "CLOSED"
+                  ? "finance.budgets.mobile.badgeClosed"
+                  : "finance.budgets.mobile.badgePaused"
+              )}
+            />
+          )}
+        </View>
         {/* Missing Exchange Rate Warning Banner */}
         {isRateMissing ? (
           <View style={styles.exchangeRateWarning}>
@@ -745,202 +644,245 @@ export default function BudgetDetailScreen() {
           </View>
         ) : null}
 
-        {/* Cross-Currency Conversion Strip */}
-        {isCrossCurrency && rateToBase > 0 ? (
-          <View style={styles.crossCurrencyStrip}>
-            <Text style={styles.crossCurrencyRateText}>
-              1 {budget.currency} = {rateToBase.toFixed(4)} {baseCurrency}
+        {isCrossCurrency && rateToBase > 0 && (
+          <Text style={styles.metaText}>
+            ≈{" "}
+            {t("finance.budgets.mobile.summarySpentOfLimit", {
+              spent: tz.formatMoney(spentInBaseCents, baseCurrency),
+              limit: tz.formatMoney(limitInBaseCents, baseCurrency),
+            })}{" "}
+            · 1 {budget.currency} ={" "}
+            {rateToBase.toLocaleString(locale, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 4,
+            })}{" "}
+            {baseCurrency}
+          </Text>
+        )}
+
+        {/* Daily Allowance Banner */}
+        {activePeriod ? (
+          <View style={styles.allowanceBanner}>
+            <Sparkles
+              size={14}
+              color={isOver ? colors.warning : colors.primary}
+            />
+            <Text style={styles.allowanceText}>
+              {isOver ? (
+                <Text>{t("finance.budgets.mobile.limitExceeded")}</Text>
+              ) : (
+                <Text>
+                  {t("finance.budgets.mobile.dailyAllowanceLabel")}{" "}
+                  <Text style={styles.allowanceBold}>
+                    {tz.formatMoney(
+                      String(dailyAllowanceCents),
+                      budget.currency
+                    )}{" "}
+                    {t("finance.budgets.mobile.perDay")}
+                  </Text>{" "}
+                  {t("finance.budgets.mobile.allowanceDaysLeft", {
+                    days: daysLeft,
+                    unit:
+                      daysLeft === 1
+                        ? t("finance.budgets.mobile.daysUnitOne")
+                        : t("finance.budgets.mobile.daysUnitMany"),
+                  })}
+                </Text>
+              )}
             </Text>
-            <Text style={styles.crossCurrencyValuesText}>
-              {t("finance.budgets.mobile.limitSpentStrip", {
-                limit: formatAmount(limitInBaseCents, baseCurrency),
-                spent: formatAmount(spentInBaseCents, baseCurrency),
+          </View>
+        ) : isHistorical && currentPeriod ? (
+          <View style={styles.allowanceBanner}>
+            {isOver ? (
+              <AlertTriangle size={14} color={colors.destructive} />
+            ) : (
+              <CheckCircle2 size={14} color={colors.success} />
+            )}
+            <Text style={styles.allowanceText}>
+              {t(isOver ? "finance.detail.over" : "finance.detail.under", {
+                amount: tz.formatMoney(
+                  Math.abs(limitCents - spentCents),
+                  budget.currency
+                ),
               })}
             </Text>
           </View>
         ) : null}
-
-        {/* Progress Track */}
-        <View style={styles.progressTrack}>
-          <View
-            style={[
-              styles.progressBar,
-              {
-                width: `${progressWidth}%`,
-                minWidth: progressWidth > 0 ? 6 : 0,
-                backgroundColor: barColor,
-              },
-            ]}
-          />
-        </View>
-
-        {/* Financial Metrics Grid */}
-        <View style={styles.metricsGrid}>
-          <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>
-              {t("finance.budgets.thSpent")}
-            </Text>
-            <Text
-              style={[
-                styles.metricValue,
-                isOver && { color: colors.destructive },
-              ]}
-            >
-              {formatAmount(String(spentCents), budget.currency)}
-            </Text>
-          </View>
-          <View style={styles.metricDivider} />
-          <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>
-              {t("finance.budgets.thLimit")}
-            </Text>
-            <Text style={styles.metricValue}>
-              {formatAmount(budget.limitAmount, budget.currency)}
-            </Text>
-          </View>
-          <View style={styles.metricDivider} />
-          <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>
-              {isOver
-                ? t("finance.budgets.progress.overBudget")
-                : t("finance.budgets.progress.remaining")}
-            </Text>
-            <Text
-              style={[
-                styles.metricValue,
-                isOver
-                  ? { color: colors.destructive }
-                  : { color: colors.success },
-              ]}
-            >
-              {isOver
-                ? `+${formatAmount(String(overCents), budget.currency)}`
-                : formatAmount(String(remainingCents), budget.currency)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Daily Allowance Banner */}
-        <View style={styles.allowanceBanner}>
-          <Sparkles
-            size={14}
-            color={isOver ? colors.warning : colors.primary}
-          />
-          <Text style={styles.allowanceText}>
-            {isOver ? (
-              <Text>{t("finance.budgets.mobile.limitExceeded")}</Text>
-            ) : (
-              <Text>
-                {t("finance.budgets.mobile.dailyAllowanceLabel")}{" "}
-                <Text style={styles.allowanceBold}>
-                  {formatAmount(String(dailyAllowanceCents), budget.currency)}{" "}
-                  {t("finance.budgets.mobile.perDay")}
-                </Text>{" "}
-                {t("finance.budgets.mobile.allowanceDaysLeft", {
-                  days: daysLeft,
-                  unit:
-                    daysLeft === 1
-                      ? t("finance.budgets.mobile.daysUnitOne")
-                      : t("finance.budgets.mobile.daysUnitMany"),
-                })}
-              </Text>
-            )}
-          </Text>
-        </View>
       </Card>
-
-      {/* Action Buttons Row */}
-      <View style={styles.actionRow}>
-        <TouchableOpacity
-          onPress={() => {
-            haptics.light()
-            router.push({
-              pathname: "/modal/add-transaction",
-              params: {
-                type: "EXPENSE",
-                budgetId: budget.id,
-                ...(budget.defaultAccountId
-                  ? { accountId: budget.defaultAccountId }
-                  : {}),
-              },
-            })
-          }}
-          disabled={budget.status === "CLOSED" || budget.status === "PAUSED"}
-          style={[
-            styles.actionBtnPrimary,
-            (budget.status === "CLOSED" || budget.status === "PAUSED") && {
-              opacity: 0.5,
+      <TouchableOpacity
+        style={styles.actionBtnPrimary}
+        onPress={() => {
+          haptics.light()
+          if (budget.status === "PAUSED" || budget.status === "CLOSED") {
+            void handleUpdateStatus(
+              "ACTIVE",
+              budget.status === "PAUSED" ? "resumed" : "reopened"
+            )
+            return
+          }
+          router.push({
+            pathname: "/modal/add-transaction",
+            params: {
+              type: "EXPENSE",
+              budgetId: budget.id,
+              accountId: budget.defaultAccountId,
             },
-          ]}
-        >
-          <Plus size={16} color={colors.primaryForeground} />
-          <Text style={styles.actionBtnPrimaryText} numberOfLines={1}>
-            {t("finance.budgets.mobile.addExpense")}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => {
-            haptics.light()
-            router.push({
-              pathname: "/modal/manage-budget",
-              params: { id: budget.id },
-            })
-          }}
-          style={[
-            styles.actionBtnSecondary,
-            { flex: 0, paddingHorizontal: 16 },
-          ]}
-        >
-          <Edit3 size={16} color={colors.textPrimary} />
-          <Text style={styles.actionBtnSecondaryText} numberOfLines={1}>
-            {t("common.edit")}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={handleStatusOptions}
-          style={[
-            styles.actionBtnSecondary,
-            { flex: 0, paddingHorizontal: 16 },
-          ]}
-        >
-          {budget.status === "CLOSED" ? (
-            <>
-              <Unlock size={16} color={colors.success} />
+          })
+        }}
+      >
+        <Primary size={16} color={colors.primaryForeground} />
+        <Text style={styles.actionBtnPrimaryText}>
+          {t(
+            budget.status === "PAUSED"
+              ? "finance.budgets.resumeBudget"
+              : budget.status === "CLOSED"
+                ? "finance.budgets.reopenBudget"
+                : "finance.budgets.mobile.addExpense"
+          )}
+        </Text>
+      </TouchableOpacity>
+      <View style={styles.underlineTabBar} accessibilityRole="tablist">
+        {(
+          [
+            ["transactions", t("nav.transactions")],
+            ["analytics", t("finance.detail.analytics")],
+          ] as const
+        ).map(([tabKey, tabLabel]) => {
+          const isSelected = activeTab === tabKey
+          return (
+            <TouchableOpacity
+              key={tabKey}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isSelected }}
+              activeOpacity={0.75}
+              style={[
+                styles.underlineTab,
+                isSelected && styles.underlineTabSelected,
+              ]}
+              onPress={() => {
+                haptics.selection()
+                setActiveTab(tabKey)
+              }}
+            >
               <Text
-                style={[
-                  styles.actionBtnSecondaryText,
-                  { color: colors.success },
-                ]}
+                style={[styles.tabLabel, isSelected && styles.tabLabelSelected]}
                 numberOfLines={1}
               >
-                {t("finance.budgets.mobile.actionReopen")}
+                {tabLabel}
               </Text>
-            </>
-          ) : budget.status === "PAUSED" ? (
-            <>
-              <Play size={16} color={colors.primary} />
-              <Text style={styles.actionBtnSecondaryText} numberOfLines={1}>
-                {t("finance.budgets.mobile.actionResume")}
-              </Text>
-            </>
-          ) : (
-            <>
-              <Pause size={16} color={colors.textMuted} />
-              <Text style={styles.actionBtnSecondaryText} numberOfLines={1}>
-                {t("finance.budgets.mobile.actionStatus")}
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <Caption style={styles.ledgerHeader}>
-        {t("finance.budgets.mobile.transactionsN", {
-          count: periodTransactions.length,
+              {tabKey === "transactions" && !isTxnsLoading && (
+                <View
+                  style={[
+                    styles.tabCountBadge,
+                    isSelected && styles.tabCountBadgeSelected,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tabCountText,
+                      isSelected && styles.tabCountTextSelected,
+                    ]}
+                  >
+                    {`${periodTransactions.length}${ledger.hasNextPage ? "+" : ""}`}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )
         })}
-      </Caption>
+      </View>
+      {activeTab === "transactions" ? (
+        <View style={styles.searchBar}>
+          <Search size={16} color={colors.textMuted} />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder={t("finance.detail.search")}
+            accessibilityLabel={t("finance.detail.search")}
+            placeholderTextColor={colors.textMuted}
+            style={styles.searchInput}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t("finance.transactions.clearSearchAria")}
+              onPress={clearSearch}
+              style={styles.clearSearchBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <X size={15} color={colors.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : (
+        <>
+          <View style={styles.metricsGrid}>
+            {(
+              [
+                [t("finance.budgets.thSpent"), spentCents],
+                [t("finance.budgets.thLimit"), limitCents],
+                [
+                  t(
+                    isOver
+                      ? "finance.budgets.progress.overBudget"
+                      : "finance.budgets.progress.remaining"
+                  ),
+                  isOver ? overCents : remainingCents,
+                ],
+              ] as const
+            ).map(([label, cents]) => (
+              <View key={label} style={styles.metricItem}>
+                <Text style={styles.metricLabel}>{label}</Text>
+                <MonoAmount size="sm">
+                  {tz.formatMoney(cents, budget.currency)}
+                </MonoAmount>
+              </View>
+            ))}
+          </View>
+          {(chart.query.isLoading ||
+            (!isOneTime && chart.history.isLoading)) && (
+            <SkeletonCard height={120} />
+          )}
+          {(chart.query.isError || (!isOneTime && chart.history.isError)) && (
+            <Text style={styles.metaText}>{t("finance.detail.error")}</Text>
+          )}
+          {chart.query.isSuccess && chart.burn.length === 0 && (
+            <Text style={styles.metaText}>
+              {t(
+                isHistorical
+                  ? "finance.budgets.mobile.emptyHistoricalTitle"
+                  : "finance.budgets.mobile.emptyNoExpensesTitle"
+              )}
+            </Text>
+          )}
+          {chart.query.isSuccess && chart.burn.length > 0 && (
+            <DetailChart
+              title={t("finance.detail.burn")}
+              valueLabel={t("finance.budgets.thSpent")}
+              comparisonLabel={t("finance.detail.ideal")}
+              ceilingLabel={t("finance.budgets.thLimit")}
+              points={chart.burn}
+              currency={budget.currency}
+              accent={nativeColors.bar}
+            />
+          )}
+          {!isOneTime &&
+            chart.history.isSuccess &&
+            chart.periods.length > 0 && (
+              <DetailChart
+                title={t("finance.detail.history")}
+                valueLabel={t("finance.budgets.thSpent")}
+                ceilingLabel={t("finance.budgets.thLimit")}
+                activeDate={currentPeriod?.startDate}
+                points={chart.periods}
+                currency={budget.currency}
+                bars
+                onSelect={(d) => setSelectedDate(tz.startOfDay(d))}
+                accent={nativeColors.bar}
+              />
+            )}
+        </>
+      )}
     </View>
   )
 
@@ -959,31 +901,6 @@ export default function BudgetDetailScreen() {
                     menu: {
                       title: budget.name,
                       items: [
-                        ...(budget.status === "ACTIVE" || !budget.status
-                          ? [
-                              {
-                                type: "action" as const,
-                                label: t("finance.budgets.recordExpense"),
-                                icon: {
-                                  type: "sfSymbol" as const,
-                                  name: "plus.circle" as const,
-                                },
-                                onPress: () => {
-                                  haptics.light()
-                                  router.push({
-                                    pathname: "/modal/add-transaction",
-                                    params: {
-                                      type: "EXPENSE",
-                                      budgetId: budget.id,
-                                      ...(budget.defaultAccountId
-                                        ? { accountId: budget.defaultAccountId }
-                                        : {}),
-                                    },
-                                  })
-                                },
-                              },
-                            ]
-                          : []),
                         ...(budget.status === "PAUSED"
                           ? [
                               {
@@ -1078,19 +995,7 @@ export default function BudgetDetailScreen() {
                       title={budget.name}
                       colorScheme={resolvedMode}
                       onPressAction={({ nativeEvent }) => {
-                        if (nativeEvent.event === "expense") {
-                          haptics.light()
-                          router.push({
-                            pathname: "/modal/add-transaction",
-                            params: {
-                              type: "EXPENSE",
-                              budgetId: budget.id,
-                              ...(budget.defaultAccountId
-                                ? { accountId: budget.defaultAccountId }
-                                : {}),
-                            },
-                          })
-                        } else if (nativeEvent.event === "pause") {
+                        if (nativeEvent.event === "pause") {
                           handleUpdateStatus("PAUSED", "paused")
                         } else if (nativeEvent.event === "resume") {
                           handleUpdateStatus("ACTIVE", "resumed")
@@ -1109,15 +1014,6 @@ export default function BudgetDetailScreen() {
                         }
                       }}
                       actions={[
-                        ...(budget.status === "ACTIVE" || !budget.status
-                          ? [
-                              {
-                                id: "expense",
-                                title: t("finance.budgets.recordExpense"),
-                                image: addExpenseIcon,
-                              },
-                            ]
-                          : []),
                         ...(budget.status === "PAUSED"
                           ? [
                               {
@@ -1176,9 +1072,18 @@ export default function BudgetDetailScreen() {
 
       <View style={styles.container}>
         <SectionList
-          sections={sections}
+          keyboardShouldPersistTaps="handled"
+          sections={activeTab === "transactions" ? sections : []}
           keyExtractor={(item) => item.id || ""}
-          ListHeaderComponent={renderHeader}
+          ListHeaderComponent={renderHeader()}
+          onEndReached={() => {
+            if (
+              activeTab === "transactions" &&
+              ledger.hasNextPage &&
+              !ledger.isFetchingNextPage
+            )
+              void ledger.fetchNextPage()
+          }}
           stickySectionHeadersEnabled={false}
           contentContainerStyle={styles.listContent}
           refreshControl={
@@ -1190,12 +1095,44 @@ export default function BudgetDetailScreen() {
               progressBackgroundColor={colors.surfaceElevated}
             />
           }
-          renderSectionHeader={({ section }) => (
-            <DateSectionHeader title={section.title} />
-          )}
-          renderItem={({ item }) => (
+          renderSectionHeader={({ section }) => {
+            const currency = section.data.every(
+              (tx) => (tx.currency || baseCurrency) === budget.currency
+            )
+              ? budget.currency
+              : baseCurrency
+            const cents = section.data.reduce(
+              (sum, tx) =>
+                sum +
+                Math.abs(
+                  Number(
+                    (tx.currency || baseCurrency) === currency
+                      ? tx.amount
+                      : tx.amountInBase || NaN
+                  )
+                ),
+              0
+            )
+            return (
+              <DateSectionHeader
+                insetHorizontal
+                title={section.title}
+                rightContent={
+                  Number.isFinite(cents) && (
+                    <MonoAmount size="sm" color={colors.destructive}>
+                      {tz.formatMoney(-cents, currency)}
+                    </MonoAmount>
+                  )
+                }
+              />
+            )
+          }}
+          renderItem={({ item, index, section }) => (
             <TransactionListItem
               item={item}
+              showDate={false}
+              showBudget={false}
+              showBorderBottom={index < section.data.length - 1}
               baseCurrency={baseCurrency}
               account={
                 item.accountId ? accountsMap.get(item.accountId) : undefined
@@ -1210,8 +1147,16 @@ export default function BudgetDetailScreen() {
               }}
             />
           )}
+          ListFooterComponent={
+            activeTab === "transactions" && ledger.isFetchingNextPage ? (
+              <ActivityIndicator
+                style={{ padding: 16 }}
+                color={colors.primary}
+              />
+            ) : undefined
+          }
           ListEmptyComponent={
-            isTxnsLoading ? (
+            activeTab === "analytics" ? undefined : isTxnsLoading ? (
               <View style={{ gap: 8, paddingHorizontal: 16 }}>
                 <SkeletonCard height={60} />
                 <SkeletonCard height={60} />
@@ -1221,34 +1166,42 @@ export default function BudgetDetailScreen() {
                 <EmptyState
                   icon={<ReceiptText size={32} color={colors.textMuted} />}
                   title={
-                    isHistorical
-                      ? t("finance.budgets.mobile.emptyHistoricalTitle")
-                      : t("finance.budgets.mobile.emptyNoExpensesTitle")
+                    searching
+                      ? t("finance.transactions.noMatches")
+                      : isHistorical
+                        ? t("finance.budgets.mobile.emptyHistoricalTitle")
+                        : t("finance.budgets.mobile.emptyNoExpensesTitle")
                   }
                   description={
-                    isHistorical
-                      ? t("finance.budgets.mobile.emptyHistoricalDesc")
-                      : t("finance.budgets.mobile.emptyNoExpensesDesc")
+                    searching
+                      ? t("finance.transactions.noMatchingDescription")
+                      : isHistorical
+                        ? t("finance.budgets.mobile.emptyHistoricalDesc")
+                        : t("finance.budgets.mobile.emptyNoExpensesDesc")
                   }
                   actionLabel={
-                    budget.status === "ACTIVE" || !budget.status
-                      ? t("finance.budgets.mobile.addExpense")
-                      : undefined
+                    searching
+                      ? t("finance.transactions.clearSearchAria")
+                      : budget.status === "ACTIVE" || !budget.status
+                        ? t("finance.budgets.mobile.addExpense")
+                        : undefined
                   }
                   onAction={
-                    budget.status === "ACTIVE" || !budget.status
-                      ? () =>
-                          router.push({
-                            pathname: "/modal/add-transaction",
-                            params: {
-                              type: "EXPENSE",
-                              budgetId: budget.id,
-                              ...(budget.defaultAccountId
-                                ? { accountId: budget.defaultAccountId }
-                                : {}),
-                            },
-                          })
-                      : undefined
+                    searching
+                      ? clearSearch
+                      : budget.status === "ACTIVE" || !budget.status
+                        ? () =>
+                            router.push({
+                              pathname: "/modal/add-transaction",
+                              params: {
+                                type: "EXPENSE",
+                                budgetId: budget.id,
+                                ...(budget.defaultAccountId
+                                  ? { accountId: budget.defaultAccountId }
+                                  : {}),
+                              },
+                            })
+                        : undefined
                   }
                 />
               </View>
@@ -1290,7 +1243,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: t.colors.surfaceElevated,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
     borderColor: t.colors.border,
   },
@@ -1305,7 +1258,10 @@ const createStyles = (t: SaturnMobileTheme) => ({
     gap: 4,
   },
   headerDotsBtn: {
-    padding: 6,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   container: {
     flex: 1,
@@ -1315,15 +1271,18 @@ const createStyles = (t: SaturnMobileTheme) => ({
     paddingBottom: 40,
   },
   headerSection: {
+    gap: 12,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
   },
   heroCard: {
-    padding: 18,
-    borderRadius: 20,
+    padding: 14,
+    gap: 10,
+    borderRadius: t.radius.lg,
+    borderColor: t.colors.border,
     borderWidth: 1,
-    backgroundColor: t.colors.surfaceElevated,
+    backgroundColor: t.colors.surface,
   },
   heroTopRow: {
     flexDirection: "row" as const,
@@ -1338,9 +1297,9 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flex: 1,
   },
   iconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 38,
+    height: 38,
+    borderRadius: t.radius.md,
     borderWidth: 1,
     alignItems: "center" as const,
     justifyContent: "center" as const,
@@ -1350,11 +1309,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flex: 1,
     gap: 4,
   },
-  budgetName: {
-    fontSize: 18,
-    fontWeight: "800" as const,
-    color: t.colors.textPrimary,
-  },
+  metaText: { fontSize: 12, color: t.colors.textMuted },
   periodRow: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
@@ -1366,83 +1321,53 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 8,
-    marginTop: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 10,
+    minHeight: 42,
+    paddingHorizontal: 4,
+    borderRadius: t.radius.md,
     backgroundColor: t.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: t.colors.border,
   },
   periodNavArrow: {
-    padding: 4,
+    width: 40,
+    height: 40,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   periodLabelGroup: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 6,
     flex: 1,
+    minWidth: 0,
     justifyContent: "center" as const,
   },
   periodRangeText: {
     fontSize: 12,
     fontWeight: "600" as const,
     color: t.colors.textPrimary,
+    flexShrink: 1,
   },
   periodResetBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    minHeight: 28,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginRight: 4,
+    borderRadius: t.radius.sm,
     backgroundColor: t.colors.primarySubtle,
     borderWidth: 1,
     borderColor: t.colors.primary,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    flexShrink: 0,
   },
   periodResetText: {
     fontSize: 10,
     fontWeight: "700" as const,
     color: t.colors.primary,
   },
-  accountBadge: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    backgroundColor: t.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-    maxWidth: 120,
-  },
-  accountBadgeText: {
-    fontSize: 10,
-    fontWeight: "600" as const,
-    color: t.colors.textMuted,
-  },
-  intervalBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    backgroundColor: t.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-  },
-  intervalBadgeText: {
-    fontSize: 10,
-    fontWeight: "600" as const,
-    color: t.colors.textSecondary,
-  },
   exchangeRateWarning: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 8,
-    marginTop: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    backgroundColor: t.colors.warningSubtle,
-    borderWidth: 1,
-    borderColor: "rgba(245, 158, 11, 0.3)",
   },
   exchangeRateWarningText: {
     fontSize: 12,
@@ -1450,34 +1375,10 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flex: 1,
     lineHeight: 16,
   },
-  crossCurrencyStrip: {
-    flexDirection: "row" as const,
-    justifyContent: "space-between" as const,
-    alignItems: "center" as const,
-    marginTop: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: t.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-  },
-  crossCurrencyRateText: {
-    fontSize: 10,
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-    color: t.colors.textMuted,
-  },
-  crossCurrencyValuesText: {
-    fontSize: 11,
-    fontWeight: "600" as const,
-    color: t.colors.textSecondary,
-  },
   progressTrack: {
     height: 8,
     borderRadius: 4,
     backgroundColor: t.colors.surfaceHighlight,
-    marginTop: 14,
-    overflow: "hidden" as const,
   },
   progressBar: {
     height: "100%" as const,
@@ -1487,19 +1388,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flexDirection: "row" as const,
     alignItems: "center" as const,
     justifyContent: "space-between" as const,
-    marginTop: 16,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: t.colors.border,
+    paddingVertical: 8,
   },
   metricItem: {
     flex: 1,
     alignItems: "center" as const,
-  },
-  metricDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: t.colors.border,
   },
   metricLabel: {
     fontSize: 11,
@@ -1508,23 +1401,13 @@ const createStyles = (t: SaturnMobileTheme) => ({
     textTransform: "uppercase" as const,
     letterSpacing: 0.5,
   },
-  metricValue: {
-    fontSize: 15,
-    fontWeight: "700" as const,
-    color: t.colors.textPrimary,
-    marginTop: 3,
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-  },
   allowanceBanner: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 8,
-    marginTop: 14,
-    padding: 10,
-    borderRadius: t.radius.md,
-    backgroundColor: t.colors.primarySubtle,
-    borderWidth: 1,
-    borderColor: "rgba(56, 189, 248, 0.2)",
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: t.colors.border,
   },
   allowanceText: {
     fontSize: 12,
@@ -1535,13 +1418,73 @@ const createStyles = (t: SaturnMobileTheme) => ({
     fontWeight: "700" as const,
     color: t.colors.textPrimary,
   },
-  actionRow: {
+  underlineTabBar: {
     flexDirection: "row" as const,
-    gap: 10,
-    marginTop: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: t.colors.border,
+    gap: 20,
+  },
+  underlineTab: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+    marginBottom: -StyleSheet.hairlineWidth,
+  },
+  underlineTabSelected: {
+    borderBottomColor: t.colors.primary,
+  },
+  tabLabel: {
+    fontSize: 14,
+    fontWeight: "500" as const,
+    color: t.colors.textMuted,
+  },
+  tabLabelSelected: {
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
+  },
+  tabCountBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 1.5,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceSubtle,
+  },
+  tabCountBadgeSelected: {
+    backgroundColor: t.colors.primarySubtle,
+  },
+  tabCountText: {
+    fontSize: 11,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
+    fontVariant: ["tabular-nums" as const],
+  },
+  tabCountTextSelected: {
+    color: t.colors.primary,
+  },
+  searchBar: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    backgroundColor: t.colors.surfaceSubtle,
+    borderRadius: t.radius.md,
+    paddingHorizontal: 12,
+    height: 40,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: t.colors.textPrimary,
+    paddingVertical: 0,
+  },
+  clearSearchBtn: {
+    padding: 4,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   actionBtnPrimary: {
-    flex: 1,
+    minHeight: 44,
     flexDirection: "row" as const,
     alignItems: "center" as const,
     justifyContent: "center" as const,
@@ -1554,29 +1497,6 @@ const createStyles = (t: SaturnMobileTheme) => ({
     fontSize: 14,
     fontWeight: "700" as const,
     color: t.colors.primaryForeground,
-  },
-  actionBtnSecondary: {
-    flex: 1,
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: t.radius.lg,
-    backgroundColor: t.colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-  },
-  actionBtnSecondaryText: {
-    fontSize: 14,
-    fontWeight: "600" as const,
-    color: t.colors.textPrimary,
-  },
-  ledgerHeader: {
-    marginTop: 20,
-    marginBottom: 8,
-    letterSpacing: 0.6,
-    textTransform: "uppercase" as const,
   },
   emptyWrap: {
     paddingTop: 16,

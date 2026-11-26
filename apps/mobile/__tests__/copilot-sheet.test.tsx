@@ -413,6 +413,7 @@ vi.mock("lucide-react-native", async () => {
     FileText: Stub("FileText"),
     Forward: Stub("Forward"),
     GitBranch: Stub("GitBranch"),
+    HandCoins: Stub("HandCoins"),
     Landmark: Stub("Landmark"),
     Mail: Stub("Mail"),
     Maximize2: Stub("Maximize2"),
@@ -576,6 +577,33 @@ describe("MobileCopilotSheet & Contextual Header Trigger", () => {
     mockStreamState.error = null
   })
 
+  it("shows a borrowing icon for the active agreement", () => {
+    function Agreement() {
+      useRegisterCopilotView({
+        viewId: "loan",
+        title: "Agreement",
+        activeEntity: {
+          key: "borrowing:l",
+          kind: "borrowing",
+          id: "l",
+          label: "Agreement",
+        },
+      })
+      return <AIHeaderButton />
+    }
+    const { getByTestId } = render(
+      <MobileCopilotProvider>
+        <Agreement />
+        <MobileCopilotSheet />
+      </MobileCopilotProvider>
+    )
+    fireEvent.click(getByTestId("ai-header-button"))
+    expect(
+      getByTestId("copilot-active-entity-chip").querySelector(
+        '[data-icon="HandCoins"]'
+      )
+    ).toBeTruthy()
+  })
   it("opens from AIHeaderButton into compact 36%/96% detents showing activeEntity chip and view suggestions", () => {
     const { getByTestId, getByText, queryByTestId } = render(
       <MobileCopilotProvider>

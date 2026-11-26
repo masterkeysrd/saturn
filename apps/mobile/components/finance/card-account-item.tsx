@@ -131,6 +131,7 @@ interface CardAccountItemProps {
   convertedText?: string
   width?: number | string
   style?: object
+  hideHolderName?: boolean
   onPress?: () => void
 }
 
@@ -141,6 +142,7 @@ export function CardAccountItem({
   convertedText,
   width,
   style,
+  hideHolderName = false,
   onPress,
 }: CardAccountItemProps) {
   const styles = useThemedStyles(createStyles)
@@ -177,21 +179,16 @@ export function CardAccountItem({
         ? "#34d399" // emerald-400 (GREEN for negative credit card balance)
         : "#ffffff"
 
-  return (
-    <TouchableOpacity
-      activeOpacity={0.88}
-      onPress={() => {
-        haptics.light()
-        onPress?.()
-      }}
-      style={[
-        styles.cardContainer,
-        width !== undefined && { width: width as any },
-        { borderColor: cardTheme.border },
-        !acc.isActive && styles.inactiveCard,
-        style,
-      ]}
-    >
+  const containerStyle = [
+    styles.cardContainer,
+    width !== undefined && { width: width as any },
+    { borderColor: cardTheme.border },
+    !acc.isActive && styles.inactiveCard,
+    style,
+  ]
+
+  const content = (
+    <>
       {/* Native Linear Gradient Background */}
       <LinearGradient
         colors={["#0b0f19", cardTheme.accentDark, "#0f172a"]}
@@ -268,24 +265,41 @@ export function CardAccountItem({
       <View style={styles.bottomSection}>
         {/* Upper Row: Account Name & Balance Display */}
         <View style={styles.footerRow}>
-          <View style={styles.footerLeft}>
-            <Text style={styles.footerSubText}>
-              {t("finance.accounts.card.nameLabel")}
-            </Text>
-            <Text style={styles.holderName} numberOfLines={1}>
-              {acc.name}
-            </Text>
-          </View>
+          {!hideHolderName ? (
+            <View style={styles.footerLeft}>
+              <Text style={styles.footerSubText}>
+                {t("finance.accounts.card.nameLabel")}
+              </Text>
+              <Text style={styles.holderName} numberOfLines={1}>
+                {acc.name}
+              </Text>
+            </View>
+          ) : null}
 
-          <View style={styles.footerRight}>
-            <Text style={[styles.footerSubText, { textAlign: "right" }]}>
+          <View
+            style={[
+              styles.footerRight,
+              hideHolderName && styles.footerBalanceLeading,
+            ]}
+          >
+            <Text
+              style={[
+                styles.footerSubText,
+                { textAlign: hideHolderName ? "left" : "right" },
+              ]}
+            >
               {isCredit
                 ? rawBal > 0
                   ? t("finance.accounts.card.balanceOwed")
                   : t("finance.accounts.card.currentCredit")
                 : t("finance.accounts.card.balance")}
             </Text>
-            <View style={styles.balanceRow}>
+            <View
+              style={[
+                styles.balanceRow,
+                hideHolderName && styles.balanceRowLeading,
+              ]}
+            >
               <MonoAmount
                 size="lg"
                 color={balanceColor}
@@ -340,6 +354,23 @@ export function CardAccountItem({
           </View>
         ) : null}
       </View>
+    </>
+  )
+
+  if (!onPress) {
+    return <View style={containerStyle}>{content}</View>
+  }
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.88}
+      onPress={() => {
+        haptics.light()
+        onPress()
+      }}
+      style={containerStyle}
+    >
+      {content}
     </TouchableOpacity>
   )
 }
@@ -452,6 +483,9 @@ const createStyles = (t: SaturnMobileTheme) => ({
   footerRight: {
     alignItems: "flex-end" as const,
   },
+  footerBalanceLeading: {
+    alignItems: "flex-start" as const,
+  },
   footerSubText: {
     fontSize: 10,
     fontWeight: "600" as const,
@@ -470,6 +504,9 @@ const createStyles = (t: SaturnMobileTheme) => ({
     alignItems: "baseline" as const,
     justifyContent: "flex-end" as const,
     gap: 5,
+  },
+  balanceRowLeading: {
+    justifyContent: "flex-start" as const,
   },
   balanceText: {
     fontSize: 20,

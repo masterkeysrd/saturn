@@ -50,6 +50,7 @@ import {
 import {
   Calendar,
   GitBranch,
+  HandCoins,
   Landmark,
   Mail,
   Maximize2,
@@ -85,6 +86,8 @@ function EntityKindIcon({
       return <PiggyBank size={12} color={color} />
     case "transaction":
       return <ReceiptText size={12} color={color} />
+    case "borrowing":
+      return <HandCoins size={12} color={color} />
     case "account":
     case "statement":
       return <Landmark size={12} color={color} />
@@ -92,6 +95,10 @@ function EntityKindIcon({
       return <Calendar size={12} color={color} />
     case "workflow":
       return <GitBranch size={12} color={color} />
+    default: {
+      kind satisfies never
+      return null
+    }
   }
 }
 

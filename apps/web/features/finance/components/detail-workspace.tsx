@@ -102,6 +102,23 @@ export function DetailWorkspace({
       key: buildCopilotEntityKey(kind, id),
       label: title,
     },
+    suggestions:
+      kind === "borrowing"
+        ? [
+            t("ai.copilotSheet.suggestBorrowing"),
+            t("finance.borrowing.suggestion.paymentHistory"),
+            t("finance.borrowing.suggestion.payoffPlan"),
+          ]
+        : kind === "budget"
+          ? [
+              t("ai.copilotSheet.suggestBudget"),
+              t("finance.budgets.suggestion.pacingAhead"),
+              t("finance.budgets.suggestion.adjustments"),
+            ]
+          : [
+              t("ai.copilotSheet.suggestAccount"),
+              t("ai.copilotSheet.suggestTransactions"),
+            ],
   })
   const bounds = resolveFinancePeriodBounds(
     period,

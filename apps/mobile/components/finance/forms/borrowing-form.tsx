@@ -48,6 +48,7 @@ export interface BorrowingFormProps {
   baseCurrency: string
   onSuccess: () => void
   borrowingsLoading?: boolean
+  disbursement?: boolean
   initialBorrowingId?: string
   initialAccountId?: string
   onAccountChange?: (accountId: string) => void
@@ -59,6 +60,7 @@ export function BorrowingForm({
   baseCurrency,
   onSuccess,
   borrowingsLoading,
+  disbursement = false,
   initialBorrowingId,
   initialAccountId,
   onAccountChange,
@@ -92,13 +94,21 @@ export function BorrowingForm({
 
     return {
       borrowingId: targetBorrowing?.id || "",
-      type: "BORROWING_TRANSACTION_TYPE_PAYMENT",
+      type: disbursement
+        ? "BORROWING_TRANSACTION_TYPE_DISBURSEMENT"
+        : "BORROWING_TRANSACTION_TYPE_PAYMENT",
       amount: "",
       paymentDate: new Date(),
       accountId: targetAcc?.id || "",
       notes: "",
     }
-  }, [activeBorrowings, initialBorrowingId, accounts, initialAccountId])
+  }, [
+    activeBorrowings,
+    initialBorrowingId,
+    accounts,
+    initialAccountId,
+    disbursement,
+  ])
 
   // React Hook Form
   const {

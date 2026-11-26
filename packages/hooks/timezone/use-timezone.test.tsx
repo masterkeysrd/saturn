@@ -92,6 +92,37 @@ describe("useTimezone", () => {
     expect(result.current.formatMoney(5000, "INVALID")).toBe("50.00 INVALID")
   })
 
+  it("prepends + for positive showSign values even when Intl.NumberFormat ignores signDisplay", () => {
+    const OriginalNumberFormat = Intl.NumberFormat
+    vi.spyOn(Intl, "NumberFormat").mockImplementation(function MockNumberFormat(
+      locale?: string | string[],
+      options?: Intl.NumberFormatOptions
+    ) {
+      const { signDisplay: _ignored, ...rest } = options ?? {}
+      return new OriginalNumberFormat(locale, rest)
+    } as unknown as typeof Intl.NumberFormat)
+    try {
+      const { result } = renderHook(() => useTimezone("UTC"))
+      expect(
+        result.current.formatMoney(4590, "DOP", { showSign: true })
+      ).toMatch(/^\+DOP\s*45\.90$/)
+      expect(result.current.formatMoney(0, "DOP", { showSign: true })).toMatch(
+        /^DOP\s*0\.00$/
+      )
+      expect(result.current.formatMoney(-0, "DOP", { showSign: true })).toMatch(
+        /^DOP\s*0\.00$/
+      )
+      expect(
+        result.current.formatMoney(-0, "DOP", { showSign: false })
+      ).toMatch(/^DOP\s*0\.00$/)
+      expect(
+        result.current.formatMoney(-12450, "DOP", { showSign: true })
+      ).toMatch(/^-DOP\s*124\.50$/)
+    } finally {
+      vi.restoreAllMocks()
+    }
+  })
+
   it("formats compact date ranges via formatDateRange omitting current year and preserving cross-year years", () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-06-15T12:00:00.000Z"))

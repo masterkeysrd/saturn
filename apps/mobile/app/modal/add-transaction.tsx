@@ -25,6 +25,7 @@ import {
   useListExchangeRatesQuery,
   useListScheduledTransactionsQuery,
   useListRecurringTransactionsQuery,
+  useGetBorrowingQuery,
   useListBorrowingsQuery,
   useListCurrenciesQuery,
   type Budget,
@@ -65,6 +66,7 @@ export default function AddTransactionModal() {
     accountId: initialAccountId,
     budgetId: initialBudgetId,
     scheduledTransactionId: initialScheduledId,
+    borrowingAction,
     borrowingId: initialBorrowingId,
   } = useLocalSearchParams<{
     id?: string
@@ -73,6 +75,7 @@ export default function AddTransactionModal() {
     accountId?: string
     budgetId?: string
     scheduledTransactionId?: string
+    borrowingAction?: string
     borrowingId?: string
   }>()
   const isEditMode = !!editTransactionId
@@ -144,9 +147,17 @@ export default function AddTransactionModal() {
   const { data: borrowingsData, isLoading: borrowingsLoading } =
     useListBorrowingsQuery(
       { status: "ACTIVE", pageSize: 100, pageToken: "" },
-      { enabled: !!activeSpaceId }
+      { enabled: !!activeSpaceId && !initialBorrowingId }
     )
-  const activeBorrowings: Borrowing[] = borrowingsData?.borrowings || []
+  const target = useGetBorrowingQuery(
+    { id: initialBorrowingId || "" },
+    { enabled: !!activeSpaceId && !!initialBorrowingId }
+  )
+  const activeBorrowings: Borrowing[] = initialBorrowingId
+    ? target.data
+      ? [target.data]
+      : []
+    : borrowingsData?.borrowings || []
 
   const { data: existingTx, isLoading: txLoading } = useGetTransactionQuery(
     { id: editTransactionId || "", view: "FULL" },
@@ -454,7 +465,12 @@ export default function AddTransactionModal() {
             accounts={accounts}
             baseCurrency={baseCurrency}
             onSuccess={() => router.back()}
-            borrowingsLoading={borrowingsLoading}
+            borrowingsLoading={
+              initialBorrowingId ? target.isLoading : borrowingsLoading
+            }
+            disbursement={
+              borrowingAction === "BORROWING_TRANSACTION_TYPE_DISBURSEMENT"
+            }
             initialBorrowingId={initialBorrowingId}
             initialAccountId={selectedAccountId}
             onAccountChange={setSelectedAccountId}
