@@ -14,7 +14,7 @@ spec:
     useWhen: Creating, modifying, or reviewing Web UI views and components under apps/web
 ---
 
-Follow Saturn's **Orbital Precision** design system ([Design System Charter](docs/conventions/design-system.md) and [Frontend Conventions](docs/conventions/frontend.md)).
+Follow Saturn's **Orbital Precision** design system ([Design System](docs/design-system/README.md), [Web Design System](docs/design-system/web.md), and [Frontend Conventions](docs/conventions/frontend.md)).
 
 ### 1. Mirror Reference Views Before Coding
 - Before building or redesigning a view, inspect sibling reference views (`apps/web/features/finance/insights-view.tsx`, `apps/web/features/finance/components/budget-card.tsx`, `apps/web/features/finance/borrowing-view.tsx`) and match their card density, typography, iconography, and visual hierarchy.
@@ -36,4 +36,4 @@ Follow Saturn's **Orbital Precision** design system ([Design System Charter](doc
 - **Ledgers**: Debounce search (`useDebounce(..., 300)`) with an inline clear button, group rows by workspace-local day (`useTimezone()`), highlight the row inspected in a side sheet, and append `+` to paginated count badges when `hasNextPage`.
 
 ### 4. Code Review Lens
-When reviewing Web UI diffs, audit **both** behavioral correctness and full compliance with this rule and `docs/conventions/design-system.md`.
+When reviewing Web UI diffs, audit **both** behavioral correctness and full compliance with this rule and `docs/design-system/web.md`.

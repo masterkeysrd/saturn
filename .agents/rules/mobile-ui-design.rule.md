@@ -15,7 +15,7 @@ spec:
     useWhen: Creating, modifying, or reviewing Mobile UI screens and components under apps/mobile
 ---
 
-Follow Saturn's Mobile visual and layout standards ([Mobile Conventions](docs/conventions/mobile.md) and [Design System Charter](docs/conventions/design-system.md)).
+Follow Saturn's Mobile visual and layout standards ([Mobile Design System](docs/design-system/mobile.md), [Orbital Precision Charter](docs/design-system/README.md), and [Mobile Conventions](docs/conventions/mobile.md)).
 
 ### 1. Reactive Theme Tokens & Surface Hierarchy
 - Always style via `useTheme()` and `useThemedStyles()` consuming `@saturn/tokens` (`colors.surface`, `colors.surfaceSubtle`, `colors.border`, `t.radius.*`)—never hardcode hex or `rgba(...)` colors.

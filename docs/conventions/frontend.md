@@ -71,7 +71,7 @@ apps/
 
 ## 4. UI, Page Shells & Form Design Rules
 
-See [Saturn Design System Charter](design-system.md) for the complete **Orbital Precision** token, radius, typography, and `/__design` verification standards.
+See [Saturn Design System](../design-system/README.md) ([Web](../design-system/web.md) & [Mobile](../design-system/mobile.md)) for the complete **Orbital Precision** token, radius, typography, and `/__design` verification standards.
 
 1. **Three Canonical Page Shells**:
    - Use `<DocumentPage>` for scrollable settings, insights, budgets, and admin views.

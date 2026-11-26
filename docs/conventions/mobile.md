@@ -58,4 +58,5 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 - **Anti-Patterns**:
   - Do **not** test generated files in `ios/` or `android/` (CNG-managed).
   - Do **not** unit-test low-level native animations or Reanimated frame-by-frame physics.
+- **Detailed Design System**: See [Saturn Mobile Design System](../design-system/mobile.md) for reactive surface tiers, above-the-fold screen anatomy, canonical UI primitives, iOS/Android header parity, and Yoga layout guardrails.
 - **Detailed Guide**: See [Testing Conventions & Guide](testing.md).
