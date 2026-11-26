@@ -2,6 +2,7 @@ export type CopilotEntityKind =
   | "transaction"
   | "budget"
   | "account"
+  | "borrowing"
   | "statement"
   | "mail_thread"
   | "calendar_event"
@@ -26,6 +27,7 @@ const VALID_COPILOT_ENTITY_KINDS = new Set<string>([
   "transaction",
   "budget",
   "account",
+  "borrowing",
   "statement",
   "mail_thread",
   "calendar_event",

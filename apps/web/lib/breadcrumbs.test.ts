@@ -2,6 +2,18 @@ import { describe, expect, it } from "vitest"
 import { resolveBreadcrumbs } from "./breadcrumbs"
 
 describe("resolveBreadcrumbs", () => {
+  it.each(["accounts", "budgets", "borrowings"])(
+    "links the %s parent and localizes the detail leaf",
+    (section) => {
+      const parent = `/space/spc_42/finance/${section}`
+      expect(resolveBreadcrumbs(`${parent}/example`, "es-ES").slice(1)).toEqual(
+        [
+          { label: resolveBreadcrumbs(parent, "es-ES")[1].label, to: parent },
+          { label: "Detalles" },
+        ]
+      )
+    }
+  )
   it("translates settings OAuth routes distinctly in English and Spanish", () => {
     expect(
       resolveBreadcrumbs("/settings/security/oauth-apps", "en-US")

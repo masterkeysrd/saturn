@@ -265,8 +265,11 @@ export function CreateExpenseForm({
         storedAccountId && activeAccounts.some((a) => a.id === storedAccountId)
       if (!hasValidStored) {
         const globalDefault = activeAccounts.find((a) => a.isDefault)
-        if (b.defaultAccountId || globalDefault?.id) {
-          setValue("accountId", b.defaultAccountId || globalDefault?.id || "")
+        const account =
+          activeAccounts.find((a) => a.id === b.defaultAccountId) ||
+          globalDefault
+        if (account?.id) {
+          setValue("accountId", account.id)
         }
       }
     }

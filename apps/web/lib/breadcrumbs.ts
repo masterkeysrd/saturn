@@ -76,6 +76,24 @@ export function resolveBreadcrumbs(
         label: translate(locale, "nav.finance"),
         to: `/space/${spaceId}/finance`,
       }
+      const [section, entityId] = sub.split("/")
+      const detailParents = {
+        accounts: "nav.accounts",
+        budgets: "nav.budgets",
+        borrowings: "nav.borrowing",
+      } as const
+      if (entityId && Object.hasOwn(detailParents, section))
+        return [
+          financeRoot,
+          {
+            label: translate(
+              locale,
+              detailParents[section as keyof typeof detailParents]
+            ),
+            to: `/space/${spaceId}/finance/${section}`,
+          },
+          { label: translate(locale, "finance.detail.workspace") },
+        ]
       if (!sub)
         return [financeRoot, { label: translate(locale, "nav.insights") }]
       if (sub.startsWith("transactions"))

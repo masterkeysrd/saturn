@@ -79,6 +79,18 @@
       "LOAN": "Loan",
       "SAVINGS": "Savings"
     },
+    "borrowingRole": {
+      "ADJUSTMENT": "Balance adjustment",
+      "DISBURSEMENT": "Additional disbursement",
+      "INITIAL_FUNDING": "Initial funding",
+      "REPAYMENT": "Repayment"
+    },
+    "chartPeriod": {
+      "1Y": "1Y",
+      "30D": "30D",
+      "90D": "90D",
+      "YTD": "Year to date"
+    },
     "interval": {
       "BIWEEKLY": "Biweekly",
       "DAILY": "Daily",

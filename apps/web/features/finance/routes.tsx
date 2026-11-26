@@ -4,6 +4,21 @@ import type { SaturnRouteObject } from "@/lib/navigation"
 
 export const routes: SaturnRouteObject[] = [
   {
+    path: "/finance/accounts/:accountId",
+    element: createElement(lazy(() => import("./account-detail-view"))),
+    requiresSpace: true,
+  },
+  {
+    path: "/finance/budgets/:budgetId",
+    element: createElement(lazy(() => import("./budget-detail-view"))),
+    requiresSpace: true,
+  },
+  {
+    path: "/finance/borrowings/:borrowingId",
+    element: createElement(lazy(() => import("./borrowing-detail-view"))),
+    requiresSpace: true,
+  },
+  {
     path: "/finance",
     element: createElement(
       lazy(() =>

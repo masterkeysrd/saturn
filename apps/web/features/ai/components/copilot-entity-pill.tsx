@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 import {
   CalendarIcon,
   FileSpreadsheetIcon,
+  HandCoinsIcon,
   LandmarkIcon,
   MailIcon,
   MapPinIcon,
@@ -26,6 +27,8 @@ export function CopilotEntityIcon({
       return <ReceiptTextIcon className={iconClass} />
     case "budget":
       return <PieChartIcon className={iconClass} />
+    case "borrowing":
+      return <HandCoinsIcon className={iconClass} />
     case "account":
       return <LandmarkIcon className={iconClass} />
     case "statement":
@@ -36,6 +39,10 @@ export function CopilotEntityIcon({
       return <CalendarIcon className={iconClass} />
     case "workflow":
       return <WorkflowIcon className={iconClass} />
+    default: {
+      kind satisfies never
+      return null
+    }
   }
 }
 

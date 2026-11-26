@@ -5,6 +5,7 @@ export interface DocumentPageProps {
   title: string
   description?: ReactNode
   icon?: ElementType
+  leading?: ReactNode
   badge?: ReactNode
   actions?: ReactNode
   maxWidth?: "md" | "lg" | "xl" | "full"
@@ -29,6 +30,7 @@ export function DocumentPage({
   title,
   description,
   icon: Icon,
+  leading,
   badge,
   actions,
   maxWidth = "lg",
@@ -58,6 +60,7 @@ export function DocumentPage({
           <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2.5">
               {Icon && <Icon className="size-5 shrink-0 text-primary" />}
+              {leading}
               <h1 className="truncate text-xl font-semibold tracking-tight text-foreground md:text-2xl">
                 {title}
               </h1>

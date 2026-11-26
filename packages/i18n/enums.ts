@@ -56,6 +56,9 @@ const ENUM_NORMALIZATION_RULES: Partial<
   "finance.accountType": {
     stripPrefix: /^ACCOUNT_TYPE_/,
   },
+  "finance.borrowingRole": {
+    stripPrefix: /^BORROWING_(?:ROLE_|TRANSACTION_TYPE_)/,
+  },
   "space.role": {
     stripPrefix: /^(?:SPACE_)?ROLE_/,
   },

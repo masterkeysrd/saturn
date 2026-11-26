@@ -29,6 +29,7 @@ interface CreateBorrowingTransactionFormProps {
   accounts?: Account[]
   refetchData?: () => void
   onBack: () => void
+  initialType?: BorrowingTransactionFormValues["type"]
   headerExtra?: React.ReactNode
 }
 
@@ -39,6 +40,7 @@ export function CreateBorrowingTransactionForm({
   accounts = [],
   refetchData,
   onBack,
+  initialType = "BORROWING_TRANSACTION_TYPE_PAYMENT",
   headerExtra,
 }: CreateBorrowingTransactionFormProps) {
   const queryClient = useQueryClient()
@@ -51,13 +53,13 @@ export function CreateBorrowingTransactionForm({
 
   const borrowingTxDefaultValues = useMemo<BorrowingTransactionFormValues>(
     () => ({
-      type: "BORROWING_TRANSACTION_TYPE_PAYMENT",
+      type: initialType,
       amount: "",
       accountId: defaultAccount?.id || "",
       notes: "",
       transactionDate: new Date(),
     }),
-    [defaultAccount?.id]
+    [defaultAccount?.id, initialType]
   )
 
   const {
@@ -68,7 +70,7 @@ export function CreateBorrowingTransactionForm({
   } = useForm<BorrowingTransactionFormValues>({
     resolver: zodResolver(BorrowingTransactionSchema),
     defaultValues: {
-      type: "BORROWING_TRANSACTION_TYPE_PAYMENT",
+      type: initialType,
       amount: "",
       accountId: defaultAccount?.id || "",
       notes: "",

@@ -99,6 +99,12 @@ export function CardAccountItem({
   return (
     <div
       key={acc.id}
+      tabIndex={0}
+      role="link"
+      aria-label={acc.name}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && e.target === e.currentTarget) onHistory()
+      }}
       onClick={onHistory}
       className={cn(
         "group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-3xl border p-6 shadow-xl backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl",

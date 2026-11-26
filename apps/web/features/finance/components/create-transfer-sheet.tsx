@@ -20,6 +20,7 @@ import { toCentsString } from "../utils"
 interface CreateTransferSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  sourceAccountId?: string
   accounts: Account[]
   refetchAccounts: () => void
   refetchTransfers: () => void
@@ -29,6 +30,7 @@ export function CreateTransferSheet({
   open,
   onOpenChange,
   accounts,
+  sourceAccountId = "",
   refetchAccounts,
   refetchTransfers,
 }: CreateTransferSheetProps) {
@@ -50,14 +52,14 @@ export function CreateTransferSheet({
 
   const transferDefaultValues = useMemo<TransferFormValues>(
     () => ({
-      sourceAccountId: "",
+      sourceAccountId,
       destinationAccountId: "",
       sourceAmount: "",
       destinationAmount: "",
       transferDate: new Date(),
       notes: "",
     }),
-    []
+    [sourceAccountId]
   )
 
   const {

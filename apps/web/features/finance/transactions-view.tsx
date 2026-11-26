@@ -1,4 +1,6 @@
-import { useState, useEffect, useMemo, createElement } from "react"
+import { TransactionFilterToolbar } from "./components/transaction-filter-toolbar"
+import { TransactionLedgerList } from "./components/transaction-ledger-list"
+import { useState, useEffect, useMemo } from "react"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { useUrlState } from "@/lib/use-url-state"
@@ -9,13 +11,7 @@ import {
   useTimezone,
 } from "@saturn/hooks"
 import { useRegisterCopilotView } from "@saturn/hooks/ai"
-import { getLocalizedEnumLabel } from "@saturn/i18n"
-import {
-  buildCopilotEntityKey,
-  convertCentsToBase,
-  getTimezoneParts,
-} from "@saturn/core"
-import { CopilotAttachButton } from "@/features/ai/components/copilot-attach-button"
+import { buildCopilotEntityKey, convertCentsToBase } from "@saturn/core"
 import {
   useSpacePermissions,
   resolveSpacePath,
@@ -32,47 +28,22 @@ import {
   useListExchangeRatesQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import {
-  ArrowLeft,
   ArrowUpDown,
   ArrowUpRight,
   ArrowDownLeft,
-  ArrowRightLeft,
-  ChevronRight,
-  Coins,
   Trash2,
   Receipt,
   Plus,
   Loader2,
   Edit2,
-  Repeat,
   MoreVertical,
   History,
   Calculator,
   Hash,
   Inbox,
-  ListFilter,
-  Search,
-  Tag,
-  Wallet,
-  PiggyBank,
-  X,
 } from "lucide-react"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { MoneyAmount } from "@/components/ui/money-amount"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import { toast } from "@/components/ui/toast"
 import {
   AlertDialog,
@@ -97,11 +68,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { cn } from "@/lib/utils"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { FinancePeriodPicker } from "./components/finance-period-picker"
 import { resolveFinancePeriodBounds } from "./period-bounds"
-import { getBudgetColors, getBudgetIcon } from "./utils"
 import { CreateTransactionSheet } from "./components/create-transaction-sheet"
 import { TransactionEventsSheet } from "./components/transaction-events-sheet"
 
@@ -120,137 +89,12 @@ const TRANSACTIONS_FILTER_DEFAULTS = {
   sort: "_default" as string,
 }
 
-type FacetDimension = "type" | "account" | "budget"
-
-function toYmdInTimezone(
-  date: Date | string | number | null | undefined,
-  timeZone: string
-): string {
-  const parts = getTimezoneParts(date, timeZone)
-  if (!parts) return ""
-  return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`
-}
-
-function FacetValueCommand({
-  dimension,
-  selectedType,
-  selectedAccountId,
-  selectedBudgetId,
-  accounts,
-  budgets,
-  onSelectType,
-  onSelectAccount,
-  onSelectBudget,
-}: {
-  dimension: FacetDimension
-  selectedType: string
-  selectedAccountId: string
-  selectedBudgetId: string
-  accounts: { id?: string; name?: string; currency?: string }[]
-  budgets: { id?: string; name?: string }[]
-  onSelectType: (value: string) => void
-  onSelectAccount: (value: string) => void
-  onSelectBudget: (value: string) => void
-}) {
-  const { t, language } = useI18n()
-  const placeholder =
-    dimension === "type"
-      ? t("finance.transactions.searchType")
-      : dimension === "account"
-        ? t("finance.transactions.searchAccount")
-        : t("finance.transactions.searchBudget")
-
-  const typeOptions: { value: Transaction_Type; label: string }[] = (
-    [
-      "EXPENSE",
-      "INCOME",
-      "TRANSFER_OUT",
-      "TRANSFER_IN",
-      "BALANCE_ADJUSTMENT",
-    ] as Transaction_Type[]
-  ).map((value) => ({
-    value,
-    label: getLocalizedEnumLabel("finance", "transactionType", value, language),
-  }))
-
-  return (
-    <Command>
-      <CommandInput placeholder={placeholder} />
-      <CommandList>
-        <CommandEmpty>{t("finance.transactions.noMatches")}</CommandEmpty>
-        <CommandGroup>
-          {dimension === "type" &&
-            typeOptions.map((opt) => {
-              const checked = selectedType === opt.value
-              return (
-                <CommandItem
-                  key={opt.value}
-                  value={opt.label}
-                  data-checked={checked}
-                  onSelect={() =>
-                    onSelectType(checked ? "TYPE_UNSPECIFIED" : opt.value)
-                  }
-                >
-                  <span>{opt.label}</span>
-                </CommandItem>
-              )
-            })}
-
-          {dimension === "account" &&
-            accounts.map((acc) => {
-              const id = acc.id || ""
-              const checked = selectedAccountId === id
-              return (
-                <CommandItem
-                  key={id}
-                  value={`${acc.name || ""} ${acc.currency || ""}`}
-                  data-checked={checked}
-                  onSelect={() => onSelectAccount(checked ? "_all" : id)}
-                >
-                  <span className="truncate">{acc.name}</span>
-                  {acc.currency && (
-                    <span className="ml-1 font-mono text-[11px] text-muted-foreground">
-                      {acc.currency}
-                    </span>
-                  )}
-                </CommandItem>
-              )
-            })}
-
-          {dimension === "budget" &&
-            budgets.map((b) => {
-              const id = b.id || ""
-              const checked = selectedBudgetId === id
-              return (
-                <CommandItem
-                  key={id}
-                  value={b.name || ""}
-                  data-checked={checked}
-                  onSelect={() => onSelectBudget(checked ? "_all" : id)}
-                >
-                  <span className="truncate">{b.name}</span>
-                </CommandItem>
-              )
-            })}
-        </CommandGroup>
-      </CommandList>
-    </Command>
-  )
-}
-
 export function TransactionsView() {
   const queryClient = useQueryClient()
   const { spaceId, isWritable } = useSpacePermissions()
   const tz = useTimezone()
-  const { t, language } = useI18n()
+  const { t } = useI18n()
   const navigate = useNavigate()
-
-  const getTypeLabel = (type: string): string => {
-    if (type === "TYPE_UNSPECIFIED") {
-      return t("finance.transactions.type.allTypes")
-    }
-    return getLocalizedEnumLabel("finance", "transactionType", type, language)
-  }
 
   const getSortLabel = (sort: string): string => {
     switch (sort) {
@@ -317,10 +161,6 @@ export function TransactionsView() {
     setPrevUrlQ(urlState.q)
     setSearchQuery(urlState.q)
   }
-
-  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false)
-  const [filterStep, setFilterStep] = useState<FacetDimension | null>(null)
-  const [editingChip, setEditingChip] = useState<FacetDimension | null>(null)
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(
@@ -489,86 +329,10 @@ export function TransactionsView() {
     }
   }
 
-  const getBudgetDetails = (id: string) => {
-    const b = budgets.find((x) => x.id === id)
-    return b
-      ? {
-          name: b.name,
-          icon: b.icon || "piggy-bank",
-          color: b.color || "indigo",
-        }
-      : {
-          name: t("finance.transactions.general"),
-          icon: "coins",
-          color: "indigo",
-        }
-  }
-
   const transactions = useMemo(
     () => txnData?.transactions || [],
     [txnData?.transactions]
   )
-
-  // Group visible transactions by calendar day in tz.timezone
-  const dateGroups = useMemo(() => {
-    const groups: {
-      key: string
-      title: string
-      items: Transaction[]
-      dailyNetBaseCents: number
-    }[] = []
-    const groupMap = new Map<string, (typeof groups)[number]>()
-
-    for (const txn of transactions) {
-      const rawDate = txn.transactionDate || txn.effectiveDate
-      const ymd = rawDate ? toYmdInTimezone(rawDate, tz.timezone) : "unknown"
-      const key = ymd || "unknown"
-
-      let group = groupMap.get(key)
-      if (!group) {
-        let title = t("finance.transactions.undated")
-        if (rawDate && key !== "unknown") {
-          if (tz.isToday(rawDate)) {
-            title = t("common.today")
-          } else if (tz.isYesterday(rawDate)) {
-            title = t("common.yesterday")
-          } else {
-            title = tz.format(rawDate, {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })
-          }
-        }
-        group = { key, title, items: [], dailyNetBaseCents: 0 }
-        groupMap.set(key, group)
-        groups.push(group)
-      }
-
-      group.items.push(txn)
-
-      const baseCents =
-        txn.amountInBase !== undefined && txn.amountInBase !== ""
-          ? Number(txn.amountInBase)
-          : convertCentsToBase(
-              txn.amount,
-              txn.currency,
-              baseCurrency,
-              exchangeRates
-            )
-
-      if (txn.type === "INCOME" || txn.type === "TRANSFER_IN") {
-        group.dailyNetBaseCents += Math.abs(baseCents)
-      } else if (txn.type === "EXPENSE" || txn.type === "TRANSFER_OUT") {
-        group.dailyNetBaseCents -= Math.abs(baseCents)
-      } else {
-        group.dailyNetBaseCents += baseCents
-      }
-    }
-
-    return groups
-  }, [transactions, tz, baseCurrency, exchangeRates, t])
 
   // Calculate KPI stats from visible (filtered) transactions
   const expenseTransactions = transactions.filter((t) => t.type === "EXPENSE")
@@ -624,17 +388,6 @@ export function TransactionsView() {
     periodBounds.period !== "this_month" ||
     (urlState.sort && urlState.sort !== "_default")
   )
-
-  const handleClearAttributeFilters = () => {
-    setUrlState({
-      type: "TYPE_UNSPECIFIED",
-      budgetId: "_all",
-      accountId: "_all",
-      transferId: "",
-      scheduledTransactionId: "",
-      borrowingId: "",
-    })
-  }
 
   const handleResetFilters = () => {
     setSearchQuery("")
@@ -762,458 +515,61 @@ export function TransactionsView() {
               </div>
             </div>
 
-            {/* Slim 1-Row Faceted Toolbar */}
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                {/* Left: Search + Faceted Filter */}
-                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                  <div className="relative w-full sm:w-64 md:w-72">
-                    <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      type="text"
-                      aria-label={t("finance.transactions.searchAria")}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={t("finance.transactions.searchPlaceholder")}
-                      className="h-9 rounded-lg border-border bg-control pr-8 pl-8.5 text-xs shadow-2xs"
-                    />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        aria-label={t("finance.transactions.clearSearchAria")}
-                        onClick={() => {
-                          setSearchQuery("")
-                          setUrlState({ q: "" })
-                        }}
-                        className="absolute top-1/2 right-2 flex size-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-                      >
-                        <X className="size-3.5" />
-                      </button>
-                    )}
-                  </div>
+            <TransactionFilterToolbar
+              filters={urlState}
+              onChange={setUrlState}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onClearSearch={() => setUrlState({ q: "" })}
+              accounts={accounts}
+              budgets={budgets}
+            >
+              <FinancePeriodPicker
+                value={{
+                  period: urlState.period,
+                  month: urlState.month,
+                  dateFrom: urlState.dateFrom,
+                  dateTo: urlState.dateTo,
+                }}
+                onChange={(next) => {
+                  setInspectorOpen(false)
+                  setUrlState(next)
+                }}
+              />
 
-                  {/* + Filter Faceted Popover */}
-                  <Popover
-                    open={filterPopoverOpen}
-                    onOpenChange={(nextOpen) => {
-                      if (nextOpen) {
-                        setFilterStep(null)
-                      }
-                      setFilterPopoverOpen(nextOpen)
-                    }}
+              <Select
+                value={urlState.sort}
+                onValueChange={(val) =>
+                  setUrlState({ sort: val || "_default" })
+                }
+              >
+                <SelectTrigger
+                  aria-label={t("finance.transactions.sortAria")}
+                  className="h-9 w-auto min-w-[116px] gap-1.5 rounded-lg border-border bg-control px-3 text-xs font-medium shadow-2xs"
+                >
+                  <ArrowUpDown className="size-3.5 shrink-0 text-muted-foreground" />
+                  <SelectValue
+                    placeholder={t("finance.transactions.sort.newest")}
                   >
-                    <PopoverTrigger
-                      type="button"
-                      aria-label={t("finance.transactions.filterAria")}
-                      className={cn(
-                        buttonVariants({ variant: "outline", size: "sm" }),
-                        "h-9 cursor-pointer gap-1.5 rounded-lg border-border bg-control px-3 text-xs font-medium shadow-2xs"
-                      )}
-                    >
-                      <ListFilter className="size-3.5" />
-                      <span>{t("finance.transactions.filter")}</span>
-                      {activeAttributeFilterCount > 0 && (
-                        <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 font-mono text-[10px] font-semibold text-primary tabular-nums">
-                          {activeAttributeFilterCount}
-                        </span>
-                      )}
-                    </PopoverTrigger>
-                    <PopoverContent
-                      align="start"
-                      className="w-64 rounded-xl border border-border bg-popover p-0 shadow-xl"
-                    >
-                      {filterStep === null ? (
-                        <Command>
-                          <CommandList>
-                            <CommandGroup>
-                              <CommandItem
-                                onSelect={() => setFilterStep("type")}
-                              >
-                                <Tag className="size-3.5 text-muted-foreground" />
-                                <span>
-                                  {t("finance.transactions.facetType")}
-                                </span>
-                                {hasTypeFilter && (
-                                  <span className="ml-auto truncate text-xs text-muted-foreground">
-                                    {getTypeLabel(urlState.type)}
-                                  </span>
-                                )}
-                                <ChevronRight className="ml-1 size-3.5 text-muted-foreground" />
-                              </CommandItem>
-                              <CommandItem
-                                onSelect={() => setFilterStep("account")}
-                              >
-                                <Wallet className="size-3.5 text-muted-foreground" />
-                                <span>
-                                  {t("finance.transactions.facetAccount")}
-                                </span>
-                                {hasAccountFilter && (
-                                  <span className="ml-auto max-w-[90px] truncate text-xs text-muted-foreground">
-                                    {accounts.find(
-                                      (a) => a.id === urlState.accountId
-                                    )?.name || urlState.accountId}
-                                  </span>
-                                )}
-                                <ChevronRight className="ml-1 size-3.5 text-muted-foreground" />
-                              </CommandItem>
-                              <CommandItem
-                                onSelect={() => setFilterStep("budget")}
-                              >
-                                <PiggyBank className="size-3.5 text-muted-foreground" />
-                                <span>
-                                  {t("finance.transactions.facetBudget")}
-                                </span>
-                                {hasBudgetFilter && (
-                                  <span className="ml-auto max-w-[90px] truncate text-xs text-muted-foreground">
-                                    {budgets.find(
-                                      (b) => b.id === urlState.budgetId
-                                    )?.name || urlState.budgetId}
-                                  </span>
-                                )}
-                                <ChevronRight className="ml-1 size-3.5 text-muted-foreground" />
-                              </CommandItem>
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      ) : (
-                        <div>
-                          <div className="flex items-center gap-1.5 border-b border-border/60 px-2.5 py-2">
-                            <button
-                              type="button"
-                              aria-label={t(
-                                "finance.transactions.backToDimensions"
-                              )}
-                              onClick={() => setFilterStep(null)}
-                              className="flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                            >
-                              <ArrowLeft className="size-3.5" />
-                            </button>
-                            <span className="text-xs font-semibold text-foreground capitalize">
-                              {filterStep === "type"
-                                ? t("finance.transactions.facetType")
-                                : filterStep === "account"
-                                  ? t("finance.transactions.facetAccount")
-                                  : t("finance.transactions.facetBudget")}
-                            </span>
-                          </div>
-                          <FacetValueCommand
-                            dimension={filterStep}
-                            selectedType={urlState.type}
-                            selectedAccountId={urlState.accountId}
-                            selectedBudgetId={urlState.budgetId}
-                            accounts={accounts}
-                            budgets={budgets}
-                            onSelectType={(val) => {
-                              setUrlState({ type: val })
-                              setFilterPopoverOpen(false)
-                            }}
-                            onSelectAccount={(val) => {
-                              setUrlState({ accountId: val })
-                              setFilterPopoverOpen(false)
-                            }}
-                            onSelectBudget={(val) => {
-                              setUrlState({ budgetId: val })
-                              setFilterPopoverOpen(false)
-                            }}
-                          />
-                        </div>
-                      )}
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {/* Right: Period Stepper + Compact Sort */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <FinancePeriodPicker
-                    value={{
-                      period: urlState.period,
-                      month: urlState.month,
-                      dateFrom: urlState.dateFrom,
-                      dateTo: urlState.dateTo,
-                    }}
-                    onChange={(next) => {
-                      setInspectorOpen(false)
-                      setUrlState(next)
-                    }}
-                  />
-
-                  <Select
-                    value={urlState.sort}
-                    onValueChange={(val) =>
-                      setUrlState({ sort: val || "_default" })
-                    }
-                  >
-                    <SelectTrigger
-                      aria-label={t("finance.transactions.sortAria")}
-                      className="h-9 w-auto min-w-[116px] gap-1.5 rounded-lg border-border bg-control px-3 text-xs font-medium shadow-2xs"
-                    >
-                      <ArrowUpDown className="size-3.5 shrink-0 text-muted-foreground" />
-                      <SelectValue
-                        placeholder={t("finance.transactions.sort.newest")}
-                      >
-                        {getSortLabel(urlState.sort)}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border border-border bg-popover p-1 shadow-xl">
-                      <SelectItem value="_default">
-                        {t("finance.transactions.sort.newest")}
-                      </SelectItem>
-                      <SelectItem value="transaction_date:asc">
-                        {t("finance.transactions.sort.oldest")}
-                      </SelectItem>
-                      <SelectItem value="amount:desc">
-                        {t("finance.transactions.sort.highest")}
-                      </SelectItem>
-                      <SelectItem value="amount:asc">
-                        {t("finance.transactions.sort.lowest")}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 2: Contextual Active Attribute Filter Chips */}
-              {activeAttributeFilterCount > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {hasTypeFilter && (
-                    <div className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border bg-card text-xs">
-                      <Popover
-                        open={editingChip === "type"}
-                        onOpenChange={(o) => setEditingChip(o ? "type" : null)}
-                      >
-                        <PopoverTrigger
-                          type="button"
-                          className="flex h-full cursor-pointer items-center gap-1 px-2 text-foreground transition-colors hover:bg-muted/50"
-                        >
-                          <span className="text-muted-foreground">
-                            {t("finance.transactions.typeLabel")}
-                          </span>
-                          <span className="font-medium">
-                            {getTypeLabel(urlState.type)}
-                          </span>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          align="start"
-                          className="w-56 rounded-xl border border-border bg-popover p-0 shadow-xl"
-                        >
-                          <FacetValueCommand
-                            dimension="type"
-                            selectedType={urlState.type}
-                            selectedAccountId={urlState.accountId}
-                            selectedBudgetId={urlState.budgetId}
-                            accounts={accounts}
-                            budgets={budgets}
-                            onSelectType={(val) => {
-                              setUrlState({ type: val })
-                              setEditingChip(null)
-                            }}
-                            onSelectAccount={() => {}}
-                            onSelectBudget={() => {}}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <button
-                        type="button"
-                        aria-label={t("finance.transactions.removeTypeFilter")}
-                        onClick={() =>
-                          setUrlState({ type: "TYPE_UNSPECIFIED" })
-                        }
-                        className="flex h-full cursor-pointer items-center border-l border-border px-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </div>
-                  )}
-
-                  {hasAccountFilter && (
-                    <div className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border bg-card text-xs">
-                      <Popover
-                        open={editingChip === "account"}
-                        onOpenChange={(o) =>
-                          setEditingChip(o ? "account" : null)
-                        }
-                      >
-                        <PopoverTrigger
-                          type="button"
-                          className="flex h-full cursor-pointer items-center gap-1 px-2 text-foreground transition-colors hover:bg-muted/50"
-                        >
-                          <span className="text-muted-foreground">
-                            {t("finance.transactions.accountLabel")}
-                          </span>
-                          <span className="font-medium">
-                            {accounts.find((a) => a.id === urlState.accountId)
-                              ?.name || urlState.accountId}
-                          </span>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          align="start"
-                          className="w-60 rounded-xl border border-border bg-popover p-0 shadow-xl"
-                        >
-                          <FacetValueCommand
-                            dimension="account"
-                            selectedType={urlState.type}
-                            selectedAccountId={urlState.accountId}
-                            selectedBudgetId={urlState.budgetId}
-                            accounts={accounts}
-                            budgets={budgets}
-                            onSelectType={() => {}}
-                            onSelectAccount={(val) => {
-                              setUrlState({ accountId: val })
-                              setEditingChip(null)
-                            }}
-                            onSelectBudget={() => {}}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <button
-                        type="button"
-                        aria-label={t(
-                          "finance.transactions.removeAccountFilter"
-                        )}
-                        onClick={() => setUrlState({ accountId: "_all" })}
-                        className="flex h-full cursor-pointer items-center border-l border-border px-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </div>
-                  )}
-
-                  {hasBudgetFilter && (
-                    <div className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border bg-card text-xs">
-                      <Popover
-                        open={editingChip === "budget"}
-                        onOpenChange={(o) =>
-                          setEditingChip(o ? "budget" : null)
-                        }
-                      >
-                        <PopoverTrigger
-                          type="button"
-                          className="flex h-full cursor-pointer items-center gap-1 px-2 text-foreground transition-colors hover:bg-muted/50"
-                        >
-                          <span className="text-muted-foreground">
-                            {t("finance.transactions.budgetLabel")}
-                          </span>
-                          <span className="font-medium">
-                            {budgets.find((b) => b.id === urlState.budgetId)
-                              ?.name || urlState.budgetId}
-                          </span>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          align="start"
-                          className="w-60 rounded-xl border border-border bg-popover p-0 shadow-xl"
-                        >
-                          <FacetValueCommand
-                            dimension="budget"
-                            selectedType={urlState.type}
-                            selectedAccountId={urlState.accountId}
-                            selectedBudgetId={urlState.budgetId}
-                            accounts={accounts}
-                            budgets={budgets}
-                            onSelectType={() => {}}
-                            onSelectAccount={() => {}}
-                            onSelectBudget={(val) => {
-                              setUrlState({ budgetId: val })
-                              setEditingChip(null)
-                            }}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <button
-                        type="button"
-                        aria-label={t(
-                          "finance.transactions.removeBudgetFilter"
-                        )}
-                        onClick={() => setUrlState({ budgetId: "_all" })}
-                        className="flex h-full cursor-pointer items-center border-l border-border px-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </div>
-                  )}
-
-                  {hasTransferFilter && (
-                    <div className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border bg-card text-xs">
-                      <span className="flex h-full items-center gap-1 px-2 text-foreground">
-                        <span className="text-muted-foreground">
-                          {t("finance.transactions.transferLabel")}
-                        </span>
-                        <span className="font-mono font-medium">
-                          {urlState.transferId}
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        aria-label={t(
-                          "finance.transactions.removeTransferFilter"
-                        )}
-                        onClick={() => setUrlState({ transferId: "" })}
-                        className="flex h-full cursor-pointer items-center border-l border-border px-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </div>
-                  )}
-
-                  {hasScheduledFilter && (
-                    <div className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border bg-card text-xs">
-                      <span className="flex h-full items-center gap-1 px-2 text-foreground">
-                        <span className="text-muted-foreground">
-                          {t("finance.transactions.scheduledLabel")}
-                        </span>
-                        <span className="font-mono font-medium">
-                          {urlState.scheduledTransactionId}
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        aria-label={t(
-                          "finance.transactions.removeScheduledFilter"
-                        )}
-                        onClick={() =>
-                          setUrlState({ scheduledTransactionId: "" })
-                        }
-                        className="flex h-full cursor-pointer items-center border-l border-border px-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </div>
-                  )}
-
-                  {hasBorrowingFilter && (
-                    <div className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border bg-card text-xs">
-                      <span className="flex h-full items-center gap-1 px-2 text-foreground">
-                        <span className="text-muted-foreground">
-                          {t("finance.transactions.borrowingLabel")}
-                        </span>
-                        <span className="font-mono font-medium">
-                          {urlState.borrowingId}
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        aria-label={t(
-                          "finance.transactions.removeBorrowingFilter"
-                        )}
-                        onClick={() => setUrlState({ borrowingId: "" })}
-                        className="flex h-full cursor-pointer items-center border-l border-border px-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </div>
-                  )}
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="xs"
-                    onClick={handleClearAttributeFilters}
-                    className="h-7 cursor-pointer px-2 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    {t("finance.transactions.reset")}
-                  </Button>
-                </div>
-              )}
-            </div>
+                    {getSortLabel(urlState.sort)}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border border-border bg-popover p-1 shadow-xl">
+                  <SelectItem value="_default">
+                    {t("finance.transactions.sort.newest")}
+                  </SelectItem>
+                  <SelectItem value="transaction_date:asc">
+                    {t("finance.transactions.sort.oldest")}
+                  </SelectItem>
+                  <SelectItem value="amount:desc">
+                    {t("finance.transactions.sort.highest")}
+                  </SelectItem>
+                  <SelectItem value="amount:asc">
+                    {t("finance.transactions.sort.lowest")}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </TransactionFilterToolbar>
 
             {/* Full-Width Date-Grouped Ledger */}
             {txnLoading ? (
@@ -1248,293 +604,67 @@ export function TransactionsView() {
                 )}
               </div>
             ) : (
-              <div className="space-y-5">
-                {dateGroups.map((group) => (
-                  <section
-                    key={group.key}
-                    aria-label={group.title}
-                    className="space-y-2"
-                  >
-                    {/* Crisp Date Section Header */}
-                    <div className="sticky top-0 z-10 flex items-center justify-between gap-4 bg-background/95 px-1 py-1.5 backdrop-blur-xs">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-xs font-semibold text-foreground">
-                          {group.title}
-                        </h3>
-                        <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11px] font-medium text-muted-foreground tabular-nums">
-                          {group.items.length}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <span>{t("finance.transactions.net")}</span>
-                        <MoneyAmount
-                          cents={group.dailyNetBaseCents}
-                          currency={baseCurrency}
-                          showSign
-                          colored
-                          size="sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Grouped Ledger Rows */}
-                    <div className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border bg-card shadow-2xs">
-                      {group.items.map((txn) => {
-                        const amtLocalCents = Number(txn.amount || 0)
-                        const amtBaseCents =
-                          txn.amountInBase !== undefined &&
-                          txn.amountInBase !== ""
-                            ? Number(txn.amountInBase)
-                            : convertCentsToBase(
-                                txn.amount,
-                                txn.currency,
-                                baseCurrency,
-                                exchangeRates
-                              )
-                        const signedLocalCents =
-                          txn.type === "EXPENSE" || txn.type === "TRANSFER_OUT"
-                            ? -Math.abs(amtLocalCents)
-                            : txn.type === "INCOME" ||
-                                txn.type === "TRANSFER_IN"
-                              ? Math.abs(amtLocalCents)
-                              : amtLocalCents
-                        const signedBaseCents =
-                          txn.type === "EXPENSE" || txn.type === "TRANSFER_OUT"
-                            ? -Math.abs(amtBaseCents)
-                            : txn.type === "INCOME" ||
-                                txn.type === "TRANSFER_IN"
-                              ? Math.abs(amtBaseCents)
-                              : amtBaseCents
-
-                        const isCrossCurrency = txn.currency !== baseCurrency
-                        const details = getBudgetDetails(txn.budgetId)
-                        const colors = getBudgetColors(details.color)
-                        const iconComp = getBudgetIcon(details.icon)
-                        const acc = accounts.find((a) => a.id === txn.accountId)
-                        const isSelected =
-                          inspectorOpen && selectedTransaction?.id === txn.id
-
-                        return (
-                          <div
-                            key={txn.id}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => handleInspectTransaction(txn)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault()
-                                handleInspectTransaction(txn)
-                              }
-                            }}
-                            className={cn(
-                              "group flex cursor-pointer items-center justify-between gap-4 px-4 py-3 text-left transition-colors outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset",
-                              isSelected &&
-                                "bg-primary/5 ring-1 ring-primary/30 ring-inset"
-                            )}
+              <TransactionLedgerList
+                transactions={transactions}
+                accounts={accounts}
+                budgets={budgets}
+                exchangeRates={exchangeRates}
+                baseCurrency={baseCurrency}
+                selectedId={inspectorOpen ? selectedTransaction?.id : undefined}
+                onInspect={handleInspectTransaction}
+                renderRowActions={(txn) => (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t("finance.transactions.actionsAria")}
+                          className="cursor-pointer text-muted-foreground hover:text-foreground"
+                        >
+                          <MoreVertical className="size-4" />
+                        </Button>
+                      }
+                    />
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-40 rounded-xl border border-border bg-popover p-1 shadow-xl"
+                    >
+                      <DropdownMenuItem
+                        onClick={() => handleInspectTransaction(txn)}
+                        className="flex cursor-pointer items-center gap-2"
+                      >
+                        <History className="size-4" />
+                        <span>{t("finance.transactions.viewHistory")}</span>
+                      </DropdownMenuItem>
+                      {isWritable &&
+                        txn.type !== "BALANCE_ADJUSTMENT" &&
+                        txn.type !== "TYPE_UNSPECIFIED" &&
+                        (txn.metadata?.source_type ??
+                          txn.metadata?.sourceType) !==
+                          "SYSTEM_BALANCE_ADJUSTMENT" && (
+                          <DropdownMenuItem
+                            onClick={() => handleEditTrigger(txn)}
+                            className="flex cursor-pointer items-center gap-2"
                           >
-                            {/* Left: Icon, description & pills */}
-                            <div className="flex min-w-0 flex-1 items-center gap-3">
-                              <div
-                                className={cn(
-                                  "flex size-9 shrink-0 items-center justify-center rounded-lg border",
-                                  txn.type === "INCOME"
-                                    ? "border-success/20 bg-success/10 text-success"
-                                    : txn.type === "TRANSFER_IN" ||
-                                        txn.type === "TRANSFER_OUT"
-                                      ? "border-info/20 bg-info/10 text-info"
-                                      : `${colors.bg} ${colors.text} ${colors.border}`
-                                )}
-                              >
-                                {txn.type === "INCOME" ? (
-                                  <ArrowUpRight className="size-4" />
-                                ) : txn.type === "TRANSFER_IN" ||
-                                  txn.type === "TRANSFER_OUT" ? (
-                                  <ArrowRightLeft className="size-4" />
-                                ) : (
-                                  createElement(iconComp, {
-                                    className: "size-4",
-                                  })
-                                )}
-                              </div>
-
-                              <div className="min-w-0 flex-1">
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="truncate text-sm font-medium text-foreground">
-                                    {txn.description || (
-                                      <span className="text-muted-foreground italic">
-                                        {t(
-                                          "finance.transactions.noDescription"
-                                        )}
-                                      </span>
-                                    )}
-                                  </span>
-
-                                  {Boolean(
-                                    txn.metadata?.recurring_transaction_id
-                                  ) && (
-                                    <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                                      <Repeat className="size-3 text-primary" />
-                                      {t("finance.transactions.recurring")}
-                                    </span>
-                                  )}
-
-                                  {Boolean(txn.metadata?.transfer_id) && (
-                                    <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                                      <ArrowRightLeft className="size-3 text-info" />
-                                      {t("finance.transactions.transfer")}
-                                    </span>
-                                  )}
-
-                                  {Boolean(txn.metadata?.borrowing_id) && (
-                                    <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                                      <Coins className="size-3 text-warning" />
-                                      {txn.metadata?.borrowing_role ===
-                                      "REPAYMENT"
-                                        ? t("finance.transactions.repayment")
-                                        : txn.type === "EXPENSE"
-                                          ? t("finance.transactions.lend")
-                                          : t("finance.transactions.borrow")}
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                                  {acc && (
-                                    <span className="inline-flex items-center rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 text-[11px] font-medium text-foreground/80">
-                                      {acc.name}
-                                    </span>
-                                  )}
-                                  {txn.budgetId && (
-                                    <span
-                                      className={cn(
-                                        "inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium",
-                                        colors.bg,
-                                        colors.text
-                                      )}
-                                    >
-                                      {details.name}
-                                    </span>
-                                  )}
-                                  <span className="text-[11px] text-muted-foreground">
-                                    {getTypeLabel(txn.type)}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Right: Hover Copilot attach, amount, menu */}
-                            <div
-                              className="flex shrink-0 items-center gap-2"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {txn.id && (
-                                <div className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                                  <CopilotAttachButton
-                                    item={{
-                                      key: buildCopilotEntityKey(
-                                        "transaction",
-                                        txn.id
-                                      ),
-                                      kind: "transaction",
-                                      id: txn.id,
-                                      label:
-                                        txn.description ||
-                                        t("finance.transactions.transaction"),
-                                      summary: {
-                                        amount: Number(txn.amount || 0),
-                                        currency: txn.currency,
-                                        type: txn.type,
-                                        transactionDate: txn.transactionDate,
-                                      },
-                                    }}
-                                  />
-                                </div>
-                              )}
-
-                              <div className="min-w-0 text-right">
-                                <MoneyAmount
-                                  cents={signedLocalCents}
-                                  currency={txn.currency}
-                                  showSign
-                                  colored={txn.type === "INCOME"}
-                                  size="md"
-                                  className="block font-medium"
-                                />
-                                {isCrossCurrency && (
-                                  <MoneyAmount
-                                    cents={signedBaseCents}
-                                    currency={baseCurrency}
-                                    showSign
-                                    size="sm"
-                                    className="block text-[11px] text-muted-foreground"
-                                  />
-                                )}
-                              </div>
-
-                              <DropdownMenu>
-                                <DropdownMenuTrigger
-                                  render={
-                                    <Button
-                                      variant="ghost"
-                                      size="icon-sm"
-                                      aria-label={t(
-                                        "finance.transactions.actionsAria"
-                                      )}
-                                      className="cursor-pointer text-muted-foreground hover:text-foreground"
-                                    >
-                                      <MoreVertical className="size-4" />
-                                    </Button>
-                                  }
-                                />
-                                <DropdownMenuContent
-                                  align="end"
-                                  className="w-40 rounded-xl border border-border bg-popover p-1 shadow-xl"
-                                >
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleInspectTransaction(txn)
-                                    }
-                                    className="flex cursor-pointer items-center gap-2"
-                                  >
-                                    <History className="size-4" />
-                                    <span>
-                                      {t("finance.transactions.viewHistory")}
-                                    </span>
-                                  </DropdownMenuItem>
-                                  {isWritable &&
-                                    txn.type !== "BALANCE_ADJUSTMENT" &&
-                                    txn.type !== "TYPE_UNSPECIFIED" &&
-                                    (txn.metadata?.source_type ??
-                                      txn.metadata?.sourceType) !==
-                                      "SYSTEM_BALANCE_ADJUSTMENT" && (
-                                      <DropdownMenuItem
-                                        onClick={() => handleEditTrigger(txn)}
-                                        className="flex cursor-pointer items-center gap-2"
-                                      >
-                                        <Edit2 className="size-4" />
-                                        <span>{t("common.edit")}</span>
-                                      </DropdownMenuItem>
-                                    )}
-                                  {isWritable && (
-                                    <DropdownMenuItem
-                                      onClick={() => handleDelete(txn.id || "")}
-                                      disabled={deleteMutation.isPending}
-                                      className="flex cursor-pointer items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
-                                    >
-                                      <Trash2 className="size-4" />
-                                      <span>{t("common.delete")}</span>
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </section>
-                ))}
-              </div>
+                            <Edit2 className="size-4" />
+                            <span>{t("common.edit")}</span>
+                          </DropdownMenuItem>
+                        )}
+                      {isWritable && (
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(txn.id || "")}
+                          disabled={deleteMutation.isPending}
+                          className="flex cursor-pointer items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
+                        >
+                          <Trash2 className="size-4" />
+                          <span>{t("common.delete")}</span>
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              />
             )}
 
             <CreateTransactionSheet

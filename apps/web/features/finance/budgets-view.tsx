@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom"
 import { createElement, useState, useMemo } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useUrlState } from "@/lib/use-url-state"
@@ -48,7 +49,6 @@ import { BudgetCard } from "./components/budget-card"
 import { CreateBudgetSheet } from "./components/create-budget-sheet"
 import { EditBudgetSheet } from "./components/edit-budget-sheet"
 import { CreateTransactionSheet } from "./components/create-transaction-sheet"
-import { BudgetHistorySheet } from "./components/budget-history-sheet"
 import {
   computeBudgetPacePercent,
   getBudgetColors,
@@ -97,6 +97,7 @@ const STATUS_ACTION_KEYS = {
 } as const
 
 export function BudgetsView() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { spaceId, isWritable } = useSpacePermissions()
   const tz = useTimezone()
@@ -154,7 +155,6 @@ export function BudgetsView() {
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
-  const [historyOpen, setHistoryOpen] = useState(false)
   const [activeBudget, setActiveBudget] = useState<Budget | null>(null)
   const [txOpen, setTxOpen] = useState(false)
   const [selectedBudgetId, setSelectedBudgetId] = useState("")
@@ -165,8 +165,7 @@ export function BudgetsView() {
   }
 
   const handleViewHistoryTrigger = (budget: Budget) => {
-    setActiveBudget(budget)
-    setHistoryOpen(true)
+    navigate(`/space/${spaceId}/finance/budgets/${budget.id}`)
   }
 
   // Compute Period Budget Summary KPIs in baseCurrency
@@ -920,12 +919,6 @@ export function BudgetsView() {
           </div>
         </FinancePageLayout>
       </div>
-
-      <BudgetHistorySheet
-        open={historyOpen}
-        onOpenChange={setHistoryOpen}
-        budget={activeBudget}
-      />
     </div>
   )
 }

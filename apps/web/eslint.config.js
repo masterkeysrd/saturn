@@ -25,7 +25,7 @@ export default defineConfig([
         {
           selector: 'JSXOpeningElement[name.name="progress"]',
           message:
-            'Do not use native <progress>; use a styled rounded-full bg-secondary progress track with role="progressbar" and ARIA range attributes (see docs/conventions/design-system.md).',
+            'Do not use native <progress>; use a styled rounded-full bg-secondary progress track with role="progressbar" and ARIA range attributes (see docs/design-system/web.md).',
         },
       ],
     },

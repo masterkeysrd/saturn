@@ -521,7 +521,9 @@ describe("Phase 2 Web Finance Views", () => {
     expect(screen.getByText("April 2026")).toBeTruthy()
     expect(screen.getByText("Whole Foods Market")).toBeTruthy()
     expect(screen.queryByText("Old March Receipt")).toBeNull()
-    expect(screen.getByText("Today")).toBeTruthy()
+    const day = screen.getByRole("region", { name: "Today" })
+    expect(day.textContent).toContain("Groceries")
+    expect(day.textContent).toContain("Net-$25.00")
     expect(screen.queryByRole("button", { name: "Reset" })).toBeNull()
 
     // Click row to open in-flow WorkspaceInspectorPanel
@@ -983,7 +985,7 @@ describe("Phase 2 Web Finance Views", () => {
     expect(screen.getByRole("button", { name: "Registrar gasto" })).toBeTruthy()
   })
 
-  it("uses @container and container-query grids on BudgetsView, AccountsView, and TransactionsView when inspectors open", async () => {
+  it("navigates from budget and account cards while transaction rows keep the in-flow inspector", async () => {
     vi.mocked(financeApi.useListBudgetsQuery).mockReturnValue({
       data: {
         budgets: [
@@ -1028,7 +1030,10 @@ describe("Phase 2 Web Finance Views", () => {
     ).toBeTruthy()
 
     fireEvent.click(screen.getByText("Dining Out"))
-    expect(await screen.findByRole("complementary")).toBeTruthy()
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/space/spc_1/finance/budgets/bgt_1"
+    )
+    expect(screen.queryByRole("complementary")).toBeNull()
     expect(budgetsContainer.querySelector(".\\@container")).toBeTruthy()
     expect(
       budgetsContainer.querySelector(
@@ -1073,7 +1078,10 @@ describe("Phase 2 Web Finance Views", () => {
     ).toBeTruthy()
 
     fireEvent.click(screen.getAllByText("Main Checking")[0])
-    expect(await screen.findByRole("complementary")).toBeTruthy()
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/space/spc_1/finance/accounts/acc_1"
+    )
+    expect(screen.queryByRole("complementary")).toBeNull()
     expect(accountsContainer.querySelector(".\\@container")).toBeTruthy()
     expect(
       accountsContainer.querySelector(

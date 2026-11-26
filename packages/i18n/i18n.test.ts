@@ -106,6 +106,12 @@ describe("@saturn/i18n", () => {
       const k = key as keyof typeof enMessages
       expect(enMessages[k].trim().length).toBeGreaterThan(0)
       expect(esMessages[k].trim().length).toBeGreaterThan(0)
+      for (const segment of key.split(".")) {
+        expect(
+          segment,
+          `locales key "${key}" contains uppercase enum segment "${segment}"; put enum labels in packages/i18n/enums/{en,es}.json instead`
+        ).not.toMatch(/^(?:[A-Z][A-Z0-9_]{1,}|[0-9]+[A-Z]+)$/)
+      }
     }
   })
 

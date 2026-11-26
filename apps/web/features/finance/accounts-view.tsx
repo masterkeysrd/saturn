@@ -32,7 +32,6 @@ import { CardAccountItem } from "./components/card-account-item"
 import { CreateAccountSheet } from "./components/create-account-sheet"
 import { CreateTransferSheet } from "./components/create-transfer-sheet"
 import { AdjustBalanceModal } from "./components/adjust-balance-modal"
-import { AccountHistorySheet } from "./components/account-history-sheet"
 import { getInstitutionLogoUrl, formatAmount, formatCents } from "./utils"
 import {
   Landmark,
@@ -118,8 +117,6 @@ export function AccountsView() {
   const [createOpen, setCreateOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [transferOpen, setTransferOpen] = useState(false)
-  const [historyOpen, setHistoryOpen] = useState(false)
-  const [historyAccount, setHistoryAccount] = useState<Account | null>(null)
 
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [adjustingAccount, setAdjustingAccount] = useState<Account | null>(null)
@@ -762,8 +759,9 @@ export function AccountsView() {
                                 institution={instMap[acc.institutionId || ""]}
                                 isWritable={isWritable}
                                 onHistory={() => {
-                                  setHistoryAccount(acc)
-                                  setHistoryOpen(true)
+                                  navigate(
+                                    `/space/${spaceId}/finance/accounts/${acc.id}`
+                                  )
                                 }}
                                 onAdjust={() => handleOpenAdjust(acc)}
                                 onEdit={() => {
@@ -799,8 +797,9 @@ export function AccountsView() {
                         institution={instMap[acc.institutionId || ""]}
                         isWritable={isWritable}
                         onHistory={() => {
-                          setHistoryAccount(acc)
-                          setHistoryOpen(true)
+                          navigate(
+                            `/space/${spaceId}/finance/accounts/${acc.id}`
+                          )
                         }}
                         onAdjust={() => handleOpenAdjust(acc)}
                         onEdit={() => {
@@ -984,12 +983,6 @@ export function AccountsView() {
           </AlertDialog>
         </FinancePageLayout>
       </div>
-
-      <AccountHistorySheet
-        open={historyOpen}
-        onOpenChange={setHistoryOpen}
-        account={historyAccount}
-      />
     </div>
   )
 }

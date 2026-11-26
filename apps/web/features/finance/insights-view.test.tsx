@@ -9,9 +9,10 @@ import { InsightsView } from "./insights-view"
 import {
   CashFlowSvgChart,
   StackedBreakdownSvgChart,
-  computeNiceSignedTicks,
   type MergedTrendPoint,
 } from "./components/insights-charts"
+
+import { computeNiceSignedTicks } from "@saturn/core"
 
 const mockNavigate = vi.fn()
 

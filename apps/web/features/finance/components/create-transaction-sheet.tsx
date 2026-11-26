@@ -35,6 +35,7 @@ interface CreateTransactionSheetProps {
   budgets?: Budget[]
   accounts?: Account[]
   editTransaction?: Transaction | null
+  cashEntriesOnly?: boolean
   preselectedBudgetId?: string
   refetchTransactions?: () => void
   refetchBudgets?: () => void
@@ -52,6 +53,7 @@ export function CreateTransactionSheet({
   budgets = EMPTY_BUDGETS,
   accounts = EMPTY_ACCOUNTS,
   editTransaction,
+  cashEntriesOnly = false,
   preselectedBudgetId,
   refetchTransactions,
   refetchBudgets,
@@ -291,62 +293,72 @@ export function CreateTransactionSheet({
             <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
           </button>
 
-          <button
-            type="button"
-            onClick={() => setStep("SCHEDULE_SELECT")}
-            className="group flex w-full cursor-pointer items-center gap-3.5 rounded-xl border border-border/70 bg-control px-3.5 py-3 text-left transition-colors outline-none hover:border-border hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
-          >
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-500 dark:bg-indigo-500/20">
-              <CalendarClock className="size-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-medium text-foreground">
-                {t("finance.transactions.create.confirmScheduled.title")}
-              </h3>
-              <p className="truncate text-xs text-muted-foreground">
-                {t("finance.transactions.create.confirmScheduled.description")}
-              </p>
-            </div>
-            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
-          </button>
+          {!cashEntriesOnly && (
+            <>
+              <button
+                type="button"
+                onClick={() => setStep("SCHEDULE_SELECT")}
+                className="group flex w-full cursor-pointer items-center gap-3.5 rounded-xl border border-border/70 bg-control px-3.5 py-3 text-left transition-colors outline-none hover:border-border hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+              >
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-500 dark:bg-indigo-500/20">
+                  <CalendarClock className="size-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-medium text-foreground">
+                    {t("finance.transactions.create.confirmScheduled.title")}
+                  </h3>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {t(
+                      "finance.transactions.create.confirmScheduled.description"
+                    )}
+                  </p>
+                </div>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+              </button>
 
-          <button
-            type="button"
-            onClick={() => setStep("BORROWING_SELECT")}
-            className="group flex w-full cursor-pointer items-center gap-3.5 rounded-xl border border-border/70 bg-control px-3.5 py-3 text-left transition-colors outline-none hover:border-border hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
-          >
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 dark:bg-amber-500/20">
-              <HandCoins className="size-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-medium text-foreground">
-                {t("finance.transactions.create.borrowingPayment.title")}
-              </h3>
-              <p className="truncate text-xs text-muted-foreground">
-                {t("finance.transactions.create.borrowingPayment.description")}
-              </p>
-            </div>
-            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
-          </button>
+              <button
+                type="button"
+                onClick={() => setStep("BORROWING_SELECT")}
+                className="group flex w-full cursor-pointer items-center gap-3.5 rounded-xl border border-border/70 bg-control px-3.5 py-3 text-left transition-colors outline-none hover:border-border hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+              >
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 dark:bg-amber-500/20">
+                  <HandCoins className="size-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-medium text-foreground">
+                    {t("finance.transactions.create.borrowingPayment.title")}
+                  </h3>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {t(
+                      "finance.transactions.create.borrowingPayment.description"
+                    )}
+                  </p>
+                </div>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+              </button>
 
-          <button
-            type="button"
-            onClick={() => setStep("TRANSFER")}
-            className="group flex w-full cursor-pointer items-center gap-3.5 rounded-xl border border-border/70 bg-control px-3.5 py-3 text-left transition-colors outline-none hover:border-border hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
-          >
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-500 dark:bg-sky-500/20">
-              <ArrowRightLeft className="size-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-medium text-foreground">
-                {t("finance.transactions.create.accountTransfer.title")}
-              </h3>
-              <p className="truncate text-xs text-muted-foreground">
-                {t("finance.transactions.create.accountTransfer.description")}
-              </p>
-            </div>
-            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
-          </button>
+              <button
+                type="button"
+                onClick={() => setStep("TRANSFER")}
+                className="group flex w-full cursor-pointer items-center gap-3.5 rounded-xl border border-border/70 bg-control px-3.5 py-3 text-left transition-colors outline-none hover:border-border hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+              >
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-500 dark:bg-sky-500/20">
+                  <ArrowRightLeft className="size-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-medium text-foreground">
+                    {t("finance.transactions.create.accountTransfer.title")}
+                  </h3>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {t(
+                      "finance.transactions.create.accountTransfer.description"
+                    )}
+                  </p>
+                </div>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+              </button>
+            </>
+          )}
         </div>
       </FormDrawer>
     )

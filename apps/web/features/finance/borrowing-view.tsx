@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { useUrlState } from "@/lib/use-url-state"
 import { useSpacePermissions } from "@/features/space/use-space"
@@ -45,7 +46,6 @@ import {
   InputGroupAddon,
 } from "@/components/ui/input-group"
 import { CreateBorrowingSheet } from "./components/create-borrowing-sheet"
-import { BorrowingDetailSheet } from "./components/borrowing-detail-sheet"
 import { AdjustBorrowingModal } from "./components/adjust-borrowing-modal"
 import { formatAmount } from "./utils"
 import {
@@ -71,6 +71,7 @@ const BORROWING_FILTER_DEFAULTS = {
 }
 
 export function BorrowingView() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const tz = useTimezone()
   const { t } = useI18n()
@@ -111,13 +112,9 @@ export function BorrowingView() {
   }
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [detailOpen, setDetailOpen] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [editBorrowing, setEditBorrowing] = useState<Borrowing | null>(null)
   const [adjustBorrowing, setAdjustBorrowing] = useState<Borrowing | null>(null)
-  const [selectedBorrowing, setSelectedBorrowing] = useState<Borrowing | null>(
-    null
-  )
   const [deleteTarget, setDeleteTarget] = useState<Borrowing | null>(null)
 
   const { data, refetch: refetchBorrowings } = useListBorrowingsQuery(
@@ -220,8 +217,7 @@ export function BorrowingView() {
   }
 
   const handleOpenDetail = (b: Borrowing) => {
-    setSelectedBorrowing(b)
-    setDetailOpen(true)
+    navigate(`/space/${spaceId}/finance/borrowings/${b.id}`)
   }
 
   return (
@@ -373,6 +369,13 @@ export function BorrowingView() {
                   return (
                     <div
                       key={b.id}
+                      tabIndex={0}
+                      role="link"
+                      aria-label={b.counterparty}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && e.target === e.currentTarget)
+                          handleOpenDetail(b)
+                      }}
                       onClick={() => handleOpenDetail(b)}
                       className="group relative cursor-pointer overflow-hidden rounded-3xl border border-border/40 bg-card/45 p-5 shadow-sm backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:bg-card/75 hover:shadow-md"
                     >
@@ -596,14 +599,6 @@ export function BorrowingView() {
           </AlertDialog>
         </FinancePageLayout>
       </div>
-
-      <BorrowingDetailSheet
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-        spaceId={spaceId}
-        borrowing={selectedBorrowing}
-        refetchBorrowings={refetchBorrowings}
-      />
     </div>
   )
 }
