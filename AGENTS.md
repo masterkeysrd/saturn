@@ -72,10 +72,11 @@ Detailed guidelines live in `docs/conventions/`. Read the relevant guide before 
     - Required dependencies are always wired at startup and injected in tests (using mocks or `Noop*` implementations). Silently returning or bypassing logic on `nil` hides wiring bugs.
     - Only check `nil` when `nil` is a valid, expected runtime value (optional request payloads, nullable fields, optional pointer return values).
 
-11. **Clean Form & Inspector Layouts (No Double-Nested Cards)**:
+11. **Clean Form, View & Inspector Layouts (Orbital Precision)**:
+    - Follow the [Saturn Design System Charter](docs/conventions/design-system.md) across Web and Mobile (`DocumentPage` header slots, `<AlertDialog>` + `toast`, `<Badge>`, `<Empty>`, `<Skeleton>`, `<MoneyAmount>`/`<MonoAmount>`, and reactive `@saturn/tokens`).
     - Never nest bordered card wrappers inside drawers, sheets, or inspector panels; separate sections with subtle hairlines (`border-t`) instead.
     - Keep narrow sidebars/inspectors (`< 520px`) single-column, render schema-driven typed controls (`Switch`, `Select`, numeric inputs) rather than raw code boxes everywhere, and hide technical plumbing behind an **Advanced** collapsible section.
-    - See [Frontend Conventions](docs/conventions/frontend.md#4-ui--form-design-rules).
+    - See [Frontend Conventions](docs/conventions/frontend.md#4-ui--form-design-rules) and [Saturn Design System Charter](docs/conventions/design-system.md).
 
 12. **100% Internationalization (`@saturn/i18n`)**:
     - **Never** hardcode user-facing copy, toast titles/descriptions, validation messages, placeholders, `aria-label` strings, sidebar items, or breadcrumb segments in Web or Mobile code—and never write inline `isEs ? ... : ...` or duplicate `*_ES` dictionaries.
@@ -125,5 +126,6 @@ Always format, lint, typecheck, and test modified subsystems before declaring an
 - [API & Protobuf Conventions](docs/conventions/api.md) — Resource-oriented design, AIP-134/136 rules, and Protobuf generation.
 - [Backend Architecture Conventions](docs/conventions/backend.md) — Domain vs. application vs. storage separation, error handling, and transaction management.
 - [Testing Conventions & Guide](docs/conventions/testing.md) — Table-driven tests, generated `@Mock` interfaces, and integration test setup.
+- [Saturn Design System Charter](docs/conventions/design-system.md) — Orbital Precision tokens, concentric radii, page shells, and Web/Mobile UI primitives.
 - [Frontend & Monorepo Conventions](docs/conventions/frontend.md) — Package dependency rules, `useTimezone` ergonomics, and React Query cache invalidation.
 - [Mobile App Conventions](docs/conventions/mobile.md) — Expo Router, CNG rules, haptic patterns, and mobile UI tokens.
